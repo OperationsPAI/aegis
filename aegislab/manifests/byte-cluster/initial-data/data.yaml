@@ -921,6 +921,64 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 0.1.7 → 0.1.8 for fork PR LGU-SE-Internal/DeathStarBench#62: the
+      # load-generator data-init initContainer no longer apt/pip-installs at pod
+      # start (byte-cluster public egress ~17 kB/s blew the 25-min readiness
+      # timeout). It now reuses the loader image with aiohttp/curl/nc baked in.
+      # Service images stay at the global tag; only the loader is overridden to
+      # the new build (socialnetwork-loader:20260529-04e3cb6).
+      - name: 0.1.8
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.2
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260529-04e3cb6
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
   - type: 2
     name: media
     is_public: true
@@ -1062,6 +1120,64 @@ containers:
               category: 1
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.7 → 0.1.8 for fork PR LGU-SE-Internal/DeathStarBench#62: the
+      # load-generator data-init initContainer no longer apt/pip-installs at pod
+      # start (byte-cluster public egress ~17 kB/s blew the 25-min readiness
+      # timeout). It now reuses the loader image with aiohttp/curl baked in.
+      # Service images stay at the global tag; only the loader is overridden to
+      # the new build (mediamicroservices-loader:20260529-04e3cb6).
+      - name: 0.1.8
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.2
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260529-04e3cb6
               overridable: true
             - key: aegis.points.enabled
               type: 0
@@ -1627,15 +1743,15 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  # Soft reclaim: idle ns gets `kubectl rollout restart` of non-DB deployments
-  # instead of helm uninstall + ns delete. SocialNetwork's helm chart bootstraps
-  # the social graph via a `data-init-job` Job (post-install,post-upgrade hook)
-  # that takes 5–10 min; mongodb/redis/memcached/mcrouter run with no PVC so
-  # `helm uninstall` silently drops their data. Soft reclaim preserves both the
-  # helm release and the DB state while still clearing any chaos-mesh residue
-  # on app pods. See ReclaimModeSoft in src/platform/config/chaos_system.go.
+  # Reverted soft → full (default) once fork PR LGU-SE-Internal/DeathStarBench#62
+  # cut DSB data-init from >25min (runtime apt/pip) to ~90s (deps baked into the
+  # loader image). The inject loop full-RestartPedestals each round (--system
+  # --auto reinstalls), so soft reclaim's DB preservation was wiped by the next
+  # inject anyway; full reclaim is cheap now AND clears chaos-mesh residue. The
+  # soft path stays in code (ReclaimModeSoft, src/platform/config/chaos_system.go)
+  # for future skip-RP warm-ns loops — flip this back to "soft" to re-enable.
   - key: injection.system.sn.reclaim_mode
-    default_value: soft
+    default_value: full
     value_type: 0
     scope: 2
     category: injection.system.reclaim_mode
@@ -1707,11 +1823,10 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  # See sn.reclaim_mode comment above — same rationale (DSB charts share the
-  # data-init-job subchart; MediaMicroservices initializes movies + users the
-  # same way SocialNetwork initializes the graph).
+  # See sn.reclaim_mode comment above — reverted soft → full for the same reason
+  # (data-init now ~90s; loop full-RPs each round; full reclaim clears residue).
   - key: injection.system.media.reclaim_mode
-    default_value: soft
+    default_value: full
     value_type: 0
     scope: 2
     category: injection.system.reclaim_mode
