@@ -51,6 +51,23 @@ containers:
     is_public: true
     status: 1
     versions:
+      # SOURCE OF TRUTH (issue #478): the live DB helm_config_values are
+      # canonical at runtime (see aegis-chaos-design.md §15). The ts-*
+      # service images were migrated to the volces shanghai mirror
+      # (`pair-cn-shanghai.cr.volces.com/opspai/*`, recorded by #483/#484),
+      # which is what the DB carries and what install must use. #478's
+      # premise that the images only live in the guangzhou `pair` registry
+      # was already stale when filed.
+      #
+      # The 1.0.6 helm_config.values below intentionally hold the opspai
+      # shanghai refs to match the DB. If the repo ever drifts from the DB
+      # again, regenerate this block from the canonical DB rather than
+      # hand-editing:
+      #   aegisctl system export-seed --name ts   # emits helm_config.values
+      # and verify with:
+      #   aegisctl system diff-seed --name ts --from-seed <this dir>
+      # (exits 0 when repo matches the live DB).
+      #
       # Bumped 1.0.2 → 1.0.4 to consolidate three out-of-band defaults that
       # ts ns previously got via per-namespace `helm upgrade --set` but which
       # weren't in the DB seed (so any RestartPedestal flow that re-installed

@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"aegis/boot/seed"
+	containerapi "aegis/core/domain/container"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	etcd "aegis/platform/etcd"
 	"aegis/platform/model"
-	"aegis/core/orchestrator/common"
-	containerapi "aegis/core/domain/container"
-	"aegis/boot/seed"
 
 	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
@@ -476,6 +476,7 @@ func (s *Service) ExportSeed(_ context.Context, name string) (*ExportSeedResp, e
 					RepoName:  helm.RepoName,
 					RepoURL:   helm.RepoURL,
 					Status:    int(consts.CommonEnabled),
+					Values:    exportHelmValues(helm.DynamicValues),
 				},
 			}},
 		})
@@ -536,11 +537,54 @@ type seedContainerVersionYAML struct {
 }
 
 type seedHelmConfigYAML struct {
-	Version   string `yaml:"version"`
-	ChartName string `yaml:"chart_name"`
-	RepoName  string `yaml:"repo_name"`
-	RepoURL   string `yaml:"repo_url"`
-	Status    int    `yaml:"status"`
+	Version   string              `yaml:"version"`
+	ChartName string              `yaml:"chart_name"`
+	RepoName  string              `yaml:"repo_name"`
+	RepoURL   string              `yaml:"repo_url"`
+	Status    int                 `yaml:"status"`
+	Values    []seedHelmValueYAML `yaml:"values,omitempty"`
+}
+
+// seedHelmValueYAML mirrors data.yaml's helm_config.values[] entry shape so an
+// exported snapshot round-trips back through the seed loader (issue #478:
+// helm_config_values is canonical runtime state and must survive export).
+type seedHelmValueYAML struct {
+	Key          string `yaml:"key"`
+	Type         int    `yaml:"type"`
+	Category     int    `yaml:"category"`
+	ValueType    int    `yaml:"value_type"`
+	DefaultValue string `yaml:"default_value"`
+	Overridable  bool   `yaml:"overridable"`
+}
+
+// exportHelmValues serializes the helm_config_values parameter_configs linked
+// to a HelmConfig into the data.yaml values[] shape. Only the helm-values
+// category is emitted; env-var rows live on a different join table.
+func exportHelmValues(params []model.ParameterConfig) []seedHelmValueYAML {
+	out := make([]seedHelmValueYAML, 0, len(params))
+	for i := range params {
+		p := &params[i]
+		if p.Category != consts.ParameterCategoryHelmValues {
+			continue
+		}
+		def := ""
+		if p.DefaultValue != nil {
+			def = *p.DefaultValue
+		}
+		out = append(out, seedHelmValueYAML{
+			Key:          p.Key,
+			Type:         int(p.Type),
+			Category:     int(p.Category),
+			ValueType:    int(p.ValueType),
+			DefaultValue: def,
+			Overridable:  p.Overridable,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // userIDFromCtx pulls the authenticated user ID for ownership stamping on

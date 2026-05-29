@@ -1127,6 +1127,7 @@ Backend side:
 | Authentication                     | Bearer tokens with scope claims; no mTLS in v1beta; webhook uses separate token                                       | —   | §10.1, §5 matrix |
 | Resource limits                    | Per-system `max_concurrent_injections` only                                                                            | —   | §12.1          |
 | Param override UX                  | Effective schema = `capability ∩ point.overrides`; 400 on out-of-range; never auto-clamp                              | —   | §12.2          |
+| Helm values source of truth        | DB `helm_config_values` is canonical at runtime; `data.yaml` is genesis input; `export-seed` is the audit round-trip; `system diff-seed` is the drift gate | —   | §15            |
 
 Items intentionally deferred (not blocking v1beta):
 
@@ -1159,3 +1160,103 @@ Migration step 2 deliverable: a generated SQL seed for the
 Capability. The generator + schemas live under
 `aegis-chaos/cmd/capgen/` and run in CI to detect upstream
 `ChaosTypeMap` changes.
+
+## 15. Helm-values source of truth: DB is canonical
+
+Pedestal chart values for a benchmark system can live in two places:
+the repo seed (`manifests/byte-cluster/initial-data/data.yaml` plus the
+per-system overlay files `ts.yaml` / `otel-demo.yaml`) and the live DB
+(`helm_config_values` rows linked to a `helm_configs` row, plus the
+`value_file` snapshot). These drift: a chart install reads the DB, but
+PRs edit the repo, and nothing forced the two to agree. The concrete
+incident was ts@1.0.6, where the repo overlay still pointed at a stale
+registry (`pair-diag-cn-guangzhou.cr.volces.com/pair`) after the images
+had been migrated to the volces shanghai mirror
+(`pair-cn-shanghai.cr.volces.com/opspai`) that the live DB already
+carried — the repo, not the DB, was wrong (issue #478).
+
+### Decision
+
+**The DB is the canonical runtime source of truth.** What the runtime
+installs is exactly `helm_configs.value_file` (a frozen YAML snapshot)
+merged-over by the `helm_config_values` rows, resolved fresh on every
+`GET /api/v2/systems/by-name/{name}/chart`. Nothing else is consulted
+at install time. The repo seed is *not* read at install time.
+
+The repo seed has two distinct, narrower roles:
+
+1. **Genesis / bootstrap input.** `data.yaml` (+ overlay files) is what
+   the boot seed loader and `aegisctl system reseed` use to *populate*
+   the DB — at first cluster bring-up and on a deliberate operator
+   reseed. It is the seed crystal, not the live state.
+2. **Audit round-trip target.** `aegisctl system export-seed` reads the
+   live DB and emits a `data.yaml`-compatible snapshot that can be
+   committed back to git. This closes the loop so a runtime-mutated DB
+   does not silently diverge from the repo forever.
+
+Lifecycle, stated precisely:
+
+```
+genesis seed (data.yaml + overlay)
+        │  boot seed loader / `system reseed`  (one-way load)
+        ▼
+   DB helm_config_values  ← canonical, what install reads
+        │  `system export-seed`               (one-way audit dump)
+        ▼
+git-committable snapshot   ← reconciles repo back to reality
+```
+
+We chose DB-canonical over repo-canonical (the "every register/reseed
+atomically rewrites the DB from the file" alternative) because reseed
+already deliberately preserves operator overrides (etcd values that
+differ from the seed default are kept unless `--reset-overrides`; see
+`reseed.go`). Making the repo authoritative would have to either throw
+those overrides away on every reseed or grow a merge policy that
+re-implements what the DB already is. Treating the DB as truth and the
+repo as genesis-plus-audit keeps one writer for runtime state.
+
+### Enforcement: `aegisctl system diff-seed`
+
+The decision is only real if drift is detectable. `aegisctl system
+diff-seed --name <sys> --from-seed <path>` is the gate:
+
+- Computes the **effective git values**: the overlay file
+  `<dir>/<sys>.yaml` (if present) flattened to dotted keys, then the
+  `data.yaml` `helm_config.values` entries applied on top — the same
+  precedence the runtime uses (`HelmConfigItem.GetValuesMap`).
+- Fetches the **effective live values** from the existing chart
+  endpoint (`SystemChartResp.Values`), which is exactly the DB
+  `value_file` snapshot merged with `helm_config_values`.
+- Prints per-key drift (only-in-DB / only-in-git / value mismatch) and
+  exits non-zero (workflow-failure exit code) when any drift is found,
+  so CI / an operator runbook can call it as a gate.
+
+It is a pure client command: it reuses the existing chart read endpoint
+and the on-disk seed, so it adds no new HTTP surface and no schema-gate
+endpoint churn. When the DB and git agree it exits 0 and is silent
+enough to wire into a pipeline.
+
+### Overlay files (`ts.yaml` / `otel-demo.yaml`)
+
+Approach (b) in its purest form says "drop the overlay files; admins
+manage values via aegisctl." We deliberately do **not** delete them in
+this change. `value_file` is a live runtime input — at seed time the
+overlay is copied into the managed file store and its path is recorded
+on `helm_configs.value_file`; at install time `GetValuesMap` reads that
+snapshot and merges `helm_config_values` on top. Deleting the overlay
+from the repo does not remove the frozen snapshot the DB already points
+at, and a fresh cold-start reseed would then lose those values entirely
+(the otel-demo per-component init-container objects, which cannot be
+expressed as flat `helm_config_values` keys because a `--set` against
+an indexed array slot replaces the whole element, are the clearest
+example — see the `data.yaml` otel-demo comments).
+
+The migration to fully drop overlays is therefore a **scoped
+follow-up**, not part of this change: every key currently carried only
+by an overlay must first be representable as a `helm_config_values` row
+(or the structural-array cases resolved another way), the DB reconciled,
+and only then the overlay file and the seed-loader's `value_file` upload
+path retired. Until that lands, `diff-seed` compares the *effective
+merged* values, which is the property operators actually care about —
+"does the live cluster match what git declares" — regardless of which
+half of the seed a given key came from.
