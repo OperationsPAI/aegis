@@ -23,7 +23,7 @@ submit:
   specs:
     - - system: teastore
         system_type: teastore
-        namespace: tea0
+        namespace: teastore0
         app: auth
         chaos_type: PodKill
 validation:
