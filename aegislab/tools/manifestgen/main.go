@@ -44,10 +44,15 @@ const (
 	replaceScope        = "service"
 )
 
-// pathHighCardinality folds high-cardinality path segments (UUIDs, numeric
-// ids) into "/*" so that per-request endpoints collapse to one chaos point.
-// Mirrors the clickhouseanalyzer route normalization.
-var pathHighCardinality = regexp.MustCompile(`/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|/\d+(?:/|$)`)
+// highCardinalitySegment matches a whole path segment that is a
+// high-cardinality identifier:
+//   - a UUID (8-4-4-4-12 hex)
+//   - a bare numeric id (123)
+//   - a short-prefix id code like a train number (D002, G1234, K85):
+//     1-3 uppercase letters + digits. These blow up ts-ui-dashboard with
+//     ~900 distinct codes. The uppercase requirement keeps version segments
+//     (v1) and word routes (configs, stations) untouched.
+var highCardinalitySegment = regexp.MustCompile(`^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d+|[A-Z]{1,3}\d+)$`)
 
 // grpcRoutePattern matches a bare gRPC pseudo-route (/package.Service/Method).
 // HTTPChaos response/request-mutation caps are skipped for these — chaos-mesh
@@ -56,13 +61,19 @@ var pathHighCardinality = regexp.MustCompile(`/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-
 // teastore's /tools.descartes.teastore.registry/rest/...) are NOT gRPC.
 var grpcRoutePattern = regexp.MustCompile(`^/[A-Za-z_][A-Za-z0-9_.]*\.[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*$`)
 
+// normalizePath folds high-cardinality segments to "*" so per-request
+// endpoints collapse to one chaos point (mirrors the clickhouseanalyzer
+// route normalization, e.g. adminorder/[uuid]/[A-Z]\d+ → adminorder/*/*).
+// Splitting on "/" handles adjacent id segments that an overlapping regex
+// replace would miss.
 func normalizePath(p string) string {
-	return pathHighCardinality.ReplaceAllStringFunc(p, func(m string) string {
-		if strings.HasSuffix(m, "/") {
-			return "/*/"
+	segs := strings.Split(p, "/")
+	for i, s := range segs {
+		if highCardinalitySegment.MatchString(s) {
+			segs[i] = "*"
 		}
-		return "/*"
-	})
+	}
+	return strings.Join(segs, "/")
 }
 
 // systemDisplay is the value written into metadata.system, the output

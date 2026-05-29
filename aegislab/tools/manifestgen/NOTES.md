@@ -70,15 +70,21 @@ other 7 systems the two coincide.
 
 ## HTTP path normalization
 
-Before dedup, high-cardinality path segments are folded to `/*`:
+Before dedup, each path is split on `/` and high-cardinality segments are
+folded to `*`:
 
-- UUIDs (`/8-4-4-4-12` hex) → `/*`
-- bare numeric segments (`/123`) → `/*`
+- UUIDs (`8-4-4-4-12` hex) → `*`
+- bare numeric segments (`123`) → `*`
+- short-prefix id codes — 1-3 uppercase letters + digits (`D002`, `G1234`,
+  `K85`) → `*`. These are train numbers in TrainTicket; the uppercase
+  requirement keeps `v1` and word routes (`configs`, `stations`) untouched.
 
 This collapses per-request endpoints (e.g. `ts-user-service`'s ~900 UUID
-delete paths) into a single `/api/v1/users/*` point, fixing the chaos-point
-explosion (#500). The dedup key is `port|method|path`, so normalized
-duplicates merge automatically.
+delete paths, `ts-ui-dashboard`'s ~900 train-code paths) into a single
+`*`-bearing route, fixing the chaos-point explosion (#500). Splitting on `/`
+(rather than a single overlapping regex replace) lets adjacent id segments
+both collapse, e.g. `adminorder/[uuid]/D1345` → `adminorder/*/*`. The dedup
+key is `port|method|path`, so normalized duplicates merge automatically.
 
 ## Test layers
 
