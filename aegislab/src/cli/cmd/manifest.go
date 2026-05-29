@@ -34,6 +34,8 @@ var (
 
 	flagImportDirConcurrency int
 	flagImportDirKeepGoing   bool
+
+	flagImportChartVersion string
 )
 
 var manifestCmd = &cobra.Command{
@@ -227,6 +229,9 @@ func manifestToImportReq(raw []byte) (apiclient.ChaosChaosImportPointsReq, strin
 	}
 	if req.Metadata == nil || req.Metadata.System == nil || *req.Metadata.System == "" {
 		return apiclient.ChaosChaosImportPointsReq{}, "", usageErrorf("manifest metadata.system is required")
+	}
+	if flagImportChartVersion != "" {
+		req.Metadata.SetChartVersion(flagImportChartVersion)
 	}
 	return req, *req.Metadata.System, nil
 }
@@ -603,6 +608,13 @@ func init() {
 
 	manifestImportDirCmd.Flags().IntVar(&flagImportDirConcurrency, "concurrency", 4, "Max parallel imports")
 	manifestImportDirCmd.Flags().BoolVar(&flagImportDirKeepGoing, "keep-going", false, "Continue past per-file failures (exit non-zero if any failed)")
+
+	for _, c := range []*cobra.Command{manifestImportCmd, manifestImportDirCmd} {
+		c.Flags().StringVar(&flagImportChartVersion, "chart-version", "",
+			"Override metadata.chart_version on every imported manifest. Chart-bound "+
+				"hooks pass the consumer chart's {{ .Chart.Version }} so points bind to "+
+				"the real chart version instead of the file literal (point-manifest-spec §6/§7).")
+	}
 
 	manifestCmd.AddCommand(manifestValidateCmd)
 	manifestCmd.AddCommand(manifestImportCmd)

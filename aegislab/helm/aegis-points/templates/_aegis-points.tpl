@@ -13,6 +13,11 @@ When enabled, it emits a Job + ConfigMap that POSTs every
 aegis-points/*.yaml under the consumer chart to
 /v1beta/systems/{sys}/points/import via 'aegisctl manifest import-dir'.
 
+The import passes --chart-version {{ .Chart.Version }} so every point binds
+to the consumer chart's actual version, not the chart_version literal baked
+into the manifest files. This is what lets a chart upgrade supersede the
+prior version's points (point-manifest-spec §6/§7).
+
 Hook weight ordering (pairs with #458 onboard Job):
 
   -10  aegis-onboard-job        (system identity + chart binding)
@@ -104,6 +109,8 @@ spec:
             - manifest
             - import-dir
             - /etc/aegis-points
+            - --chart-version
+            - {{ .Chart.Version | quote }}
             {{- if $keepGoing }}
             - --keep-going
             {{- end }}

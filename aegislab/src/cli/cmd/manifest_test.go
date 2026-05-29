@@ -109,6 +109,44 @@ func TestManifestImport_DryRun_SendsCorrectPathBodyAndQuery(t *testing.T) {
 	}
 }
 
+func TestManifestImport_ChartVersionOverride(t *testing.T) {
+	captureChartVersion := func(t *testing.T, extraArgs ...string) string {
+		t.Helper()
+		var gotChartVersion string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			var sent map[string]any
+			_ = json.Unmarshal(body, &sent)
+			if md, ok := sent["metadata"].(map[string]any); ok {
+				if cv, ok := md["chart_version"].(string); ok {
+					gotChartVersion = cv
+				}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":{"upserted":1,"superseded":0,"dry_run":true,"point_ids":["abc"]}}`))
+		}))
+		defer srv.Close()
+		t.Setenv("AEGIS_CHAOS_SERVER", srv.URL)
+
+		args := append([]string{"manifest", "import", "--dry-run"}, extraArgs...)
+		args = append(args, "testdata/manifest-valid.yaml")
+		if rc := executeArgs(args); rc != 0 {
+			t.Fatalf("import returned non-zero: %d", rc)
+		}
+		return gotChartVersion
+	}
+
+	resetManifestTestState(t)
+	if got := captureChartVersion(t, "--chart-version", "9.9.9"); got != "9.9.9" {
+		t.Errorf("with --chart-version: forwarded chart_version got %q want 9.9.9", got)
+	}
+
+	resetManifestTestState(t)
+	if got := captureChartVersion(t); got != "v3.2.0" {
+		t.Errorf("without --chart-version: forwarded chart_version got %q want file value v3.2.0", got)
+	}
+}
+
 func TestResolveChaosServer_DefaultsToGatewayUnderServer(t *testing.T) {
 	resetManifestTestState(t)
 	t.Setenv(chaosServerEnv, "")
@@ -249,6 +287,7 @@ func resetManifestTestState(t *testing.T) {
 	flagQuiet = true
 	flagImportDirConcurrency = 0
 	flagImportDirKeepGoing = false
+	flagImportChartVersion = ""
 	chaosServerDeprecationOnce = sync.Once{}
 }
 
