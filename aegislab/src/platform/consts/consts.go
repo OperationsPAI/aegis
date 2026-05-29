@@ -523,6 +523,18 @@ const (
 	StuckTraceReconcileStuckThresholdKey   = "rate_limiting.stuck_trace_reconcile_stuck_threshold_seconds"
 	DefaultStuckTraceReconcileIntervalSecs = 60
 	DefaultStuckTraceReconcileStuckSecs    = 600
+	// StuckTraceReconcileRestartPedestalThresholdKey overrides the stuck
+	// threshold applied specifically to traces parked at
+	// restart.pedestal.started. RestartPedestal legitimately holds this state
+	// far longer than the fault.injection.* states: a cold DSB bootstrap
+	// chains the per-system readiness_timeout (up to ~25 min), the warmup
+	// floor, and the traffic-presence gate (up to 10 min) BEFORE the inject
+	// fires, and the trace's updated_at does not advance during that wait. The
+	// generic 600 s threshold reaps these legitimate in-progress bootstraps.
+	// 2400 s (40 min) comfortably exceeds the worst-case legitimate RP
+	// duration while still recovering genuinely-dead workers.
+	StuckTraceReconcileRestartPedestalThresholdKey = "rate_limiting.stuck_trace_reconcile_restart_pedestal_threshold_seconds"
+	DefaultStuckTraceReconcileRestartPedestalSecs  = 2400
 )
 
 type EventType string
