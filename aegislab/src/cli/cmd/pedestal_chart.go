@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -178,6 +179,8 @@ var (
 	pedestalChartInstallChart              string
 	pedestalChartInstallVersion            string
 	pedestalChartInstallWait               bool
+	pedestalChartInstallAtomic             bool
+	pedestalChartInstallCleanupOnFail      bool
 	pedestalChartInstallApplyOverrides     bool
 	pedestalChartInstallFromPedestalVerArg string
 	pedestalChartInstallHelmSet            []string
@@ -219,12 +222,21 @@ Use --set / --set-string (repeatable) for ad-hoc upstream-chart toggles
 that aren't seed-managed — e.g.
 "--set global.security.allowInsecureImages=true" for charts that pull
 bitnami subcharts. These are passed straight to helm AFTER the values
-file, so they win over both value_file and helm_config_values.`,
+file, so they win over both value_file and helm_config_values.
+
+By default the install is --atomic (implies --wait) with --cleanup-on-fail,
+and a pre-existing release in a non-deployed state (failed / pending-*) is
+helm-uninstalled first. Together these keep a failed/timed-out install from
+leaving a release whose stored manifest is out of sync with the cluster — the
+desync that makes a later "helm upgrade --install --wait" error
+'deployments.apps "<svc>" not found' on a healthy cluster (#481). Pass
+--atomic=false / --cleanup-on-fail=false to opt out.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runPedestalChartInstall(args[0], pedestalChartInstallNamespace,
 			pedestalChartInstallTgz, pedestalChartInstallRepo, pedestalChartInstallChart,
 			pedestalChartInstallVersion, pedestalChartInstallWait,
+			pedestalChartInstallAtomic, pedestalChartInstallCleanupOnFail,
 			pedestalChartInstallApplyOverrides, pedestalChartInstallFromPedestalVerArg,
 			pedestalChartInstallHelmSet, pedestalChartInstallHelmSetString)
 	},
@@ -244,7 +256,7 @@ type chartSource struct {
 	pedestalTag    string
 }
 
-func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool, applyOverrides bool, fromPedestalVersion string, helmSet, helmSetString []string) error {
+func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool, atomic bool, cleanupOnFail bool, applyOverrides bool, fromPedestalVersion string, helmSet, helmSetString []string) error {
 	if strings.TrimSpace(systemCode) == "" {
 		return usageErrorf("system short-code is required")
 	}
@@ -292,6 +304,19 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 		output.PrintInfo(fmt.Sprintf("merged %d helm_config_values overrides for %s@%s", countLeafPaths(src.values), systemCode, tag))
 	}
 
+	// A prior failed/aborted install leaves the release in a "failed" or
+	// "pending-*" state whose stored manifest can reference objects the
+	// cluster no longer has (e.g. a Deployment removed by a manual kubectl
+	// patch during recovery). `helm upgrade --install` over such a release
+	// does a 3-way merge against that stale manifest and then, under --wait,
+	// polls a Deployment the cluster doesn't have — surfacing
+	// `deployments.apps "<svc>" not found` on an otherwise-healthy cluster
+	// (aegis #481). Uninstall the desynced release first so the next install
+	// starts from a clean slate instead of upgrading over the poison.
+	if err := uninstallIfDesynced(namespace, namespace); err != nil {
+		return err
+	}
+
 	// "upgrade --install" is the upsert idiom — works whether the release
 	// exists or not. Previously this was bare `install`, which crashed on
 	// re-runs with "cannot re-use a name that is still in use" when the
@@ -318,8 +343,17 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 	for _, kv := range helmSetString {
 		helmArgs = append(helmArgs, "--set-string", kv)
 	}
-	if wait {
+	// --atomic implies --wait and rolls the release back on any failure /
+	// timeout, so a failed install can't leave behind the desynced manifest
+	// that poisons the next upgrade (the #481 loop). --cleanup-on-fail deletes
+	// resources newly created by a failed run. Both default on.
+	if atomic {
+		helmArgs = append(helmArgs, "--atomic")
+	} else if wait {
 		helmArgs = append(helmArgs, "--wait")
+	}
+	if cleanupOnFail {
+		helmArgs = append(helmArgs, "--cleanup-on-fail")
 	}
 	// Mirror kubectl's --v=2-style preview so operators can copy-paste.
 	output.PrintInfo(fmt.Sprintf("+ helm %s", strings.Join(helmArgs, " ")))
@@ -331,6 +365,42 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 		return fmt.Errorf("helm install failed: %w", err)
 	}
 	output.PrintInfo(fmt.Sprintf("installed chart %q as release %q in namespace %q", src.positional, namespace, namespace))
+	return nil
+}
+
+// uninstallIfDesynced helm-uninstalls release in namespace when it exists in a
+// non-deployed state (failed / pending-install / pending-upgrade /
+// pending-rollback / uninstalling). Such a release's stored manifest can be out
+// of sync with the cluster; `helm upgrade --install --wait` over it polls
+// objects that aren't there and errors `<kind> "<name>" not found` even though
+// the cluster is healthy (aegis #481). A clean uninstall lets the subsequent
+// install start fresh. A successfully "deployed" release is left untouched so
+// the normal idempotent upgrade path still applies.
+func uninstallIfDesynced(release, namespace string) error {
+	out, err := chartRunner.Run("helm", "status", release, "-n", namespace, "-o", "json")
+	if err != nil {
+		// No such release (or status unavailable) — nothing to clean up; let
+		// `upgrade --install` handle the create path.
+		return nil
+	}
+	var status struct {
+		Info struct {
+			Status string `json:"status"`
+		} `json:"info"`
+	}
+	if jerr := json.Unmarshal(out, &status); jerr != nil {
+		return nil
+	}
+	if status.Info.Status == "deployed" || status.Info.Status == "" {
+		return nil
+	}
+	output.PrintInfo(fmt.Sprintf("release %q in %q is %q (not deployed) — uninstalling before reinstall to clear desynced manifest", release, namespace, status.Info.Status))
+	if uout, uerr := chartRunner.Run("helm", "uninstall", release, "-n", namespace, "--wait"); uerr != nil {
+		if len(uout) > 0 {
+			output.PrintInfo(strings.TrimRight(string(uout), "\n"))
+		}
+		return fmt.Errorf("uninstall desynced release %q: %w", release, uerr)
+	}
 	return nil
 }
 
@@ -669,7 +739,9 @@ func init() {
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallRepo, "repo", "", "Helm chart repo URL (use with --chart)")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallChart, "chart", "", "Chart name in the repo given by --repo")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallVersion, "version", "", "Chart version (passed to helm --version)")
-	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallWait, "wait", false, "Pass --wait to helm install")
+	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallWait, "wait", false, "Pass --wait to helm install (ignored when --atomic is set, which already implies --wait)")
+	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallAtomic, "atomic", true, "Pass --atomic to helm: roll the release back on failure/timeout so a failed install can't leave a desynced manifest that poisons the next upgrade (#481). Implies --wait. Disable with --atomic=false.")
+	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallCleanupOnFail, "cleanup-on-fail", true, "Pass --cleanup-on-fail to helm: delete resources created during a failed install/upgrade. Disable with --cleanup-on-fail=false.")
 	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallApplyOverrides, "apply-overrides", false, "Merge helm_config_values rows for the matched pedestal version into the values file before helm install (matches RestartPedestal behaviour). Default: false (current behaviour preserved).")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallFromPedestalVerArg, "from-pedestal-version", "", "Pin which container_versions.name the backend should resolve helm_config_values for (default: latest status=1 row for this system).")
 	pedestalChartInstallCmd.Flags().StringArrayVar(&pedestalChartInstallHelmSet, "set", nil, "Ad-hoc helm --set k=v; repeatable. Applied AFTER --apply-overrides / value file so it wins. Use for upstream-chart toggles that aren't seed-managed (e.g. bitnami global.security.allowInsecureImages=true).")
