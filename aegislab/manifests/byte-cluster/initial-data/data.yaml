@@ -257,6 +257,46 @@ containers:
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
+      # Bumped 1.0.7 → 1.0.8 to pick up trainticket chart 0.3.2
+      # (OperationsPAI/train-ticket#26): chart 0.3.1 shipped
+      # `autoscaling.enabled: true`, rendering one HPA per ts service. Under
+      # `helm install --wait` the HPA scaleTargetRef lookup races against the
+      # not-yet-ready metrics-server and surfaces `Error: deployments.apps
+      # "ts-route-plan-service" not found` even though all 56 pods come up
+      # Running — so helm exits non-zero and `aegisctl regression run
+      # --auto-install` fails despite a healthy install (aegis #481). Chart
+      # 0.3.2 defaults autoscaling off; Deployments then carry explicit
+      # `replicas: 1` which --wait tracks cleanly. Chart-only fix; same value
+      # overrides as 1.0.7 (ts-ui-dashboard + mysql ClusterIP pins, sidecar
+      # otel-collector volces mirror).
+      - name: 1.0.8
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.3.2
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
   - type: 2
     name: otel-demo
     is_public: true
