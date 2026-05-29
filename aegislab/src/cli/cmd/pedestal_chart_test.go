@@ -169,21 +169,21 @@ func TestNsPatternToNamespace(t *testing.T) {
 // via TestNsPatternToNamespace.
 func TestPedestalChartInstallValidation(t *testing.T) {
 	t.Run("missing_code", func(t *testing.T) {
-		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", "", "", false, false, "", nil, nil)
+		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", "", "", false, false, false, false, "", nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "short-code") {
 			t.Fatalf("want short-code error, got %v", err)
 		}
 	})
 
 	t.Run("repo_without_chart_rejected", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "", "https://example.com/charts", "", "", false, false, "", nil, nil)
+		err := runPedestalChartInstall("ts", "ts0", "", "https://example.com/charts", "", "", false, false, false, false, "", nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "--repo and --chart must be provided together") {
 			t.Fatalf("want repo/chart pairing error, got %v", err)
 		}
 	})
 
 	t.Run("tgz_not_found", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", "", "", false, false, "", nil, nil)
+		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", "", "", false, false, false, false, "", nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "not found") {
 			t.Fatalf("want not-found error, got %v", err)
 		}
@@ -196,7 +196,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "", false, false, "", nil, nil)
+		err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "", false, false, false, false, "", nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "helm not found") {
 			t.Fatalf("want helm-missing error, got %v", err)
 		}
@@ -212,7 +212,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		}
 		withFakeRunner(t, f)
 		url := "https://example.com/charts/foo-0.1.0.tgz"
-		if err := runPedestalChartInstall("ts", "ts0", url, "", "", "", false, false, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", url, "", "", "", false, false, false, false, "", nil, nil); err != nil {
 			t.Fatalf("url install failed: %v", err)
 		}
 		if len(got) == 0 || got[0] != "helm" || !containsArg(got, url) {
@@ -229,7 +229,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			},
 		}
 		withFakeRunner(t, f)
-		if err := runPedestalChartInstall("ts", "ts0", "", "https://charts.example.com", "foo", "1.0.0", false, false, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "https://charts.example.com", "foo", "1.0.0", false, false, false, false, "", nil, nil); err != nil {
 			t.Fatalf("repo install failed: %v", err)
 		}
 		if !containsArg(got, "--repo") || !containsArg(got, "https://charts.example.com") || !containsArg(got, "foo") {
@@ -248,13 +248,10 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", true, false, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", true, false, false, false, "", nil, nil); err != nil {
 			t.Fatalf("install failed: %v", err)
 		}
-		if len(f.calls) != 1 {
-			t.Fatalf("want 1 helm call, got %d: %v", len(f.calls), f.calls)
-		}
-		call := f.calls[0]
+		call := findHelmUpgradeCall(t, f.calls)
 		if call[0] != "helm" || call[1] != "upgrade" || call[2] != "--install" || call[3] != "ts0" {
 			t.Fatalf("bad helm args: %v", call)
 		}
@@ -263,6 +260,97 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			if !strings.Contains(joined, want) {
 				t.Errorf("helm args missing %q: %s", want, joined)
 			}
+		}
+	})
+
+	// #481: --atomic (default on) must reach helm so a failed install rolls
+	// back instead of leaving a desynced manifest. It implies --wait, and
+	// --cleanup-on-fail tags along.
+	t.Run("atomic_default_passes_atomic_and_cleanup_on_fail", func(t *testing.T) {
+		f := &fakeChartExec{
+			fallback: func(name string, args []string) ([]byte, error) {
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+		tgz := filepath.Join(t.TempDir(), "chart.tgz")
+		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		// wait=false but atomic=true: --atomic implies --wait, so --wait is
+		// NOT added separately, but the release still waits.
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", false, true, true, false, "", nil, nil); err != nil {
+			t.Fatalf("install failed: %v", err)
+		}
+		call := findHelmUpgradeCall(t, f.calls)
+		if !containsArg(call, "--atomic") {
+			t.Errorf("expected --atomic in helm args: %v", call)
+		}
+		if !containsArg(call, "--cleanup-on-fail") {
+			t.Errorf("expected --cleanup-on-fail in helm args: %v", call)
+		}
+		if containsArg(call, "--wait") {
+			t.Errorf("--wait should not be added alongside --atomic (atomic implies wait): %v", call)
+		}
+	})
+
+	// #481: a release stuck in a non-deployed state (e.g. "failed" after a
+	// timed-out install whose manifest now references a missing Deployment) is
+	// uninstalled before reinstall, so `upgrade --install --wait` doesn't poll
+	// objects the cluster lacks.
+	t.Run("desynced_failed_release_is_uninstalled_first", func(t *testing.T) {
+		var uninstalled bool
+		f := &fakeChartExec{
+			results: map[string]fakeExecResult{
+				"helm status ts0 -n ts0 -o json": {out: []byte(`{"info":{"status":"failed"}}`)},
+			},
+			fallback: func(name string, args []string) ([]byte, error) {
+				if name == "helm" && len(args) > 0 && args[0] == "uninstall" {
+					uninstalled = true
+				}
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+		tgz := filepath.Join(t.TempDir(), "chart.tgz")
+		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", false, true, true, false, "", nil, nil); err != nil {
+			t.Fatalf("install failed: %v", err)
+		}
+		if !uninstalled {
+			t.Fatalf("expected helm uninstall of the failed release before reinstall; calls: %v", f.calls)
+		}
+		// And the reinstall still happens afterwards.
+		_ = findHelmUpgradeCall(t, f.calls)
+	})
+
+	// A healthy "deployed" release must NOT be uninstalled — the normal
+	// idempotent upgrade path applies.
+	t.Run("deployed_release_is_not_uninstalled", func(t *testing.T) {
+		var uninstalled bool
+		f := &fakeChartExec{
+			results: map[string]fakeExecResult{
+				"helm status ts0 -n ts0 -o json": {out: []byte(`{"info":{"status":"deployed"}}`)},
+			},
+			fallback: func(name string, args []string) ([]byte, error) {
+				if name == "helm" && len(args) > 0 && args[0] == "uninstall" {
+					uninstalled = true
+				}
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+		tgz := filepath.Join(t.TempDir(), "chart.tgz")
+		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", false, true, true, false, "", nil, nil); err != nil {
+			t.Fatalf("install failed: %v", err)
+		}
+		if uninstalled {
+			t.Fatalf("deployed release should not be uninstalled; calls: %v", f.calls)
 		}
 	})
 
@@ -301,19 +389,10 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		}
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, false, false, "", nil, nil); err != nil {
 			t.Fatalf("backend chart install failed: %v", err)
 		}
-		var helmCalls [][]string
-		for _, c := range f.calls {
-			if len(c) > 0 && c[0] == "helm" {
-				helmCalls = append(helmCalls, c)
-			}
-		}
-		if len(helmCalls) != 1 {
-			t.Fatalf("want 1 helm call, got %d: %v", len(helmCalls), helmCalls)
-		}
-		call := helmCalls[0]
+		call := findHelmUpgradeCall(t, f.calls)
 		if !containsArg(call, "-f") {
 			t.Fatalf("expected helm values file flag, got %v", call)
 		}
@@ -380,7 +459,7 @@ func TestPedestalChartInstallApplyOverrides(t *testing.T) {
 		f := captureValues(t, &got)
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, false, false, "", nil, nil); err != nil {
 			t.Fatalf("install: %v", err)
 		}
 		if !strings.Contains(got, "otel/opentelemetry-collector-contrib") {
@@ -403,7 +482,7 @@ func TestPedestalChartInstallApplyOverrides(t *testing.T) {
 		f := captureValues(t, &got)
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, false, true, "", nil, nil); err != nil {
 			t.Fatalf("install: %v", err)
 		}
 		if !strings.Contains(got, mergedRepo) {
@@ -432,7 +511,7 @@ func TestPedestalChartInstallApplyOverrides(t *testing.T) {
 		f := &fakeChartExec{fallback: func(name string, args []string) ([]byte, error) { return []byte("ok"), nil }}
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, "1.0.7", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, false, true, "1.0.7", nil, nil); err != nil {
 			t.Fatalf("install: %v", err)
 		}
 		if gotQuery != "1.0.7" {
@@ -461,7 +540,7 @@ func TestPedestalChartInstallApplyOverrides(t *testing.T) {
 		f := &fakeChartExec{fallback: func(name string, args []string) ([]byte, error) { return []byte("ok"), nil }}
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, "", nil, nil); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, false, true, "", nil, nil); err != nil {
 			t.Fatalf("install: %v", err)
 		}
 		var sawValuesFlag bool
@@ -507,4 +586,21 @@ func containsArg(args []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// findHelmUpgradeCall returns the single `helm upgrade --install` invocation,
+// skipping the `helm status` desync probe that runs first. Fails the test if
+// there isn't exactly one upgrade call.
+func findHelmUpgradeCall(t *testing.T, calls [][]string) []string {
+	t.Helper()
+	var found [][]string
+	for _, c := range calls {
+		if len(c) >= 2 && c[0] == "helm" && c[1] == "upgrade" {
+			found = append(found, c)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("want 1 helm upgrade call, got %d: %v", len(found), calls)
+	}
+	return found[0]
 }
