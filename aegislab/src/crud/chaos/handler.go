@@ -149,6 +149,53 @@ func (h *Handler) ImportPoints(c *gin.Context) {
 	dto.SuccessResponse(c, res)
 }
 
+type sweepPointsReq struct {
+	ActivePointIDs []string `json:"active_point_ids"`
+}
+
+// SweepPoints deprecates every active Point in a system that is absent from
+// the supplied authoritative id set. It reconciles the live catalog after an
+// import-dir run so zombie points (whose natural key drifted out of the
+// manifest set and were therefore never superseded) are retired.
+//
+//	@Summary		Sweep (deprecate) stale chaos Points
+//	@Description	Mark every status='active' Point in the system whose id is absent from active_point_ids as 'deprecated'. The set must be non-empty (an empty set is rejected to avoid deprecating the whole system).
+//	@Tags			Chaos
+//	@ID				chaos_sweep_points
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			sys		path		string										true	"System name"
+//	@Param			request	body		ChaosSweepPointsReq							true	"Authoritative active Point id set"
+//	@Success		200		{object}	dto.GenericResponse[ChaosSweepPointsResp]	"Sweep summary"
+//	@Failure		400		{object}	dto.GenericResponse[any]					"Empty active_point_ids set or invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		404		{object}	dto.GenericResponse[any]					"System not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/v1beta/systems/{sys}/points/sweep [post]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) SweepPoints(c *gin.Context) {
+	sysName := c.Param("sys")
+	var req sweepPointsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	deprecated, err := h.Mgr.SweepPoints(c.Request.Context(), sysName, req.ActivePointIDs)
+	if err != nil {
+		code := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, ErrSweepEmpty):
+			code = http.StatusBadRequest
+		case errors.Is(err, ErrSystemNotFound):
+			code = http.StatusNotFound
+		}
+		dto.ErrorResponse(c, code, err.Error())
+		return
+	}
+	dto.SuccessResponse(c, ChaosSweepPointsResp{Deprecated: deprecated})
+}
+
 type createInjectionReq struct {
 	PointID        string         `json:"point_id"         binding:"required"`
 	Namespace      string         `json:"namespace"        binding:"required"`

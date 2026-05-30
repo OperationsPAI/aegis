@@ -65,6 +65,7 @@ func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.Route
 			auth.GET("/systems/:sys/points", h.ListSystemPoints)
 			auth.GET("/systems/:sys/points/export", h.ExportSystemPoints)
 			auth.POST("/systems/:sys/points/import", h.ImportPoints)
+			auth.POST("/systems/:sys/points/sweep", h.SweepPoints)
 			auth.GET("/systems/:sys/candidates", h.ListSystemCandidates)
 
 			auth.POST("/guided/resolve", h.GuidedResolve)

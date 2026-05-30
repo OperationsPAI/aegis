@@ -185,6 +185,84 @@ func TestImportPoints_BatchUpsert_LargeManifest(t *testing.T) {
 	}
 }
 
+// TestSweepPoints_DeprecatesAbsent: after importing two services' worth of
+// active points, sweeping with a subset of their ids deprecates every active
+// point not in the set — across services — while the kept ids stay active.
+func TestSweepPoints_DeprecatesAbsent(t *testing.T) {
+	mgr := newImportTestManager(t)
+
+	frontend := baseManifest()
+	frontend.Spec.ReplaceScope = ReplaceScopeNone
+	frontend.Spec.Points = []PointManifestEntry{
+		{Capability: "pod_kill", Target: map[string]any{"namespace": "ts", "app": "frontend"}},
+		{Capability: "pod_failure", Target: map[string]any{"namespace": "ts", "app": "frontend"}},
+	}
+	fRes, err := mgr.ImportPoints(t.Context(), "ts", frontend, false)
+	if err != nil {
+		t.Fatalf("import frontend: %v", err)
+	}
+
+	cart := PointManifest{
+		APIVersion: "aegis-chaos/v1beta", Kind: "PointManifest",
+		Metadata: PointManifestMetadata{System: "ts", Service: "cart", ChartVersion: "v1.0.0"},
+		Spec: PointManifestSpec{
+			ReplaceScope: ReplaceScopeNone,
+			Points: []PointManifestEntry{
+				{Capability: "pod_kill", Target: map[string]any{"namespace": "ts", "app": "cart"}},
+			},
+		},
+	}
+	cRes, err := mgr.ImportPoints(t.Context(), "ts", cart, false)
+	if err != nil {
+		t.Fatalf("import cart: %v", err)
+	}
+
+	// Keep only the first frontend point + the cart point active.
+	keep := []string{fRes.PointIDs[0], cRes.PointIDs[0]}
+	deprecated, err := mgr.SweepPoints(t.Context(), "ts", keep)
+	if err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if deprecated != 1 {
+		t.Fatalf("expected 1 deprecated (the second frontend point), got %d", deprecated)
+	}
+
+	var active, dep int64
+	mgr.DB.Model(&Point{}).Where("status = ?", PointActive).Count(&active)
+	mgr.DB.Model(&Point{}).Where("status = ?", PointDeprecated).Count(&dep)
+	if active != 2 || dep != 1 {
+		t.Fatalf("expected active=2 deprecated=1; got active=%d deprecated=%d", active, dep)
+	}
+
+	// Idempotent: a second sweep with the same kept set deprecates nothing.
+	again, err := mgr.SweepPoints(t.Context(), "ts", keep)
+	if err != nil {
+		t.Fatalf("re-sweep: %v", err)
+	}
+	if again != 0 {
+		t.Fatalf("re-sweep should deprecate 0, got %d", again)
+	}
+}
+
+// TestSweepPoints_RejectsEmptySet: an empty active_point_ids set must be
+// refused so a caller can't accidentally deprecate the whole system.
+func TestSweepPoints_RejectsEmptySet(t *testing.T) {
+	mgr := newImportTestManager(t)
+	m := baseManifest()
+	m.Spec.ReplaceScope = ReplaceScopeNone
+	if _, err := mgr.ImportPoints(t.Context(), "ts", m, false); err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if _, err := mgr.SweepPoints(t.Context(), "ts", nil); err == nil {
+		t.Fatalf("expected empty-set rejection")
+	}
+	var active int64
+	mgr.DB.Model(&Point{}).Where("status = ?", PointActive).Count(&active)
+	if active != 1 {
+		t.Fatalf("rejected sweep must not touch points; active=%d", active)
+	}
+}
+
 func TestValidateManifest_NormalisesInstance(t *testing.T) {
 	m := baseManifest()
 	m.Metadata.Instance = ""

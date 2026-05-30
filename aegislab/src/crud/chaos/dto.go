@@ -74,10 +74,10 @@ type ChaosCapabilityResp struct {
 // ChaosImportPointsReq is the manifest envelope POSTed to
 // /v1beta/systems/{sys}/points/import.
 type ChaosImportPointsReq struct {
-	APIVersion string                        `json:"apiVersion" example:"aegis-chaos/v1beta"`
-	Kind       string                        `json:"kind"       example:"PointManifest"`
-	Metadata   ChaosImportPointsReqMetadata  `json:"metadata"`
-	Spec       ChaosImportPointsReqSpec      `json:"spec"`
+	APIVersion string                       `json:"apiVersion" example:"aegis-chaos/v1beta"`
+	Kind       string                       `json:"kind"       example:"PointManifest"`
+	Metadata   ChaosImportPointsReqMetadata `json:"metadata"`
+	Spec       ChaosImportPointsReqSpec     `json:"spec"`
 }
 
 type ChaosImportPointsReqMetadata struct {
@@ -88,8 +88,8 @@ type ChaosImportPointsReqMetadata struct {
 }
 
 type ChaosImportPointsReqSpec struct {
-	ReplaceScope string                       `json:"replace_scope" example:"service"`
-	Points       []ChaosImportPointsReqEntry  `json:"points"`
+	ReplaceScope string                      `json:"replace_scope" example:"service"`
+	Points       []ChaosImportPointsReqEntry `json:"points"`
 }
 
 type ChaosImportPointsReqEntry struct {
@@ -104,6 +104,19 @@ type ChaosImportPointsResp struct {
 	Superseded int      `json:"superseded"`
 	DryRun     bool     `json:"dry_run"`
 	PointIDs   []string `json:"point_ids"`
+}
+
+// ChaosSweepPointsReq is the request body for
+// POST /v1beta/systems/{sys}/points/sweep. ActivePointIDs is the
+// authoritative set of Point ids that should remain active; every other
+// active Point in the system is deprecated. It MUST be non-empty.
+type ChaosSweepPointsReq struct {
+	ActivePointIDs []string `json:"active_point_ids"`
+}
+
+// ChaosSweepPointsResp reports how many Points the sweep deprecated.
+type ChaosSweepPointsResp struct {
+	Deprecated int `json:"deprecated"`
 }
 
 // ChaosCreateBatchChildReq is one child entry inside a batch submission.

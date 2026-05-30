@@ -390,39 +390,60 @@ func runManifestImportDir(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func importDirFile(ctx context.Context, cli *apiclient.APIClient, file string) importDirOutcome {
-	o := importDirOutcome{File: file}
+// classifiedManifest is the result of inspecting one file on disk: either a
+// parsed import request, a non-manifest file to skip, or a hard error. System
+// is filled best-effort whenever the file carried a metadata.system — even on
+// a parse error — so reconcile-dir can mark that system's sweep unsafe.
+type classifiedManifest struct {
+	Req        apiclient.ChaosChaosImportPointsReq
+	System     string
+	Skipped    bool
+	SkipReason string
+	Err        error
+}
+
+func classifyManifestFile(file string) classifiedManifest {
 	raw, err := os.ReadFile(file)
 	if err != nil {
-		o.Err = fmt.Errorf("read: %w", err)
-		return o
+		return classifiedManifest{Err: fmt.Errorf("read: %w", err)}
 	}
 	docJSON, err := sigsyaml.YAMLToJSON(raw)
 	if err != nil {
-		o.Skipped = true
-		o.SkipReason = "not valid YAML"
-		return o
+		return classifiedManifest{Skipped: true, SkipReason: "not valid YAML"}
 	}
 	var probe struct {
 		APIVersion string `json:"apiVersion"`
 		Kind       string `json:"kind"`
+		Metadata   struct {
+			System string `json:"system"`
+		} `json:"metadata"`
 	}
 	if err := json.Unmarshal(docJSON, &probe); err != nil {
-		o.Skipped = true
-		o.SkipReason = "not a Kubernetes-style document"
-		return o
+		return classifiedManifest{Skipped: true, SkipReason: "not a Kubernetes-style document"}
 	}
 	if probe.APIVersion != "aegis-chaos/v1beta" || probe.Kind != "PointManifest" {
-		o.Skipped = true
-		o.SkipReason = fmt.Sprintf("apiVersion=%q kind=%q (want aegis-chaos/v1beta/PointManifest)", probe.APIVersion, probe.Kind)
-		return o
+		return classifiedManifest{Skipped: true, SkipReason: fmt.Sprintf("apiVersion=%q kind=%q (want aegis-chaos/v1beta/PointManifest)", probe.APIVersion, probe.Kind)}
 	}
 	req, system, err := manifestToImportReq(raw)
 	if err != nil {
-		o.Err = err
+		return classifiedManifest{System: probe.Metadata.System, Err: err}
+	}
+	return classifiedManifest{Req: req, System: system}
+}
+
+func importDirFile(ctx context.Context, cli *apiclient.APIClient, file string) importDirOutcome {
+	o := importDirOutcome{File: file}
+	c := classifyManifestFile(file)
+	if c.Err != nil {
+		o.Err = c.Err
 		return o
 	}
-	resp, err := importManifest(ctx, cli, system, req, flagDryRun)
+	if c.Skipped {
+		o.Skipped = true
+		o.SkipReason = c.SkipReason
+		return o
+	}
+	resp, err := importManifest(ctx, cli, c.System, c.Req, flagDryRun)
 	if err != nil {
 		o.Err = err
 		return o
