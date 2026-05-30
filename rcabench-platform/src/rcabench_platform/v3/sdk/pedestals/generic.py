@@ -124,6 +124,7 @@ class OtelDemoPedestal(GenericPedestal):
 
 
 @register_pedestal("tea")
+@register_pedestal("teastore")
 class TeaStorePedestal(GenericPedestal):
     _NAME = "tea"
     _ENTRANCE = "teastore-webui"
@@ -141,6 +142,7 @@ class SocialNetworkPedestal(GenericPedestal):
 
 
 @register_pedestal("mm")
+@register_pedestal("media")
 class MediaMicroservicesPedestal(GenericPedestal):
     _NAME = "mm"
     _ENTRANCE = "nginx-web-server"
