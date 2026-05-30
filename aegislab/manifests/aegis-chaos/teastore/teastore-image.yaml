@@ -11,12 +11,12 @@ spec:
     - capability: "container_kill"
       target:
         app: "image"
-        container: "teastore-image"
+        container: "image"
         namespace: "teastore"
     - capability: "cpu_stress"
       target:
         app: "image"
-        container: "teastore-image"
+        container: "image"
         namespace: "teastore"
     - capability: "http_request_abort"
       target:
@@ -711,7 +711,7 @@ spec:
     - capability: "memory_stress"
       target:
         app: "image"
-        container: "teastore-image"
+        container: "image"
         namespace: "teastore"
     - capability: "pod_failure"
       target:
@@ -724,5 +724,5 @@ spec:
     - capability: "time_skew"
       target:
         app: "image"
-        container: "teastore-image"
+        container: "image"
         namespace: "teastore"

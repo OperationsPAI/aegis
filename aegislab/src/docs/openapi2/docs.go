@@ -19892,6 +19892,80 @@ const docTemplate = `{
                     "sdk": "true"
                 }
             }
+        },
+        "/v1beta/systems/{sys}/points/sweep": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark every status='active' Point in the system whose id is absent from active_point_ids as 'deprecated'. The set must be non-empty (an empty set is rejected to avoid deprecating the whole system).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Sweep (deprecate) stale chaos Points",
+                "operationId": "chaos_sweep_points",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System name",
+                        "name": "sys",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Authoritative active Point id set",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chaos.ChaosSweepPointsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sweep summary",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosSweepPointsResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Empty active_point_ids set or invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "System not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
         }
     },
     "definitions": {
@@ -21176,6 +21250,25 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "chaos.ChaosSweepPointsReq": {
+            "type": "object",
+            "properties": {
+                "active_point_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "chaos.ChaosSweepPointsResp": {
+            "type": "object",
+            "properties": {
+                "deprecated": {
+                    "type": "integer"
                 }
             }
         },
@@ -24835,6 +24928,31 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/chaos.ChaosListPointsResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaos_ChaosSweepPointsResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosSweepPointsResp"
                         }
                     ]
                 },

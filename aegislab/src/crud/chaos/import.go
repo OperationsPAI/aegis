@@ -31,8 +31,8 @@ type PointManifestMetadata struct {
 }
 
 type PointManifestSpec struct {
-	ReplaceScope string                `json:"replace_scope" yaml:"replace_scope"`
-	Points       []PointManifestEntry  `json:"points"        yaml:"points"`
+	ReplaceScope string               `json:"replace_scope" yaml:"replace_scope"`
+	Points       []PointManifestEntry `json:"points"        yaml:"points"`
 }
 
 type PointManifestEntry struct {
@@ -186,6 +186,48 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 	}
 	committed = true
 	return out, nil
+}
+
+// ErrSweepEmpty guards against deprecating an entire system: a sweep with no
+// active_point_ids would mark every active Point deprecated, which is almost
+// always an accidental empty-set call rather than an intentional teardown.
+var ErrSweepEmpty = errors.New("chaos: sweep requires a non-empty active_point_ids set")
+
+// SweepPoints reconciles the active catalog for a system against an
+// authoritative set of Point ids. Every status='active' Point in the system
+// whose id is absent from activeIDs transitions to 'deprecated' in one
+// transaction. This is the catalog counterpart to ImportPoints's
+// replace_scope=service supersede: import only supersedes points that share a
+// service identity, so points whose natural key drifted out of the manifest
+// set (e.g. a renamed service prefix) survive as zombies until a sweep
+// retires them. Deprecation is soft (reversible, auditable) — points are
+// never hard-deleted.
+func (s *Manager) SweepPoints(ctx context.Context, systemName string, activeIDs []string) (int, error) {
+	if len(activeIDs) == 0 {
+		return 0, ErrSweepEmpty
+	}
+	if _, err := s.GetSystem(ctx, systemName); err != nil {
+		return 0, err
+	}
+
+	var deprecated int
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Point{}).
+			Where("system_name = ? AND status = ? AND id NOT IN ?", systemName, PointActive, activeIDs).
+			Updates(map[string]any{
+				"status":     PointDeprecated,
+				"updated_at": time.Now().UTC(),
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		deprecated = int(res.RowsAffected)
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return deprecated, nil
 }
 
 func validateManifest(systemName string, m *PointManifest) error {

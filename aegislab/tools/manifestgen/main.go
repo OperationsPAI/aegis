@@ -154,10 +154,12 @@ var orderedSystems = []string{"hs", "media", "ob", "oteldemo", "sn", "sockshop",
 
 // appLabel maps a chaos-experiment service-data key to the pod app-label
 // value used in chaos targets. For teastore the trace-derived data keys
-// carry the deployment prefix (teastore-webui) but the pods are labelled
-// with the short name (webui); chaos addresses pods by the app label, so
-// targets and metadata.service use the stripped form. The deployment name
-// (filename and target.container) keeps the full key.
+// carry the deployment prefix (teastore-webui) but the fork chart names the
+// pod app label, the deployment, and container[0] all with the short name
+// (webui); chaos addresses pods (app) and containers (container) by that
+// short name, so every target field and metadata.service use the stripped
+// form. Only the output filename keeps the full key (avoids churning the
+// existing per-service manifest filenames).
 func appLabel(sysKey, service string) string {
 	if sysKey == "teastore" {
 		return strings.TrimPrefix(service, "teastore-")
@@ -411,17 +413,17 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 // from the historical base behavior).
 func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []point {
 	ns := d.namespace
-	// WHY container=service: chaos-experiment data carries no container
-	// name, but the 8 benchmark charts all follow the k8s convention
-	// deployment.name == pod.label.app == container[0].name. Defaulting
-	// container=service lets us emit container_kill / cpu_stress /
-	// memory_stress / time_skew whose seed target_schema requires
-	// `container`. If a benchmark ever deviates, the rendered chaos-mesh
-	// CR will no-op against a non-existent container — loud runtime
-	// failure beats silent fudging at manifest time.
+	// WHY container=app: chaos-experiment data carries no container name,
+	// but the 8 benchmark charts all follow the k8s convention
+	// pod.label.app == container[0].name. Defaulting container to the app
+	// label lets us emit container_kill / cpu_stress / memory_stress /
+	// time_skew whose seed target_schema requires `container`. If a
+	// benchmark ever deviates, the rendered chaos-mesh CR will no-op
+	// against a non-existent container — loud runtime failure beats silent
+	// fudging at manifest time.
 	app := appLabel(d.sysKey, service)
 	appOnly := map[string]any{"namespace": ns, "app": app}
-	withContainer := map[string]any{"namespace": ns, "app": app, "container": service}
+	withContainer := map[string]any{"namespace": ns, "app": app, "container": app}
 	pts := []point{
 		{Capability: "container_kill", Target: cloneTarget(withContainer)},
 		{Capability: "cpu_stress", Target: cloneTarget(withContainer)},

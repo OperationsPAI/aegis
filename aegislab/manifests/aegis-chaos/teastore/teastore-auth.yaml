@@ -11,12 +11,12 @@ spec:
     - capability: "container_kill"
       target:
         app: "auth"
-        container: "teastore-auth"
+        container: "auth"
         namespace: "teastore"
     - capability: "cpu_stress"
       target:
         app: "auth"
-        container: "teastore-auth"
+        container: "auth"
         namespace: "teastore"
     - capability: "http_request_abort"
       target:
@@ -249,7 +249,7 @@ spec:
     - capability: "memory_stress"
       target:
         app: "auth"
-        container: "teastore-auth"
+        container: "auth"
         namespace: "teastore"
     - capability: "pod_failure"
       target:
@@ -262,5 +262,5 @@ spec:
     - capability: "time_skew"
       target:
         app: "auth"
-        container: "teastore-auth"
+        container: "auth"
         namespace: "teastore"

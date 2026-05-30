@@ -11,12 +11,12 @@ spec:
     - capability: "container_kill"
       target:
         app: "persistence"
-        container: "teastore-persistence"
+        container: "persistence"
         namespace: "teastore"
     - capability: "cpu_stress"
       target:
         app: "persistence"
-        container: "teastore-persistence"
+        container: "persistence"
         namespace: "teastore"
     - capability: "http_request_abort"
       target:
@@ -1395,7 +1395,7 @@ spec:
     - capability: "memory_stress"
       target:
         app: "persistence"
-        container: "teastore-persistence"
+        container: "persistence"
         namespace: "teastore"
     - capability: "pod_failure"
       target:
@@ -1408,5 +1408,5 @@ spec:
     - capability: "time_skew"
       target:
         app: "persistence"
-        container: "teastore-persistence"
+        container: "persistence"
         namespace: "teastore"

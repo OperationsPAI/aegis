@@ -862,6 +862,18 @@ definitions:
       updated_at:
         type: string
     type: object
+  chaos.ChaosSweepPointsReq:
+    properties:
+      active_point_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  chaos.ChaosSweepPointsResp:
+    properties:
+      deprecated:
+        type: integer
+    type: object
   chaos.ChaosSystemCandidatesResp:
     properties:
       candidates:
@@ -3428,6 +3440,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/chaos.ChaosListPointsResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosSweepPointsResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosSweepPointsResp'
         description: Generic type data
       message:
         description: Response message
@@ -22615,6 +22643,56 @@ paths:
       security:
       - BearerAuth: []
       summary: Import chaos Points from a manifest
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}/points/sweep:
+    post:
+      consumes:
+      - application/json
+      description: Mark every status='active' Point in the system whose id is absent
+        from active_point_ids as 'deprecated'. The set must be non-empty (an empty
+        set is rejected to avoid deprecating the whole system).
+      operationId: chaos_sweep_points
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: Authoritative active Point id set
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosSweepPointsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sweep summary
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosSweepPointsResp'
+        "400":
+          description: Empty active_point_ids set or invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: System not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Sweep (deprecate) stale chaos Points
       tags:
       - Chaos
       x-api-type:
