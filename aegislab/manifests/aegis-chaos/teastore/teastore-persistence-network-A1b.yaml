@@ -12,29 +12,41 @@ spec:
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"
     - capability: "network_corrupt"
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"
     - capability: "network_delay"
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"
     - capability: "network_duplicate"
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"
     - capability: "network_loss"
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"
     - capability: "network_partition"
       target:
         namespace: "teastore"
         source_app: "persistence"
+        span_names:
+          - "PUT"
         target_service: "registry"

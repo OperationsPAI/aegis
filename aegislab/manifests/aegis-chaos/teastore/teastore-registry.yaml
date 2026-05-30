@@ -25,6 +25,8 @@ spec:
         namespace: "teastore"
         path: "/rest/services/*"
         port: 8080
+        server_address: "teastore-webui"
+        span_name: "GET /rest/services/{name}"
     - capability: "http_request_abort"
       target:
         app: "registry"
@@ -32,6 +34,8 @@ spec:
         namespace: "teastore"
         path: "/rest/services/*/*"
         port: 8080
+        server_address: "teastore-webui"
+        span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_request_delay"
       target:
         app: "registry"
@@ -39,6 +43,8 @@ spec:
         namespace: "teastore"
         path: "/rest/services/*"
         port: 8080
+        server_address: "teastore-webui"
+        span_name: "GET /rest/services/{name}"
     - capability: "http_request_delay"
       target:
         app: "registry"
@@ -46,6 +52,8 @@ spec:
         namespace: "teastore"
         path: "/rest/services/*/*"
         port: 8080
+        server_address: "teastore-webui"
+        span_name: "PUT /rest/services/{name}/{location}"
     - capability: "jvm_method_latency"
       target:
         app: "registry"

@@ -12,29 +12,41 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-order-other-service"
+        span_names:
+          - "DELETE ts.orders_other"
         target_service: "mysql"

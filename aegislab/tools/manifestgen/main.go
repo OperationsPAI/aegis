@@ -76,6 +76,63 @@ func normalizePath(p string) string {
 	return strings.Join(segs, "/")
 }
 
+var (
+	uuidSegment    = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	tripIDSegment  = regexp.MustCompile(`^[A-Z]{1,3}\d+$`)
+	numericSegment = regexp.MustCompile(`^\d+$`)
+)
+
+// normalizeSpanName collapses high-cardinality segments of a span name's path
+// into named placeholders ({uuid}/{tripid}/{id}) so distinct concrete spans
+// fold to one groundtruth template. A span name is "METHOD /path[ suffix]";
+// only the slash-delimited segments of the path part are rewritten — the
+// method prefix and any non-path tokens are preserved verbatim.
+func normalizeSpanName(s string) string {
+	fields := strings.SplitN(s, " ", 2)
+	if len(fields) != 2 {
+		return s
+	}
+	method, rest := fields[0], fields[1]
+	segs := strings.Split(rest, "/")
+	for i, seg := range segs {
+		switch {
+		case uuidSegment.MatchString(seg):
+			segs[i] = "{uuid}"
+		case tripIDSegment.MatchString(seg):
+			segs[i] = "{tripid}"
+		case numericSegment.MatchString(seg):
+			segs[i] = "{id}"
+		}
+	}
+	return method + " " + strings.Join(segs, "/")
+}
+
+var staticResourceExts = map[string]struct{}{
+	".css": {}, ".js": {}, ".png": {}, ".jpg": {}, ".jpeg": {}, ".gif": {},
+	".ico": {}, ".svg": {}, ".woff": {}, ".woff2": {}, ".ttf": {}, ".eot": {}, ".map": {},
+}
+
+var staticResourcePrefixes = []string{"/assets/", "/css/", "/js/", "/img/", "/fonts/", "/static/"}
+
+// isStaticResource reports whether a route serves a static asset rather than a
+// service endpoint. Chaos on these is noise — they bypass application logic.
+func isStaticResource(route string) bool {
+	if i := strings.LastIndex(route, "/"); i >= 0 {
+		last := route[i:]
+		if dot := strings.LastIndex(last, "."); dot >= 0 {
+			if _, ok := staticResourceExts[strings.ToLower(last[dot:])]; ok {
+				return true
+			}
+		}
+	}
+	for _, p := range staticResourcePrefixes {
+		if strings.HasPrefix(route, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // systemDisplay is the value written into metadata.system, the output
 // folder name, and the target namespace. It is the canonical SystemType
 // (e.g. "otel-demo"); the seed manifests use it as the namespace because
@@ -440,17 +497,28 @@ func httpTarget(ns, service string, e httpEndpoint) (map[string]any, bool) {
 	if !isAllowedHTTPMethod(method) {
 		return nil, false
 	}
-	path := normalizePath(strings.TrimSpace(e.Route))
+	rawPath := strings.TrimSpace(e.Route)
+	if isStaticResource(rawPath) {
+		return nil, false
+	}
+	path := normalizePath(rawPath)
 	if path == "" {
 		return nil, false
 	}
-	return map[string]any{
+	t := map[string]any{
 		"namespace": ns,
 		"app":       service,
 		"port":      port,
 		"method":    method,
 		"path":      path,
-	}, true
+	}
+	if e.ServerAddress != "" {
+		t["server_address"] = e.ServerAddress
+	}
+	if sn := strings.TrimSpace(e.SpanName); sn != "" {
+		t["span_name"] = normalizeSpanName(sn)
+	}
+	return t, true
 }
 
 // buildDNSPoints derives (app, domain) pairs from each service's endpoint
@@ -486,22 +554,37 @@ func buildDNSPoints(service string, d *systemData) []point {
 // service's endpoint ServerAddress values (excluding self) and emits the 6
 // network caps per pair.
 func buildNetworkPoints(service string, d *systemData) []point {
-	targets := map[string]struct{}{}
+	spansByTarget := map[string]map[string]struct{}{}
 	for _, e := range d.endpoints[service] {
 		if e.ServerAddress == "" || e.ServerAddress == service {
 			continue
 		}
-		targets[appLabel(d.sysKey, e.ServerAddress)] = struct{}{}
+		target := appLabel(d.sysKey, e.ServerAddress)
+		if spansByTarget[target] == nil {
+			spansByTarget[target] = map[string]struct{}{}
+		}
+		if sn := strings.TrimSpace(e.SpanName); sn != "" {
+			spansByTarget[target][normalizeSpanName(sn)] = struct{}{}
+		}
 	}
 	app := appLabel(d.sysKey, service)
 	var pts []point
-	for _, target := range sortedKeys(targets) {
+	for _, target := range sortedKeys(spansByTarget) {
+		spanNames := sortedKeys(spansByTarget[target])
 		for _, cap := range networkCaps {
-			pts = append(pts, point{Capability: cap, Target: map[string]any{
+			tgt := map[string]any{
 				"namespace":      d.namespace,
 				"source_app":     app,
 				"target_service": target,
-			}})
+			}
+			if len(spanNames) > 0 {
+				arr := make([]any, len(spanNames))
+				for i, s := range spanNames {
+					arr[i] = s
+				}
+				tgt["span_names"] = arr
+			}
+			pts = append(pts, point{Capability: cap, Target: tgt})
 		}
 	}
 	return pts
@@ -803,14 +886,29 @@ func dedupHTTP(d *systemData) {
 			seen[k] = struct{}{}
 			out = append(out, e)
 		}
+		// Order so that within one normalized (method, path, port) group the
+		// richest span_name sorts first — http point dedup keeps the first
+		// endpoint per group, and a templated span like
+		// "DELETE /adminorder/{uuid}/{tripid}" is a better groundtruth label
+		// than a bare "DELETE". Group by normalized path first so collapsing
+		// endpoints land adjacent regardless of their raw (pre-normalization)
+		// route.
 		sort.SliceStable(out, func(i, j int) bool {
-			if out[i].Route != out[j].Route {
-				return out[i].Route < out[j].Route
+			ni, nj := normalizePath(out[i].Route), normalizePath(out[j].Route)
+			if ni != nj {
+				return ni < nj
 			}
 			if out[i].Method != out[j].Method {
 				return out[i].Method < out[j].Method
 			}
-			return out[i].Port < out[j].Port
+			if out[i].Port != out[j].Port {
+				return out[i].Port < out[j].Port
+			}
+			si, sj := normalizeSpanName(out[i].SpanName), normalizeSpanName(out[j].SpanName)
+			if len(si) != len(sj) {
+				return len(si) > len(sj)
+			}
+			return si < sj
 		})
 		d.endpoints[svc] = out
 	}

@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "http_request_delay"
       target:
         app: "fraud-detection"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "memory_stress"
       target:
         app: "fraud-detection"

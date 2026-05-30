@@ -12,29 +12,41 @@ spec:
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"
     - capability: "network_corrupt"
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"
     - capability: "network_delay"
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"
     - capability: "network_duplicate"
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"
     - capability: "network_loss"
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"
     - capability: "network_partition"
       target:
         namespace: "otel-demo"
         source_app: "email"
+        span_names:
+          - "POST /send_order_confirmation"
         target_service: "checkout"

@@ -93,6 +93,8 @@ func networkTarget(extra map[string]any, extraRequired ...string) map[string]any
 		"source_app":     str(1),
 		"target_service": str(1),
 		"direction":      map[string]any{"type": "string", "enum": []any{"to", "from", "both"}, "default": "to"},
+		// Optional groundtruth metadata; the CR renderer ignores it.
+		"span_names": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 	}
 	required := []string{"namespace", "source_app", "target_service"}
 	for k, v := range extra {
@@ -110,6 +112,9 @@ func httpTarget(extra map[string]any, extraRequired ...string) map[string]any {
 		"port":      map[string]any{"type": "integer", "minimum": 1, "maximum": 65535},
 		"method":    map[string]any{"type": "string", "enum": []any{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"}},
 		"path":      str(1),
+		// Optional groundtruth metadata; the CR renderer ignores it.
+		"server_address": map[string]any{"type": "string"},
+		"span_name":      map[string]any{"type": "string"},
 	}
 	required := []string{"namespace", "app", "port", "method", "path"}
 	for k, v := range extra {

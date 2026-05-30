@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CurrencyService/Convert"
         port: 8080
+        server_address: "currency"
+        span_name: "Currency/Convert"
     - capability: "http_request_delay"
       target:
         app: "currency"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CurrencyService/Convert"
         port: 8080
+        server_address: "currency"
+        span_name: "Currency/Convert"
     - capability: "memory_stress"
       target:
         app: "currency"

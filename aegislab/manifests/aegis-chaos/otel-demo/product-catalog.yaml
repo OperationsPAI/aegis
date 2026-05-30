@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/GetProduct"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/GetProduct"
     - capability: "http_request_abort"
       target:
         app: "product-catalog"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/ListProducts"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/ListProducts"
     - capability: "http_request_delay"
       target:
         app: "product-catalog"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/GetProduct"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/GetProduct"
     - capability: "http_request_delay"
       target:
         app: "product-catalog"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/ListProducts"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/ListProducts"
     - capability: "memory_stress"
       target:
         app: "product-catalog"

@@ -12,179 +12,269 @@ spec:
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_bandwidth"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_bandwidth"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_bandwidth"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_bandwidth"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_bandwidth"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_corrupt"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_delay"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_duplicate"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_loss"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
         target_service: "attractions"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
         target_service: "profile"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
         target_service: "recommendation"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
         target_service: "reservation"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
         target_service: "search"
     - capability: "network_partition"
       target:
         namespace: "hs"
         source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
         target_service: "user"

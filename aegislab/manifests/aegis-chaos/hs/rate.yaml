@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/rate.Rate/GetRates"
         port: 8084
+        server_address: "rate"
+        span_name: "rate.Rate/GetRates"
     - capability: "http_request_delay"
       target:
         app: "rate"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/rate.Rate/GetRates"
         port: 8084
+        server_address: "rate"
+        span_name: "rate.Rate/GetRates"
     - capability: "memory_stress"
       target:
         app: "rate"

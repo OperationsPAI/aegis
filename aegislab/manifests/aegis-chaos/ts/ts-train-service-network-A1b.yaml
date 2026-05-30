@@ -12,29 +12,41 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-train-service"
+        span_names:
+          - "INSERT ts.train_type"
         target_service: "mysql"

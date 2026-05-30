@@ -15,6 +15,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -22,6 +24,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -29,6 +33,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -36,6 +42,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -43,6 +51,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -50,6 +60,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -57,6 +69,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -64,6 +78,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -71,6 +87,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -78,6 +96,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -85,6 +105,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -92,6 +114,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -99,6 +123,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_request_replace_method"
       target:
         app: "ts-basic-service"
@@ -106,6 +132,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -113,6 +141,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -120,6 +150,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -127,6 +159,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -134,6 +168,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -141,6 +177,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -148,6 +186,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -155,6 +195,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -162,6 +204,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -169,6 +213,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -176,6 +222,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -183,6 +231,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -190,6 +240,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -197,6 +249,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_request_replace_path"
       target:
         app: "ts-basic-service"
@@ -204,6 +258,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -211,6 +267,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -218,6 +276,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -225,6 +285,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -232,6 +294,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -239,6 +303,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -246,6 +312,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -253,6 +321,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -260,6 +330,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -267,6 +339,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -274,6 +348,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -281,6 +357,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -288,6 +366,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -295,6 +375,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_response_abort"
       target:
         app: "ts-basic-service"
@@ -302,6 +384,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -309,6 +393,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -316,6 +402,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -323,6 +411,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -330,6 +420,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -337,6 +429,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -344,6 +438,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -351,6 +447,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -358,6 +456,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -365,6 +465,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -372,6 +474,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -379,6 +483,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -386,6 +492,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -393,6 +501,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_response_delay"
       target:
         app: "ts-basic-service"
@@ -400,6 +510,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -407,6 +519,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -414,6 +528,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -421,6 +537,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -428,6 +546,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -435,6 +555,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -442,6 +564,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -449,6 +573,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -456,6 +582,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -463,6 +591,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -470,6 +600,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -477,6 +609,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -484,6 +618,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -491,6 +627,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_response_patch_body"
       target:
         app: "ts-basic-service"
@@ -498,6 +636,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -505,6 +645,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -512,6 +654,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -519,6 +663,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -526,6 +672,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -533,6 +681,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -540,6 +690,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -547,6 +699,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -554,6 +708,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -561,6 +717,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -568,6 +726,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -575,6 +735,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -582,6 +744,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -589,6 +753,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_response_replace_body"
       target:
         app: "ts-basic-service"
@@ -596,6 +762,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -603,6 +771,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/DongCheOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -610,6 +780,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieOne"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -617,6 +789,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/GaoTieTwo"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -624,6 +798,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/KuaiSu"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -631,6 +807,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/TeKuai"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -638,6 +816,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/*/ZhiDa"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -645,6 +825,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -652,6 +834,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/id/*"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -659,6 +843,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byName/*"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -666,6 +852,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/priceservice/prices/byRouteIdsAndTrainTypes"
         port: 8080
+        server_address: "ts-price-service"
+        span_name: "POST"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -673,6 +861,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/*"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -680,6 +870,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes/byIds/"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "POST"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -687,6 +879,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/stationservice/stations/idlist"
         port: 8080
+        server_address: "ts-station-service"
+        span_name: "POST"
     - capability: "http_response_replace_code"
       target:
         app: "ts-basic-service"
@@ -694,3 +888,5 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains/byNames"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "POST"

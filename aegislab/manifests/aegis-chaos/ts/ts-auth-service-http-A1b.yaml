@@ -15,6 +15,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_request_replace_path"
       target:
         app: "ts-auth-service"
@@ -22,6 +24,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_response_abort"
       target:
         app: "ts-auth-service"
@@ -29,6 +33,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_response_delay"
       target:
         app: "ts-auth-service"
@@ -36,6 +42,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_response_patch_body"
       target:
         app: "ts-auth-service"
@@ -43,6 +51,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_response_replace_body"
       target:
         app: "ts-auth-service"
@@ -50,6 +60,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"
     - capability: "http_response_replace_code"
       target:
         app: "ts-auth-service"
@@ -57,3 +69,5 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET"

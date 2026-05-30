@@ -25,6 +25,8 @@ spec:
         namespace: "sn"
         path: "/PostStorageService/ReadPosts"
         port: 9090
+        server_address: "post-storage-service"
+        span_name: "post_storage_read_posts_server"
     - capability: "http_request_delay"
       target:
         app: "post-storage-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "sn"
         path: "/PostStorageService/ReadPosts"
         port: 9090
+        server_address: "post-storage-service"
+        span_name: "post_storage_read_posts_server"
     - capability: "memory_stress"
       target:
         app: "post-storage-service"

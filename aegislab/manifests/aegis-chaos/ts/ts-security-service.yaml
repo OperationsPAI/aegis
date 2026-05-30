@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/security/*/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "ts-security-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/security/*/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-security-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/security/*/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-security-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/security/*/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "jvm_method_latency"
       target:
         app: "ts-security-service"

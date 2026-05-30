@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/read-info"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "/wrk2-api/movie/read-info"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/read-page"
         port: 9090
+        server_address: "page-service"
+        span_name: "/wrk2-api/movie/read-page"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -39,6 +43,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/cast-info/write"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "/wrk2-api/cast-info/write"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -46,6 +52,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie-info/write"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "/wrk2-api/movie-info/write"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -53,6 +61,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/register"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "/wrk2-api/movie/register"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -60,6 +70,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/plot/write"
         port: 9090
+        server_address: "plot-service"
+        span_name: "/wrk2-api/plot/write"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -67,6 +79,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/review/compose"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "/wrk2-api/review/compose"
     - capability: "http_request_abort"
       target:
         app: "nginx-web-server"
@@ -74,6 +88,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/user/register"
         port: 9090
+        server_address: "user-service"
+        span_name: "/wrk2-api/user/register"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -81,6 +97,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/read-info"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "/wrk2-api/movie/read-info"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -88,6 +106,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/read-page"
         port: 9090
+        server_address: "page-service"
+        span_name: "/wrk2-api/movie/read-page"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -95,6 +115,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/cast-info/write"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "/wrk2-api/cast-info/write"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -102,6 +124,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie-info/write"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "/wrk2-api/movie-info/write"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -109,6 +133,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/movie/register"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "/wrk2-api/movie/register"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -116,6 +142,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/plot/write"
         port: 9090
+        server_address: "plot-service"
+        span_name: "/wrk2-api/plot/write"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -123,6 +151,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/review/compose"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "/wrk2-api/review/compose"
     - capability: "http_request_delay"
       target:
         app: "nginx-web-server"
@@ -130,6 +160,8 @@ spec:
         namespace: "media"
         path: "/wrk2-api/user/register"
         port: 9090
+        server_address: "user-service"
+        span_name: "/wrk2-api/user/register"
     - capability: "memory_stress"
       target:
         app: "nginx-web-server"

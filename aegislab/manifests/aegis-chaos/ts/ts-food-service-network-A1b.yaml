@@ -12,149 +12,209 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "mysql"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
-        target_service: "ts-rabbitmq"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
-    - capability: "network_corrupt"
+    - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
         target_service: "mysql"
-    - capability: "network_corrupt"
+    - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
         target_service: "ts-rabbitmq"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
         target_service: "mysql"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
         target_service: "ts-rabbitmq"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
         target_service: "mysql"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
         target_service: "ts-rabbitmq"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
         target_service: "mysql"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
         target_service: "ts-rabbitmq"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
         target_service: "mysql"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
         target_service: "ts-rabbitmq"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
-        target_service: "ts-station-food-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-food-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-food-service"
+        span_names:
+          - "GET"
         target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "INSERT ts.food_order"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST"
+        target_service: "ts-station-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "queue.declare"
+        target_service: "ts-rabbitmq"

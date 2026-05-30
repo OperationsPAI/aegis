@@ -12,89 +12,125 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
+        target_service: "ts-train-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-route-plan-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
-        target_service: "ts-seat-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-travel-plan-service"
-        target_service: "ts-train-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-travel-plan-service"
-        target_service: "ts-route-plan-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-seat-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-service"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-route-plan-service"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-seat-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-service"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-route-plan-service"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-seat-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-service"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-route-plan-service"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-seat-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-service"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-route-plan-service"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
         target_service: "ts-seat-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-travel-plan-service"
+        span_names:
+          - "GET"
         target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
+        target_service: "ts-route-plan-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel-plan-service"
+        span_names:
+          - "POST"
+        target_service: "ts-seat-service"

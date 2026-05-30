@@ -25,6 +25,8 @@ spec:
         namespace: "sn"
         path: "/UserMentionService/ComposeUserMentions"
         port: 9090
+        server_address: "user-mention-service"
+        span_name: "compose_user_mentions_server"
     - capability: "http_request_delay"
       target:
         app: "user-mention-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "sn"
         path: "/UserMentionService/ComposeUserMentions"
         port: 9090
+        server_address: "user-mention-service"
+        span_name: "compose_user_mentions_server"
     - capability: "memory_stress"
       target:
         app: "user-mention-service"

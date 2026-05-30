@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignpriceservice/consignprice/*/*"
         port: 8080
+        server_address: "ts-consign-price-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-consign-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignpriceservice/consignprice/*/*"
         port: 8080
+        server_address: "ts-consign-price-service"
+        span_name: "GET"
     - capability: "jvm_method_latency"
       target:
         app: "ts-consign-service"

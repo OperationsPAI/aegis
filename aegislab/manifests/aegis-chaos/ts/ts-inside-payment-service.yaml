@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "ts-inside-payment-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/status/*/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "ts-inside-payment-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/paymentservice/payment"
         port: 8080
+        server_address: "ts-payment-service"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "ts-inside-payment-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-inside-payment-service"
@@ -53,6 +61,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/status/*/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-inside-payment-service"
@@ -60,6 +70,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/paymentservice/payment"
         port: 8080
+        server_address: "ts-payment-service"
+        span_name: "POST"
     - capability: "jvm_method_latency"
       target:
         app: "ts-inside-payment-service"

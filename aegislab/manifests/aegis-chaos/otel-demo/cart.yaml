@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "POST"
     - capability: "http_request_abort"
       target:
         app: "cart"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "POST"
     - capability: "http_request_abort"
       target:
         app: "cart"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/AddItem"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/AddItem"
     - capability: "http_request_abort"
       target:
         app: "cart"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/EmptyCart"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/EmptyCart"
     - capability: "http_request_abort"
       target:
         app: "cart"
@@ -53,6 +61,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/GetCart"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/GetCart"
     - capability: "http_request_delay"
       target:
         app: "cart"
@@ -60,6 +70,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "cart"
@@ -67,6 +79,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "cart"
@@ -74,6 +88,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/AddItem"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/AddItem"
     - capability: "http_request_delay"
       target:
         app: "cart"
@@ -81,6 +97,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/EmptyCart"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/EmptyCart"
     - capability: "http_request_delay"
       target:
         app: "cart"
@@ -88,6 +106,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/GetCart"
         port: 8080
+        server_address: "cart"
+        span_name: "POST /oteldemo.CartService/GetCart"
     - capability: "memory_stress"
       target:
         app: "cart"

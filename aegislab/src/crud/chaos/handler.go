@@ -578,37 +578,43 @@ func (h *Handler) ExportSystemPoints(c *gin.Context) {
 }
 
 var manifestEnvelopeSchema = map[string]any{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"title":   "aegis-chaos PointManifest",
-	"type":    "object",
-	"required": []any{"apiVersion", "kind", "metadata", "spec"},
+	"$schema":              "https://json-schema.org/draft/2020-12/schema",
+	"title":                "aegis-chaos PointManifest",
+	"description":          "Envelope schema for PointManifest YAMLs. The per-capability target / param_overrides shapes are not encoded here because they're stored in the live capabilities table and may evolve between releases — use 'aegisctl manifest validate --fetch-schema' or 'aegisctl manifest import --dry-run' to cross-check those.",
+	"type":                 "object",
+	"additionalProperties": false,
+	"required":             []any{"apiVersion", "kind", "metadata", "spec"},
 	"properties": map[string]any{
 		"apiVersion": map[string]any{"const": "aegis-chaos/v1beta"},
 		"kind":       map[string]any{"const": "PointManifest"},
 		"metadata": map[string]any{
-			"type":     "object",
-			"required": []any{"system", "service", "chart_version"},
+			"type":                 "object",
+			"additionalProperties": false,
+			"required":             []any{"system", "service", "chart_version"},
 			"properties": map[string]any{
 				"system":        map[string]any{"type": "string", "minLength": 1},
 				"service":       map[string]any{"type": "string", "minLength": 1},
-				"instance":      map[string]any{"type": "string", "default": "default"},
+				"instance":      map[string]any{"type": "string", "minLength": 1, "default": "default"},
 				"chart_version": map[string]any{"type": "string", "minLength": 1},
 			},
 		},
 		"spec": map[string]any{
-			"type":     "object",
-			"required": []any{"points"},
+			"type":                 "object",
+			"additionalProperties": false,
+			"required":             []any{"points"},
 			"properties": map[string]any{
 				"replace_scope": map[string]any{
 					"enum": []any{"service", "system", "none"},
 				},
 				"points": map[string]any{
-					"type": "array",
+					"type":     "array",
+					"minItems": 1,
 					"items": map[string]any{
-						"type":     "object",
-						"required": []any{"capability", "target"},
+						"type":                 "object",
+						"additionalProperties": false,
+						"required":             []any{"capability", "target"},
 						"properties": map[string]any{
-							"capability":      map[string]any{"type": "string"},
+							"capability":      map[string]any{"type": "string", "minLength": 1},
 							"target":          map[string]any{"type": "object"},
 							"param_overrides": map[string]any{"type": "object"},
 						},

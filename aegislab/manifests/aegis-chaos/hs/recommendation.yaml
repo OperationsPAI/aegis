@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/recommendation.Recommendation/GetRecommendations"
         port: 8085
+        server_address: "recommendation"
+        span_name: "recommendation.Recommendation/GetRecommendations"
     - capability: "http_request_delay"
       target:
         app: "recommendation"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/recommendation.Recommendation/GetRecommendations"
         port: 8085
+        server_address: "recommendation"
+        span_name: "recommendation.Recommendation/GetRecommendations"
     - capability: "memory_stress"
       target:
         app: "recommendation"

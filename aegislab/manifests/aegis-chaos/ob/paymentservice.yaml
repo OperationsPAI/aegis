@@ -25,6 +25,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
+        server_address: "paymentservice"
+        span_name: "grpc.hipstershop.PaymentService/Charge"
     - capability: "http_request_delay"
       target:
         app: "paymentservice"
@@ -32,6 +34,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
+        server_address: "paymentservice"
+        span_name: "grpc.hipstershop.PaymentService/Charge"
     - capability: "memory_stress"
       target:
         app: "paymentservice"

@@ -12,29 +12,41 @@ spec:
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"
     - capability: "network_corrupt"
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"
     - capability: "network_delay"
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"
     - capability: "network_duplicate"
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"
     - capability: "network_loss"
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"
     - capability: "network_partition"
       target:
         namespace: "otel-demo"
         source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/EventStream"
         target_service: "flagd"

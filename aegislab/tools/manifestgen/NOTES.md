@@ -92,7 +92,30 @@ delete paths, `ts-ui-dashboard`'s ~900 train-code paths) into a single
 `*`-bearing route, fixing the chaos-point explosion (#500). Splitting on `/`
 (rather than a single overlapping regex replace) lets adjacent id segments
 both collapse, e.g. `adminorder/[uuid]/D1345` → `adminorder/*/*`. The dedup
-key is `port|method|path`, so normalized duplicates merge automatically.
+key is `port|method|path`, so normalized duplicates merge automatically. When
+several raw endpoints collapse to one point, the one with the richest
+(longest) normalized `span_name` is kept.
+
+## Groundtruth metadata (span_name / span_names / server_address)
+
+http points carry optional `server_address` and a normalized `span_name`;
+network points carry a sorted `span_names` array. These are groundtruth-
+labelling metadata — the chaos-mesh CR renderer ignores them, but the
+DB-backed resourcelookup surfaces them. They are optional in both the capgen
+`target_schema` and the server `Seeds*` schema.
+
+span_name normalization uses **named** placeholders (distinct from the `*`
+used for the `path` field): a span name is `"METHOD /path"`, and path
+segments fold to `{uuid}` / `{tripid}` (`^[A-Z]{1,3}\d+$`) / `{id}` (`^\d+$`).
+This collapses the ~900 concrete `ts-ui-dashboard` spans to ~50 templates.
+
+## Static-resource filtering
+
+http points (base `http_request_*` and the http A1b family) skip static-asset
+routes — by extension (`.css .js .png .jpg .jpeg .gif .ico .svg .woff .woff2
+.ttf .eot .map`) or path prefix (`/assets/ /css/ /js/ /img/ /fonts/
+/static/`). network/dns derivation is unaffected. Only ts-ui-dashboard and
+sockshop front-end carry such routes today.
 
 ## Test layers
 

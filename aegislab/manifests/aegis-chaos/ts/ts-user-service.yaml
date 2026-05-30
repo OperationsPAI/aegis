@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/users/*"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "DELETE"
     - capability: "http_request_abort"
       target:
         app: "ts-user-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/auth"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "ts-user-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/users/*"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "DELETE"
     - capability: "http_request_delay"
       target:
         app: "ts-user-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/auth"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "POST"
     - capability: "jvm_method_latency"
       target:
         app: "ts-user-service"

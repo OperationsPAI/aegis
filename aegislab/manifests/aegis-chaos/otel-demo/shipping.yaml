@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/get-quote"
         port: 8080
+        server_address: "load-generator"
+        span_name: "/get-quote"
     - capability: "http_request_abort"
       target:
         app: "shipping"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/getquote"
         port: 8080
+        server_address: "quote"
+        span_name: "POST quote"
     - capability: "http_request_abort"
       target:
         app: "shipping"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/ship-order"
         port: 8080
+        server_address: "checkout"
+        span_name: "/ship-order"
     - capability: "http_request_delay"
       target:
         app: "shipping"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/get-quote"
         port: 8080
+        server_address: "load-generator"
+        span_name: "/get-quote"
     - capability: "http_request_delay"
       target:
         app: "shipping"
@@ -53,6 +61,8 @@ spec:
         namespace: "otel-demo"
         path: "/getquote"
         port: 8080
+        server_address: "quote"
+        span_name: "POST quote"
     - capability: "http_request_delay"
       target:
         app: "shipping"
@@ -60,6 +70,8 @@ spec:
         namespace: "otel-demo"
         path: "/ship-order"
         port: 8080
+        server_address: "checkout"
+        span_name: "/ship-order"
     - capability: "memory_stress"
       target:
         app: "shipping"

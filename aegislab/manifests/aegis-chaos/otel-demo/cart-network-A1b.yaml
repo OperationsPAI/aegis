@@ -12,59 +12,83 @@ spec:
       target:
         namespace: "otel-demo"
         source_app: "cart"
-        target_service: "flagd"
+        span_names:
+          - "DB Access"
+        target_service: "valkey-cart"
     - capability: "network_bandwidth"
       target:
         namespace: "otel-demo"
         source_app: "cart"
-        target_service: "valkey-cart"
-    - capability: "network_corrupt"
-      target:
-        namespace: "otel-demo"
-        source_app: "cart"
+        span_names:
+          - "POST"
         target_service: "flagd"
     - capability: "network_corrupt"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "DB Access"
         target_service: "valkey-cart"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "POST"
         target_service: "flagd"
     - capability: "network_delay"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "DB Access"
         target_service: "valkey-cart"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "POST"
         target_service: "flagd"
     - capability: "network_duplicate"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "DB Access"
         target_service: "valkey-cart"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "POST"
         target_service: "flagd"
     - capability: "network_loss"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "DB Access"
         target_service: "valkey-cart"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "POST"
         target_service: "flagd"
     - capability: "network_partition"
       target:
         namespace: "otel-demo"
         source_app: "cart"
+        span_names:
+          - "DB Access"
         target_service: "valkey-cart"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "cart"
+        span_names:
+          - "POST"
+        target_service: "flagd"

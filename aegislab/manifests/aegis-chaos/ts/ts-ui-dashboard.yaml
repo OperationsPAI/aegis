@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder/*/*"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute/*"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -39,6 +43,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users/*"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "DELETE /api/v1/adminuserservice/users/{uuid}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -46,6 +52,8 @@ spec:
         namespace: "ts"
         path: "/"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -53,6 +61,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -60,6 +70,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -67,6 +79,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/prices"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/prices"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -74,6 +88,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -81,6 +97,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -88,6 +106,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "GET /api/v1/adminorderservice/adminorder"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -95,6 +115,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "GET /api/v1/adminrouteservice/adminroute"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -102,6 +124,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/admintravelservice/admintravel"
         port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "GET /api/v1/admintravelservice/admintravel"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -109,6 +133,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "GET /api/v1/adminuserservice/users"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -116,6 +142,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/assuranceservice/assurances/types"
         port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET /api/v1/assuranceservice/assurances/types"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -123,6 +151,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/cancelservice/cancel/*/*"
         port: 8080
+        server_address: "ts-cancel-service"
+        span_name: "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -130,6 +160,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/cancelservice/cancel/refound/*"
         port: 8080
+        server_address: "ts-cancel-service"
+        span_name: "GET /api/v1/cancelservice/cancel/refound/{orderId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -137,6 +169,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns/account/*"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "GET /api/v1/consignservice/consigns/account/{id}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -144,6 +178,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns/order/*"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "GET /api/v1/consignservice/consigns/order/{id}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -151,6 +187,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/contactservice/contacts/account/*"
         port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET /api/v1/contactservice/contacts/account/{accountId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -158,6 +196,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/executeservice/execute/collected/*"
         port: 8080
+        server_address: "ts-execute-service"
+        span_name: "GET /api/v1/executeservice/execute/collected/{orderId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -165,6 +205,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/executeservice/execute/execute/*"
         port: 8080
+        server_address: "ts-execute-service"
+        span_name: "GET /api/v1/executeservice/execute/execute/{orderId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -172,6 +214,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/foodservice/foods/*/*/*"
         port: 8080
+        server_address: "ts-food-service"
+        span_name: "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -179,6 +223,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET /api/v1/routeservice/routes"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -186,6 +232,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET /api/v1/trainservice/trains"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -193,6 +241,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/userservice/users/id/*"
         port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET /api/v1/userservice/users/id/{userId}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -200,6 +250,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/generate"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/generate"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -207,146 +259,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/admin.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/amazeui.min.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/app.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/client.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/cropper.min.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/fonts/fontawesome-webfont.woff2"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/i/favicon.png"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/img/logo.png"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/img/user01.png"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/amazeui.min.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/app.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_common.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_login.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_order_list.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/cropper.min.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/index.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/jquery.min.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/jquery.shCircleLoader-min.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/vue-upload-component.js"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/vue.js"
-        port: 5672
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/verify/{verifyCode}"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -354,6 +268,8 @@ spec:
         namespace: "ts"
         path: "/client_login.html"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -361,41 +277,8 @@ spec:
         namespace: "ts"
         path: "/client_order_list.html"
         port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap-theme.css.map"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap-theme.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap.css.map"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap.css"
-        port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/style.css"
-        port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -403,13 +286,8 @@ spec:
         namespace: "ts"
         path: "/index.html"
         port: 5672
-    - capability: "http_request_abort"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/js/upload.js"
-        port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -417,6 +295,8 @@ spec:
         namespace: "ts"
         path: "/upload_avatar.html"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -424,6 +304,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -431,6 +313,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -438,6 +322,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -445,6 +331,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -452,6 +340,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "POST /api/v1/adminorderservice/adminorder"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -459,6 +349,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "POST /api/v1/adminrouteservice/adminroute"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -466,6 +358,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/admintravelservice/admintravel"
         port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "POST /api/v1/admintravelservice/admintravel"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -473,6 +367,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "POST /api/v1/adminuserservice/users"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -480,6 +376,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/inside_pay_service/inside_payment"
         port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "POST /api/v1/inside_pay_service/inside_payment"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -487,6 +385,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/refresh"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "POST /api/v1/orderOtherService/orderOther/refresh"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -494,6 +394,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/refresh"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/refresh"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -501,6 +403,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/preserveservice/preserve"
         port: 8080
+        server_address: "ts-preserve-service"
+        span_name: "POST /api/v1/preserveservice/preserve"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -508,6 +412,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/rebookservice/rebook"
         port: 8080
+        server_address: "ts-rebook-service"
+        span_name: "POST /api/v1/rebookservice/rebook"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -515,6 +421,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travel2service/trips/left"
         port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/left"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -522,6 +430,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/cheapest"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/cheapest"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -529,6 +439,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/minStation"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/minStation"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -536,6 +448,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/quickest"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/quickest"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -543,6 +457,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelservice/trips/left"
         port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST /api/v1/travelservice/trips/left"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -550,6 +466,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/users/login"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "POST /api/v1/users/login"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -557,6 +475,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -564,6 +484,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -571,6 +493,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -578,6 +502,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -585,6 +511,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "PUT /api/v1/adminorderservice/adminorder"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -592,6 +520,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "PUT /api/v1/adminuserservice/users"
     - capability: "http_request_abort"
       target:
         app: "ts-ui-dashboard"
@@ -599,6 +529,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "PUT /api/v1/consignservice/consigns"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -606,6 +538,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder/*/*"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -613,6 +547,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute/*"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -620,6 +556,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users/*"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "DELETE /api/v1/adminuserservice/users/{uuid}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -627,6 +565,8 @@ spec:
         namespace: "ts"
         path: "/"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -634,6 +574,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -641,6 +583,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -648,6 +592,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/prices"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/prices"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -655,6 +601,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -662,6 +610,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -669,6 +619,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "GET /api/v1/adminorderservice/adminorder"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -676,6 +628,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "GET /api/v1/adminrouteservice/adminroute"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -683,6 +637,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/admintravelservice/admintravel"
         port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "GET /api/v1/admintravelservice/admintravel"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -690,6 +646,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "GET /api/v1/adminuserservice/users"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -697,6 +655,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/assuranceservice/assurances/types"
         port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET /api/v1/assuranceservice/assurances/types"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -704,6 +664,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/cancelservice/cancel/*/*"
         port: 8080
+        server_address: "ts-cancel-service"
+        span_name: "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -711,6 +673,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/cancelservice/cancel/refound/*"
         port: 8080
+        server_address: "ts-cancel-service"
+        span_name: "GET /api/v1/cancelservice/cancel/refound/{orderId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -718,6 +682,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns/account/*"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "GET /api/v1/consignservice/consigns/account/{id}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -725,6 +691,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns/order/*"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "GET /api/v1/consignservice/consigns/order/{id}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -732,6 +700,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/contactservice/contacts/account/*"
         port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET /api/v1/contactservice/contacts/account/{accountId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -739,6 +709,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/executeservice/execute/collected/*"
         port: 8080
+        server_address: "ts-execute-service"
+        span_name: "GET /api/v1/executeservice/execute/collected/{orderId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -746,6 +718,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/executeservice/execute/execute/*"
         port: 8080
+        server_address: "ts-execute-service"
+        span_name: "GET /api/v1/executeservice/execute/execute/{orderId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -753,6 +727,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/foodservice/foods/*/*/*"
         port: 8080
+        server_address: "ts-food-service"
+        span_name: "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -760,6 +736,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/routeservice/routes"
         port: 8080
+        server_address: "ts-route-service"
+        span_name: "GET /api/v1/routeservice/routes"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -767,6 +745,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainservice/trains"
         port: 8080
+        server_address: "ts-train-service"
+        span_name: "GET /api/v1/trainservice/trains"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -774,6 +754,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/userservice/users/id/*"
         port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET /api/v1/userservice/users/id/{userId}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -781,6 +763,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/generate"
         port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/generate"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -788,146 +772,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/verifycode/verify/*"
         port: 8080
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/admin.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/amazeui.min.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/app.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/client.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/css/cropper.min.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/fonts/fontawesome-webfont.woff2"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/i/favicon.png"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/img/logo.png"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/img/user01.png"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/amazeui.min.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/app.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_common.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_login.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/client_order_list.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/cropper.min.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/index.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/jquery.min.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/jquery.shCircleLoader-min.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/vue-upload-component.js"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/assets/js/vue.js"
-        port: 5672
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/verify/{verifyCode}"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -935,6 +781,8 @@ spec:
         namespace: "ts"
         path: "/client_login.html"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -942,41 +790,8 @@ spec:
         namespace: "ts"
         path: "/client_order_list.html"
         port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap-theme.css.map"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap-theme.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap.css.map"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/bootstrap.css"
-        port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/css/style.css"
-        port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -984,13 +799,8 @@ spec:
         namespace: "ts"
         path: "/index.html"
         port: 5672
-    - capability: "http_request_delay"
-      target:
-        app: "ts-ui-dashboard"
-        method: "GET"
-        namespace: "ts"
-        path: "/js/upload.js"
-        port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -998,6 +808,8 @@ spec:
         namespace: "ts"
         path: "/upload_avatar.html"
         port: 5672
+        server_address: "ts-rabbitmq"
+        span_name: "app"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1005,6 +817,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1012,6 +826,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1019,6 +835,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1026,6 +844,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1033,6 +853,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "POST /api/v1/adminorderservice/adminorder"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1040,6 +862,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminrouteservice/adminroute"
         port: 8080
+        server_address: "ts-admin-route-service"
+        span_name: "POST /api/v1/adminrouteservice/adminroute"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1047,6 +871,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/admintravelservice/admintravel"
         port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "POST /api/v1/admintravelservice/admintravel"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1054,6 +880,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "POST /api/v1/adminuserservice/users"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1061,6 +889,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/inside_pay_service/inside_payment"
         port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "POST /api/v1/inside_pay_service/inside_payment"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1068,6 +898,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/refresh"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "POST /api/v1/orderOtherService/orderOther/refresh"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1075,6 +907,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/refresh"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/refresh"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1082,6 +916,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/preserveservice/preserve"
         port: 8080
+        server_address: "ts-preserve-service"
+        span_name: "POST /api/v1/preserveservice/preserve"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1089,6 +925,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/rebookservice/rebook"
         port: 8080
+        server_address: "ts-rebook-service"
+        span_name: "POST /api/v1/rebookservice/rebook"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1096,6 +934,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travel2service/trips/left"
         port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/left"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1103,6 +943,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/cheapest"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/cheapest"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1110,6 +952,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/minStation"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/minStation"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1117,6 +961,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelplanservice/travelPlan/quickest"
         port: 8080
+        server_address: "ts-travel-plan-service"
+        span_name: "POST /api/v1/travelplanservice/travelPlan/quickest"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1124,6 +970,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/travelservice/trips/left"
         port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST /api/v1/travelservice/trips/left"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1131,6 +979,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/users/login"
         port: 8080
+        server_address: "ts-auth-service"
+        span_name: "POST /api/v1/users/login"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1138,6 +988,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/configs"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/configs"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1145,6 +997,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/contacts"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/contacts"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1152,6 +1006,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/stations"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/stations"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1159,6 +1015,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminbasicservice/adminbasic/trains"
         port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/trains"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1166,6 +1024,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminorderservice/adminorder"
         port: 8080
+        server_address: "ts-admin-order-service"
+        span_name: "PUT /api/v1/adminorderservice/adminorder"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1173,6 +1033,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/adminuserservice/users"
         port: 8080
+        server_address: "ts-admin-user-service"
+        span_name: "PUT /api/v1/adminuserservice/users"
     - capability: "http_request_delay"
       target:
         app: "ts-ui-dashboard"
@@ -1180,6 +1042,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/consignservice/consigns"
         port: 8080
+        server_address: "ts-consign-service"
+        span_name: "PUT /api/v1/consignservice/consigns"
     - capability: "memory_stress"
       target:
         app: "ts-ui-dashboard"

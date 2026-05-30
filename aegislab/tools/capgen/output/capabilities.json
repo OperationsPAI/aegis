@@ -280,6 +280,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -357,6 +363,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -447,6 +459,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -537,6 +555,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -619,6 +643,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -696,6 +726,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -780,6 +816,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -854,6 +896,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -939,6 +987,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -1713,6 +1767,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -1793,6 +1853,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -1870,6 +1936,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,
@@ -1953,6 +2025,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -2022,6 +2100,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,
@@ -2099,6 +2183,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,

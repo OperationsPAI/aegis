@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/reservation.Reservation/CheckAvailability"
         port: 8087
+        server_address: "reservation"
+        span_name: "reservation.Reservation/CheckAvailability"
     - capability: "http_request_abort"
       target:
         app: "reservation"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/reservation.Reservation/MakeReservation"
         port: 8087
+        server_address: "reservation"
+        span_name: "reservation.Reservation/MakeReservation"
     - capability: "http_request_delay"
       target:
         app: "reservation"
@@ -39,6 +43,8 @@ spec:
         namespace: "hs"
         path: "/reservation.Reservation/CheckAvailability"
         port: 8087
+        server_address: "reservation"
+        span_name: "reservation.Reservation/CheckAvailability"
     - capability: "http_request_delay"
       target:
         app: "reservation"
@@ -46,6 +52,8 @@ spec:
         namespace: "hs"
         path: "/reservation.Reservation/MakeReservation"
         port: 8087
+        server_address: "reservation"
+        span_name: "reservation.Reservation/MakeReservation"
     - capability: "memory_stress"
       target:
         app: "reservation"

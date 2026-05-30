@@ -25,6 +25,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "DELETE /cart"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -32,6 +34,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*"
         port: 80
+        server_address: "carts"
+        span_name: "DELETE"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -39,6 +43,8 @@ spec:
         namespace: "sockshop"
         path: "/"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET /"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -46,6 +52,8 @@ spec:
         namespace: "sockshop"
         path: "/basket.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -53,6 +61,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET /cart"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -60,6 +70,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
+        server_address: "carts"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -67,6 +79,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/merge"
         port: 80
+        server_address: "carts"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -74,6 +88,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue*"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET /catalogue*"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -81,6 +97,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue/*"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -88,69 +106,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue/images*"
         port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/WAT.jpg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/bit_of_leg_1.jpeg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/catsocks.jpg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/classic.jpg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/colourful_socks.jpg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/cross_1.jpeg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/holy_1.jpeg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/puma_1.jpeg"
-        port: 80
-    - capability: "http_request_abort"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/youtube_1.jpeg"
-        port: 80
+        server_address: "catalogue"
+        span_name: "GET /catalogue/images*"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -158,6 +115,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -165,6 +124,8 @@ spec:
         namespace: "sockshop"
         path: "/category.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -172,6 +133,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*/addresses"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -179,6 +142,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*/cards"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -186,6 +151,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -193,6 +160,8 @@ spec:
         namespace: "sockshop"
         path: "/detail.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -200,6 +169,8 @@ spec:
         namespace: "sockshop"
         path: "/login"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -207,6 +178,8 @@ spec:
         namespace: "sockshop"
         path: "/addresses"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -214,6 +187,8 @@ spec:
         namespace: "sockshop"
         path: "/cards"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -221,6 +196,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST /cart"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -228,6 +205,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
+        server_address: "carts"
+        span_name: "POST"
     - capability: "http_request_abort"
       target:
         app: "front-end"
@@ -235,6 +214,8 @@ spec:
         namespace: "sockshop"
         path: "/orders"
         port: 80
+        server_address: "orders"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -242,6 +223,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "DELETE /cart"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -249,6 +232,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*"
         port: 80
+        server_address: "carts"
+        span_name: "DELETE"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -256,6 +241,8 @@ spec:
         namespace: "sockshop"
         path: "/"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET /"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -263,6 +250,8 @@ spec:
         namespace: "sockshop"
         path: "/basket.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -270,6 +259,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET /cart"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -277,6 +268,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
+        server_address: "carts"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -284,6 +277,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/merge"
         port: 80
+        server_address: "carts"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -291,6 +286,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue*"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET /catalogue*"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -298,6 +295,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue/*"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -305,69 +304,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue/images*"
         port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/WAT.jpg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/bit_of_leg_1.jpeg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/catsocks.jpg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/classic.jpg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/colourful_socks.jpg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/cross_1.jpeg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/holy_1.jpeg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/puma_1.jpeg"
-        port: 80
-    - capability: "http_request_delay"
-      target:
-        app: "front-end"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/catalogue/images/youtube_1.jpeg"
-        port: 80
+        server_address: "catalogue"
+        span_name: "GET /catalogue/images*"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -375,6 +313,8 @@ spec:
         namespace: "sockshop"
         path: "/catalogue"
         port: 80
+        server_address: "catalogue"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -382,6 +322,8 @@ spec:
         namespace: "sockshop"
         path: "/category.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -389,6 +331,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*/addresses"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -396,6 +340,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*/cards"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -403,6 +349,8 @@ spec:
         namespace: "sockshop"
         path: "/customers/*"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -410,6 +358,8 @@ spec:
         namespace: "sockshop"
         path: "/detail.html"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -417,6 +367,8 @@ spec:
         namespace: "sockshop"
         path: "/login"
         port: 8079
+        server_address: "front-end"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -424,6 +376,8 @@ spec:
         namespace: "sockshop"
         path: "/addresses"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -431,6 +385,8 @@ spec:
         namespace: "sockshop"
         path: "/cards"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -438,6 +394,8 @@ spec:
         namespace: "sockshop"
         path: "/cart"
         port: 8079
+        server_address: "front-end"
+        span_name: "POST /cart"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -445,6 +403,8 @@ spec:
         namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
+        server_address: "carts"
+        span_name: "POST"
     - capability: "http_request_delay"
       target:
         app: "front-end"
@@ -452,6 +412,8 @@ spec:
         namespace: "sockshop"
         path: "/orders"
         port: 80
+        server_address: "orders"
+        span_name: "POST"
     - capability: "memory_stress"
       target:
         app: "front-end"

@@ -12,29 +12,59 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-admin-user-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
         target_service: "ts-user-service"

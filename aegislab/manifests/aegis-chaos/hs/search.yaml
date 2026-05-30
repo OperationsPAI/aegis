@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
+        server_address: "geo"
+        span_name: "geo.Geo/Nearby"
     - capability: "http_request_abort"
       target:
         app: "search"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/rate.Rate/GetRates"
         port: 8084
+        server_address: "rate"
+        span_name: "rate.Rate/GetRates"
     - capability: "http_request_abort"
       target:
         app: "search"
@@ -39,6 +43,8 @@ spec:
         namespace: "hs"
         path: "/search.Search/Nearby"
         port: 8082
+        server_address: "search"
+        span_name: "search.Search/Nearby"
     - capability: "http_request_delay"
       target:
         app: "search"
@@ -46,6 +52,8 @@ spec:
         namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
+        server_address: "geo"
+        span_name: "geo.Geo/Nearby"
     - capability: "http_request_delay"
       target:
         app: "search"
@@ -53,6 +61,8 @@ spec:
         namespace: "hs"
         path: "/rate.Rate/GetRates"
         port: 8084
+        server_address: "rate"
+        span_name: "rate.Rate/GetRates"
     - capability: "http_request_delay"
       target:
         app: "search"
@@ -60,6 +70,8 @@ spec:
         namespace: "hs"
         path: "/search.Search/Nearby"
         port: 8082
+        server_address: "search"
+        span_name: "search.Search/Nearby"
     - capability: "memory_stress"
       target:
         app: "search"

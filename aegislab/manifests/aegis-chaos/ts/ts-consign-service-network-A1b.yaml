@@ -12,59 +12,83 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
-        target_service: "mysql"
+        span_names:
+          - "GET"
+        target_service: "ts-consign-price-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
-        target_service: "ts-consign-price-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
         target_service: "mysql"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "GET"
         target_service: "ts-consign-price-service"
-    - capability: "network_delay"
+    - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
         target_service: "mysql"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "GET"
         target_service: "ts-consign-price-service"
-    - capability: "network_duplicate"
+    - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
         target_service: "mysql"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "GET"
         target_service: "ts-consign-price-service"
-    - capability: "network_loss"
+    - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
         target_service: "mysql"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "GET"
         target_service: "ts-consign-price-service"
-    - capability: "network_partition"
+    - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
         target_service: "mysql"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-consign-service"
+        span_names:
+          - "GET"
         target_service: "ts-consign-price-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        span_names:
+          - "INSERT ts.consign_record"
+        target_service: "mysql"

@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.AdService/GetAds"
         port: 8080
+        server_address: "ad"
+        span_name: "oteldemo.AdService/GetAds"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/AddItem"
         port: 8080
+        server_address: "cart"
+        span_name: "oteldemo.CartService/AddItem"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/GetCart"
         port: 8080
+        server_address: "cart"
+        span_name: "grpc.oteldemo.CartService/GetCart"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CheckoutService/PlaceOrder"
         port: 8080
+        server_address: "checkout"
+        span_name: "oteldemo.CheckoutService/PlaceOrder"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -53,6 +61,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/GetProduct"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/GetProduct"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -60,6 +70,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendation"
+        span_name: "oteldemo.RecommendationService/ListRecommendations"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -67,6 +79,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.AdService/GetAds"
         port: 8080
+        server_address: "ad"
+        span_name: "oteldemo.AdService/GetAds"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -74,6 +88,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/AddItem"
         port: 8080
+        server_address: "cart"
+        span_name: "oteldemo.CartService/AddItem"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -81,6 +97,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CartService/GetCart"
         port: 8080
+        server_address: "cart"
+        span_name: "grpc.oteldemo.CartService/GetCart"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -88,6 +106,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.CheckoutService/PlaceOrder"
         port: 8080
+        server_address: "checkout"
+        span_name: "oteldemo.CheckoutService/PlaceOrder"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -95,6 +115,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/GetProduct"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/GetProduct"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -102,6 +124,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendation"
+        span_name: "oteldemo.RecommendationService/ListRecommendations"
     - capability: "memory_stress"
       target:
         app: "frontend"

@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/getquote"
         port: 8080
+        server_address: "quote"
+        span_name: "POST /getquote"
     - capability: "http_request_delay"
       target:
         app: "quote"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/getquote"
         port: 8080
+        server_address: "quote"
+        span_name: "POST /getquote"
     - capability: "memory_stress"
       target:
         app: "quote"

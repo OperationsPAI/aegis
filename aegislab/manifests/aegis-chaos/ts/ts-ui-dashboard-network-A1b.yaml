@@ -12,749 +12,1217 @@ spec:
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_bandwidth"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_bandwidth"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_corrupt"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_corrupt"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_delay"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_delay"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_duplicate"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_duplicate"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_loss"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_loss"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-basic-info-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminorderservice/adminorder/{uuid}/{tripid}"
+          - "GET /api/v1/adminorderservice/adminorder"
+          - "POST /api/v1/adminorderservice/adminorder"
+          - "PUT /api/v1/adminorderservice/adminorder"
         target_service: "ts-admin-order-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminrouteservice/adminroute/{uuid}"
+          - "GET /api/v1/adminrouteservice/adminroute"
+          - "POST /api/v1/adminrouteservice/adminroute"
         target_service: "ts-admin-route-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-admin-travel-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "DELETE /api/v1/adminuserservice/users/{uuid}"
+          - "GET /api/v1/adminuserservice/users"
+          - "POST /api/v1/adminuserservice/users"
+          - "PUT /api/v1/adminuserservice/users"
         target_service: "ts-admin-user-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/adminbasicservice/adminbasic/configs"
+          - "GET /api/v1/adminbasicservice/adminbasic/contacts"
+          - "GET /api/v1/adminbasicservice/adminbasic/prices"
+          - "GET /api/v1/adminbasicservice/adminbasic/stations"
+          - "GET /api/v1/adminbasicservice/adminbasic/trains"
+          - "POST /api/v1/adminbasicservice/adminbasic/configs"
+          - "POST /api/v1/adminbasicservice/adminbasic/contacts"
+          - "POST /api/v1/adminbasicservice/adminbasic/stations"
+          - "POST /api/v1/adminbasicservice/adminbasic/trains"
+          - "PUT /api/v1/adminbasicservice/adminbasic/configs"
+          - "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+          - "PUT /api/v1/adminbasicservice/adminbasic/stations"
+          - "PUT /api/v1/adminbasicservice/adminbasic/trains"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/admintravelservice/admintravel"
+          - "POST /api/v1/admintravelservice/admintravel"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/types"
         target_service: "ts-assurance-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-auth-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/cancelservice/cancel/refound/{orderId}"
+          - "GET /api/v1/cancelservice/cancel/{orderId}/{loginId}"
         target_service: "ts-cancel-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/consignservice/consigns/account/{id}"
+          - "GET /api/v1/consignservice/consigns/order/{id}"
+          - "PUT /api/v1/consignservice/consigns"
         target_service: "ts-consign-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/account/{accountId}"
         target_service: "ts-contacts-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/executeservice/execute/collected/{orderId}"
+          - "GET /api/v1/executeservice/execute/execute/{orderId}"
         target_service: "ts-execute-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
         target_service: "ts-food-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-inside-payment-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-other-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-order-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-preserve-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rabbitmq"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-rebook-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/routeservice/routes"
         target_service: "ts-route-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
         target_service: "ts-train-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-plan-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
-        target_service: "ts-travel2-service"
-    - capability: "network_partition"
-      target:
-        namespace: "ts"
-        source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
         target_service: "ts-user-service"
     - capability: "network_partition"
       target:
         namespace: "ts"
         source_app: "ts-ui-dashboard"
+        span_names:
+          - "GET /api/v1/verifycode/generate"
+          - "GET /api/v1/verifycode/verify/{verifyCode}"
         target_service: "ts-verification-code-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/inside_pay_service/inside_payment"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderOtherService/orderOther/refresh"
+        target_service: "ts-order-other-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/orderservice/order/refresh"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/preserveservice/preserve"
+        target_service: "ts-preserve-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/rebookservice/rebook"
+        target_service: "ts-rebook-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travel2service/trips/left"
+        target_service: "ts-travel2-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelplanservice/travelPlan/cheapest"
+          - "POST /api/v1/travelplanservice/travelPlan/minStation"
+          - "POST /api/v1/travelplanservice/travelPlan/quickest"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/travelservice/trips/left"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "POST /api/v1/users/login"
+        target_service: "ts-auth-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        span_names:
+          - "app"
+        target_service: "ts-rabbitmq"
