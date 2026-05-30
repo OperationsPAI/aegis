@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.PaymentService/Charge"
         port: 8080
+        server_address: "payment"
+        span_name: "grpc.oteldemo.PaymentService/Charge"
     - capability: "http_request_delay"
       target:
         app: "payment"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.PaymentService/Charge"
         port: 8080
+        server_address: "payment"
+        span_name: "grpc.oteldemo.PaymentService/Charge"
     - capability: "memory_stress"
       target:
         app: "payment"

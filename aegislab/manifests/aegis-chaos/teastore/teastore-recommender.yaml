@@ -25,6 +25,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "recommender"
@@ -32,6 +34,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "recommender"
@@ -39,6 +43,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.recommender/rest/recommend"
         port: 8080
+        server_address: "teastore-recommender"
+        span_name: "POST /tools.descartes.teastore.recommender/rest/recommend"
     - capability: "http_request_abort"
       target:
         app: "recommender"
@@ -46,6 +52,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/teastore-recommender-0.teastore-recommender"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT"
     - capability: "http_request_delay"
       target:
         app: "recommender"
@@ -53,6 +61,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "recommender"
@@ -60,6 +70,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "recommender"
@@ -67,6 +79,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.recommender/rest/recommend"
         port: 8080
+        server_address: "teastore-recommender"
+        span_name: "POST /tools.descartes.teastore.recommender/rest/recommend"
     - capability: "http_request_delay"
       target:
         app: "recommender"
@@ -74,6 +88,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/teastore-recommender-0.teastore-recommender"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT"
     - capability: "jvm_method_latency"
       target:
         app: "recommender"

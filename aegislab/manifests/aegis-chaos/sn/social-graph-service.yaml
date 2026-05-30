@@ -25,6 +25,8 @@ spec:
         namespace: "sn"
         path: "/SocialGraphService/FollowWithUsername"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "follow_with_username_server"
     - capability: "http_request_delay"
       target:
         app: "social-graph-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "sn"
         path: "/SocialGraphService/FollowWithUsername"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "follow_with_username_server"
     - capability: "memory_stress"
       target:
         app: "social-graph-service"

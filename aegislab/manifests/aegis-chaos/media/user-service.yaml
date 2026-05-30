@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/UserService/RegisterUser"
         port: 9090
+        server_address: "user-service"
+        span_name: "RegisterUser"
     - capability: "http_request_delay"
       target:
         app: "user-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/UserService/RegisterUser"
         port: 9090
+        server_address: "user-service"
+        span_name: "RegisterUser"
     - capability: "memory_stress"
       target:
         app: "user-service"

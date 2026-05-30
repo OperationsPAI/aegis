@@ -1,451 +1,577 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-preserve-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-preserve-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/assuranceservice/assurances/1/*
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/contactservice/contacts/*
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/securityservice/securityConfigs/*
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: GET
-      namespace: ts
-      path: /api/v1/userservice/users/id/*
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/basicservice/basic/travel
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/foodservice/orders
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/orderservice/order
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/seatservice/seats
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: ts-preserve-service
-      method: POST
-      namespace: ts
-      path: /api/v1/travelservice/trip_detail
-      port: 8080
-  replace_scope: service
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/*/*"
+        port: 8080
+        server_address: "ts-assurance-service"
+        span_name: "GET"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+        server_address: "ts-contacts-service"
+        span_name: "GET"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+        server_address: "ts-security-service"
+        span_name: "GET"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+        server_address: "ts-user-service"
+        span_name: "GET"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+        server_address: "ts-basic-service"
+        span_name: "POST"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+        server_address: "ts-seat-service"
+        span_name: "POST"
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+        server_address: "ts-travel-service"
+        span_name: "POST"

@@ -1,10 +1,16 @@
-// manifestgen reads per-system chaos-experiment data files and emits one
-// aegis-chaos Point Manifest per (system, service) pair under
-// aegislab/manifests/aegis-chaos/<system>/<service>.yaml.
+// manifestgen reads per-system chaos-experiment data files and emits
+// aegis-chaos Point Manifests under aegislab/manifests/aegis-chaos/<system>/.
 //
-// Source data lives in a separate Go module (chaos-experiment), so we
-// parse it as text via go/parser AST instead of importing — keeps this
-// tool self-contained, matching capgen's pattern.
+// Two manifest families are written per (system, service):
+//   - <service>.yaml — the workload-agnostic base (pod/container/cpu/mem/time)
+//     plus http_request_delay/abort and jvm_method_latency.
+//   - <service>-<category>-A1b.yaml — derived chaos for http (response/replace
+//     mutations), dns, network, jvm-method, and jvm-mysql.
+//
+// Source data lives in vendored copies of the chaos-experiment static
+// data files under ./data; we parse them as text via go/parser AST rather
+// than importing, so this tool stays self-contained and the chaos-experiment
+// module need not be on disk.
 package main
 
 import (
@@ -18,6 +24,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,21 +44,100 @@ const (
 	replaceScope        = "service"
 )
 
-// systemNamespace maps the chaos-experiment SystemType key to the
-// canonical (non-multi-instance) namespace used for seed manifests.
-var systemNamespace = map[string]string{
-	"ts":        "ts",
-	"oteldemo":  "otel-demo",
-	"media":     "media-microsvc",
-	"hs":        "hotel-reservation",
-	"sn":        "social-network",
-	"ob":        "online-boutique",
-	"sockshop":  "sock-shop",
-	"teastore":  "teastore",
+// highCardinalitySegment matches a whole path segment that is a
+// high-cardinality identifier:
+//   - a UUID (8-4-4-4-12 hex)
+//   - a bare numeric id (123)
+//   - a short-prefix id code like a train number (D002, G1234, K85):
+//     1-3 uppercase letters + digits. These blow up ts-ui-dashboard with
+//     ~900 distinct codes. The uppercase requirement keeps version segments
+//     (v1) and word routes (configs, stations) untouched.
+var highCardinalitySegment = regexp.MustCompile(`^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d+|[A-Z]{1,3}\d+)$`)
+
+// grpcRoutePattern matches a bare gRPC pseudo-route (/package.Service/Method).
+// HTTPChaos response/request-mutation caps are skipped for these — chaos-mesh
+// HTTPChaos operates on HTTP/1.x and never matches a single-segment gRPC route.
+// Multi-segment REST paths that merely contain a dotted first segment (e.g.
+// teastore's /tools.descartes.teastore.registry/rest/...) are NOT gRPC.
+var grpcRoutePattern = regexp.MustCompile(`^/[A-Za-z_][A-Za-z0-9_.]*\.[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*$`)
+
+// normalizePath folds high-cardinality segments to "*" so per-request
+// endpoints collapse to one chaos point (mirrors the clickhouseanalyzer
+// route normalization, e.g. adminorder/[uuid]/[A-Z]\d+ → adminorder/*/*).
+// Splitting on "/" handles adjacent id segments that an overlapping regex
+// replace would miss.
+func normalizePath(p string) string {
+	segs := strings.Split(p, "/")
+	for i, s := range segs {
+		if highCardinalitySegment.MatchString(s) {
+			segs[i] = "*"
+		}
+	}
+	return strings.Join(segs, "/")
 }
 
-// systemDisplay is the value written into metadata.system. It is the
-// canonical SystemType (e.g. "otel-demo"), not the folder name.
+var (
+	uuidSegment    = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	tripIDSegment  = regexp.MustCompile(`^[A-Z]{1,3}\d+$`)
+	numericSegment = regexp.MustCompile(`^\d+$`)
+)
+
+// normalizeSpanName collapses high-cardinality segments of a span name's path
+// into named placeholders ({uuid}/{tripid}/{id}) so distinct concrete spans
+// fold to one groundtruth template. A span name is "METHOD /path[ suffix]";
+// only the slash-delimited segments of the path part are rewritten — the
+// method prefix and any non-path tokens are preserved verbatim.
+func normalizeSpanName(s string) string {
+	fields := strings.SplitN(s, " ", 2)
+	if len(fields) != 2 {
+		return s
+	}
+	method, rest := fields[0], fields[1]
+	segs := strings.Split(rest, "/")
+	for i, seg := range segs {
+		switch {
+		case uuidSegment.MatchString(seg):
+			segs[i] = "{uuid}"
+		case tripIDSegment.MatchString(seg):
+			segs[i] = "{tripid}"
+		case numericSegment.MatchString(seg):
+			segs[i] = "{id}"
+		}
+	}
+	return method + " " + strings.Join(segs, "/")
+}
+
+var staticResourceExts = map[string]struct{}{
+	".css": {}, ".js": {}, ".png": {}, ".jpg": {}, ".jpeg": {}, ".gif": {},
+	".ico": {}, ".svg": {}, ".woff": {}, ".woff2": {}, ".ttf": {}, ".eot": {}, ".map": {},
+}
+
+var staticResourcePrefixes = []string{"/assets/", "/css/", "/js/", "/img/", "/fonts/", "/static/"}
+
+// isStaticResource reports whether a route serves a static asset rather than a
+// service endpoint. Chaos on these is noise — they bypass application logic.
+func isStaticResource(route string) bool {
+	if i := strings.LastIndex(route, "/"); i >= 0 {
+		last := route[i:]
+		if dot := strings.LastIndex(last, "."); dot >= 0 {
+			if _, ok := staticResourceExts[strings.ToLower(last[dot:])]; ok {
+				return true
+			}
+		}
+	}
+	for _, p := range staticResourcePrefixes {
+		if strings.HasPrefix(route, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// systemDisplay is the value written into metadata.system, the output
+// folder name, and the target namespace. It is the canonical SystemType
+// (e.g. "otel-demo"); the seed manifests use it as the namespace because
+// the single-instance seed deployment lives in a namespace named for the
+// system code.
 var systemDisplay = map[string]string{
 	"ts":       "ts",
 	"oteldemo": "otel-demo",
@@ -66,10 +152,54 @@ var systemDisplay = map[string]string{
 // orderedSystems is the canonical iteration order for deterministic output.
 var orderedSystems = []string{"hs", "media", "ob", "oteldemo", "sn", "sockshop", "teastore", "ts"}
 
+// appLabel maps a chaos-experiment service-data key to the pod app-label
+// value used in chaos targets. For teastore the trace-derived data keys
+// carry the deployment prefix (teastore-webui) but the pods are labelled
+// with the short name (webui); chaos addresses pods by the app label, so
+// targets and metadata.service use the stripped form. The deployment name
+// (filename and target.container) keeps the full key.
+func appLabel(sysKey, service string) string {
+	if sysKey == "teastore" {
+		return strings.TrimPrefix(service, "teastore-")
+	}
+	return service
+}
+
+// HTTPChaos response/request-mutation capabilities. Emitted per (app, port,
+// method, path) into the http category; gRPC pseudo-routes are excluded.
+var (
+	httpRespCaps = []string{
+		"http_response_abort",
+		"http_response_delay",
+		"http_response_replace_code",
+		"http_response_patch_body",
+		"http_response_replace_body",
+	}
+	httpReqMutationCaps = []string{
+		"http_request_replace_method",
+		"http_request_replace_path",
+	}
+	dnsCaps       = []string{"dns_error", "dns_random"}
+	networkCaps   = []string{"network_delay", "network_loss", "network_duplicate", "network_corrupt", "network_bandwidth", "network_partition"}
+	jvmMethodCaps = []string{"jvm_method_return", "jvm_method_exception", "jvm_cpu_stress", "jvm_memory_stress"}
+	jvmMysqlCaps  = []string{"jvm_mysql_latency", "jvm_mysql_exception"}
+
+	mutationTypeNames = map[int]string{0: "constant", 1: "operator", 2: "string"}
+
+	validMySQLTypes = map[string]bool{"select": true, "insert": true, "update": true, "delete": true, "replace": true, "all": true}
+)
+
 type httpEndpoint struct {
-	Method string
-	Route  string
-	Port   string
+	Method        string
+	Route         string
+	Port          string
+	ServerAddress string
+	SpanName      string
+	// grpc marks an endpoint folded from gRPC operations. Such endpoints
+	// still seed http_request_delay/abort in the base manifest, but are
+	// excluded from the http A1b response/replace family — chaos-mesh
+	// HTTPChaos cannot act on gRPC/HTTP-2 calls.
+	grpc bool
 }
 
 type classMethod struct {
@@ -77,12 +207,46 @@ type classMethod struct {
 	Method string
 }
 
+type dbOp struct {
+	DBName   string
+	Table    string
+	SQLType  string
+	DBSystem string
+}
+
+type grpcOp struct {
+	Service       string
+	ServerAddress string
+}
+
+type mutationSpec struct {
+	Type        int
+	TypeName    string
+	From        string
+	To          string
+	Strategy    string
+	Description string
+}
+
+type mutatorEntry struct {
+	Class     string
+	Method    string
+	Mutations []mutationSpec
+}
+
 type systemData struct {
+	sysKey    string
 	namespace string
-	// service → endpoints (deduplicated by (method, route, port))
+	// service → HTTP/gRPC-folded endpoints (deduplicated)
 	endpoints map[string][]httpEndpoint
 	// service → class/method pairs (deduplicated)
 	methods map[string][]classMethod
+	// service → mysql database operations
+	dbOps map[string][]dbOp
+	// service → runtime-mutator method entries
+	mutators map[string][]mutatorEntry
+	// client-side gRPC operations across all services (DNS gRPC-only filter)
+	grpcClientOps []grpcOp
 	// union of every service name observed anywhere in this system
 	services map[string]struct{}
 	// presentFamilies records which capability-family source files existed
@@ -93,27 +257,15 @@ type systemData struct {
 }
 
 type point struct {
-	Capability string         `json:"capability"`
-	Target     map[string]any `json:"target"`
-}
-
-type manifestSpec struct {
-	ReplaceScope string  `json:"replace_scope"`
-	Points       []point `json:"points"`
+	Capability string
+	Target     map[string]any
 }
 
 type manifestMeta struct {
-	System       string `json:"system"`
-	Service      string `json:"service"`
-	Instance     string `json:"instance"`
-	ChartVersion string `json:"chart_version"`
-}
-
-type manifest struct {
-	APIVersion string       `json:"apiVersion"`
-	Kind       string       `json:"kind"`
-	Metadata   manifestMeta `json:"metadata"`
-	Spec       manifestSpec `json:"spec"`
+	System       string
+	Service      string
+	Instance     string
+	ChartVersion string
 }
 
 // stats tallies counts for the final summary.
@@ -122,15 +274,18 @@ type stats struct {
 	servicesBySystem map[string]int
 	pointsBySystem   map[string]int
 	skippedSystems   []string
-	// httpPointsBySystem counts http_request_* across the system; sourced
-	// from serviceendpoints/grpcoperations files.
-	httpPointsBySystem map[string]int
-	// jvmPointsBySystem counts jvm_method_latency; sourced from javaclassmethods.
-	jvmPointsBySystem map[string]int
+
+	httpReqBySystem    map[string]int
+	httpA1bBySystem    map[string]int
+	dnsBySystem        map[string]int
+	networkBySystem    map[string]int
+	jvmMethodBySystem  map[string]int
+	jvmMysqlBySystem   map[string]int
+	jvmMutatorBySystem map[string]int
 }
 
 func main() {
-	chaosRoot := flag.String("chaos-root", "../../../chaos-experiment/internal", "path to chaos-experiment/internal")
+	chaosRoot := flag.String("chaos-root", "./data", "path to vendored chaos-experiment data (per-system subdirs)")
 	outRoot := flag.String("out", "../../manifests/aegis-chaos", "output root directory")
 	date := flag.String("date", defaultChartVersion, "chart_version stamp; defaults to seed-genesis for deterministic re-runs")
 	flag.Parse()
@@ -145,8 +300,13 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 	st := stats{
 		servicesBySystem:   map[string]int{},
 		pointsBySystem:     map[string]int{},
-		httpPointsBySystem: map[string]int{},
-		jvmPointsBySystem:  map[string]int{},
+		httpReqBySystem:    map[string]int{},
+		httpA1bBySystem:    map[string]int{},
+		dnsBySystem:        map[string]int{},
+		networkBySystem:    map[string]int{},
+		jvmMethodBySystem:  map[string]int{},
+		jvmMysqlBySystem:   map[string]int{},
+		jvmMutatorBySystem: map[string]int{},
 	}
 
 	if err := os.MkdirAll(outRoot, 0o755); err != nil {
@@ -170,35 +330,57 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 		if err := os.MkdirAll(sysDir, 0o755); err != nil {
 			return err
 		}
+		if err := removeStaleA1b(sysDir); err != nil {
+			return err
+		}
 
 		services := sortedKeys(data.services)
 		for _, svc := range services {
-			pts := buildPoints(svc, data)
-			if len(pts) == 0 {
-				continue
+			svcLabel := appLabel(sysKey, svc)
+			base := buildBasePoints(svc, data, &st, sysKey)
+			if len(base) > 0 {
+				if err := writeManifest(filepath.Join(sysDir, svc+".yaml"), manifestMeta{
+					System: systemDisplay[sysKey], Service: svcLabel, Instance: manifestInstance, ChartVersion: chartVersion,
+				}, base); err != nil {
+					return err
+				}
+				st.servicesBySystem[sysKey]++
+				st.pointsBySystem[sysKey] += len(base)
 			}
-			m := manifest{
-				APIVersion: apiVersion,
-				Kind:       kind,
-				Metadata: manifestMeta{
-					System:       systemDisplay[sysKey],
-					Service:      svc,
-					Instance:     manifestInstance,
-					ChartVersion: chartVersion,
-				},
-				Spec: manifestSpec{ReplaceScope: replaceScope, Points: pts},
+
+			categories := map[string][]point{
+				"http":                buildHTTPA1bPoints(svc, data),
+				"dns":                 buildDNSPoints(svc, data),
+				"network":             buildNetworkPoints(svc, data),
+				"jvm-method":          buildJVMMethodPoints(svc, data),
+				"jvm-mysql":           buildJVMMysqlPoints(svc, data),
+				"jvm-runtime-mutator": buildRuntimeMutatorPoints(svc, data),
 			}
-			if err := writeManifest(filepath.Join(sysDir, svc+".yaml"), m); err != nil {
-				return err
-			}
-			st.servicesBySystem[sysKey]++
-			st.pointsBySystem[sysKey] += len(pts)
-			for _, p := range pts {
-				switch p.Capability {
-				case "http_request_delay", "http_request_abort":
-					st.httpPointsBySystem[sysKey]++
-				case "jvm_method_latency":
-					st.jvmPointsBySystem[sysKey]++
+			for _, cat := range []string{"dns", "http", "jvm-method", "jvm-mysql", "jvm-runtime-mutator", "network"} {
+				pts := categories[cat]
+				if len(pts) == 0 {
+					continue
+				}
+				sortPoints(pts)
+				if err := writeManifest(filepath.Join(sysDir, fmt.Sprintf("%s-%s-A1b.yaml", svc, cat)), manifestMeta{
+					System: systemDisplay[sysKey], Service: svcLabel, Instance: manifestInstance, ChartVersion: chartVersion,
+				}, pts); err != nil {
+					return err
+				}
+				st.pointsBySystem[sysKey] += len(pts)
+				switch cat {
+				case "http":
+					st.httpA1bBySystem[sysKey] += len(pts)
+				case "dns":
+					st.dnsBySystem[sysKey] += len(pts)
+				case "network":
+					st.networkBySystem[sysKey] += len(pts)
+				case "jvm-method":
+					st.jvmMethodBySystem[sysKey] += len(pts)
+				case "jvm-mysql":
+					st.jvmMysqlBySystem[sysKey] += len(pts)
+				case "jvm-runtime-mutator":
+					st.jvmMutatorBySystem[sysKey] += len(pts)
 				}
 			}
 		}
@@ -208,11 +390,11 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 		// Mismatch means the source was truncated, the AST var name drifted,
 		// or the loader silently swallowed a parse error.
 		var mismatches []string
-		if (data.presentFamilies["serviceendpoints"] || data.presentFamilies["grpcoperations"]) && st.httpPointsBySystem[sysKey] == 0 {
+		if (data.presentFamilies["serviceendpoints"] || data.presentFamilies["grpcoperations"]) && st.httpReqBySystem[sysKey] == 0 {
 			mismatches = append(mismatches, "http (serviceendpoints/grpcoperations file present, 0 http_request_* points)")
 		}
-		if data.presentFamilies["javaclassmethods"] && st.jvmPointsBySystem[sysKey] == 0 {
-			mismatches = append(mismatches, "jvm (javaclassmethods file present, 0 jvm_method_latency points)")
+		if data.presentFamilies["javaclassmethods"] && st.jvmMethodBySystem[sysKey] == 0 {
+			mismatches = append(mismatches, "jvm-method (javaclassmethods file present, 0 jvm-method A1b points)")
 		}
 		if len(mismatches) > 0 {
 			return fmt.Errorf("system %s: capability-family floor failed: %s", sysKey, strings.Join(mismatches, "; "))
@@ -223,7 +405,11 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 	return nil
 }
 
-func buildPoints(service string, d *systemData) []point {
+// buildBasePoints emits the workload-agnostic baseline plus the canonical
+// http_request_delay/abort pair and jvm_method_latency. http request points
+// are emitted for every endpoint including gRPC pseudo-routes (unchanged
+// from the historical base behavior).
+func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []point {
 	ns := d.namespace
 	// WHY container=service: chaos-experiment data carries no container
 	// name, but the 8 benchmark charts all follow the k8s convention
@@ -233,8 +419,9 @@ func buildPoints(service string, d *systemData) []point {
 	// `container`. If a benchmark ever deviates, the rendered chaos-mesh
 	// CR will no-op against a non-existent container — loud runtime
 	// failure beats silent fudging at manifest time.
-	appOnly := map[string]any{"namespace": ns, "app": service}
-	withContainer := map[string]any{"namespace": ns, "app": service, "container": service}
+	app := appLabel(d.sysKey, service)
+	appOnly := map[string]any{"namespace": ns, "app": app}
+	withContainer := map[string]any{"namespace": ns, "app": app, "container": service}
 	pts := []point{
 		{Capability: "container_kill", Target: cloneTarget(withContainer)},
 		{Capability: "cpu_stress", Target: cloneTarget(withContainer)},
@@ -243,47 +430,305 @@ func buildPoints(service string, d *systemData) []point {
 		{Capability: "pod_kill", Target: cloneTarget(appOnly)},
 		{Capability: "time_skew", Target: cloneTarget(withContainer)},
 	}
-	// WHY-skip network_*: seed schema needs {source_app, target_service}; no curated peer in data.
-	// WHY-skip dns_error: seed schema needs domain_patterns; no per-service domain data.
-	// WHY-skip jvm_mysql_*: seed schema needs class+method; databaseoperations only has db/table/sql_type.
 
-	endpoints := d.endpoints[service]
-	for _, e := range endpoints {
-		port, err := strconv.Atoi(e.Port)
-		if err != nil || port <= 0 || port > 65535 {
+	httpSeen := map[string]struct{}{}
+	for _, e := range d.endpoints[service] {
+		target, ok := httpTarget(ns, app, e)
+		if !ok {
 			continue
 		}
-		method := strings.ToUpper(strings.TrimSpace(e.Method))
-		if !isAllowedHTTPMethod(method) {
+		key := fmt.Sprintf("%v|%s|%s", target["port"], target["method"], target["path"])
+		if _, dup := httpSeen[key]; dup {
 			continue
 		}
-		path := strings.TrimSpace(e.Route)
-		if path == "" {
-			continue
-		}
-		target := map[string]any{
-			"namespace": ns,
-			"app":       service,
-			"port":      port,
-			"method":    method,
-			"path":      path,
-		}
+		httpSeen[key] = struct{}{}
 		pts = append(pts, point{Capability: "http_request_delay", Target: cloneTarget(target)})
 		pts = append(pts, point{Capability: "http_request_abort", Target: cloneTarget(target)})
+		st.httpReqBySystem[sysKey] += 2
 	}
 
 	for _, cm := range d.methods[service] {
-		target := map[string]any{
-			"namespace": ns,
-			"app":       service,
-			"class":     cm.Class,
-			"method":    cm.Method,
-		}
-		pts = append(pts, point{Capability: "jvm_method_latency", Target: target})
+		pts = append(pts, point{Capability: "jvm_method_latency", Target: map[string]any{
+			"namespace": ns, "app": app, "class": cm.Class, "method": cm.Method,
+		}})
 	}
 
 	sortPoints(pts)
 	return pts
+}
+
+// buildHTTPA1bPoints emits the response/request-mutation HTTPChaos caps per
+// (app, port, method, path). gRPC pseudo-routes are excluded — chaos-mesh
+// HTTPChaos operates on HTTP/1.x and never matches them.
+func buildHTTPA1bPoints(service string, d *systemData) []point {
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	seen := map[string]struct{}{}
+	for _, e := range d.endpoints[service] {
+		if e.grpc || grpcRoutePattern.MatchString(e.Route) {
+			continue
+		}
+		target, ok := httpTarget(d.namespace, app, e)
+		if !ok {
+			continue
+		}
+		key := fmt.Sprintf("%v|%s|%s", target["port"], target["method"], target["path"])
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		for _, cap := range httpRespCaps {
+			pts = append(pts, point{Capability: cap, Target: cloneTarget(target)})
+		}
+		for _, cap := range httpReqMutationCaps {
+			pts = append(pts, point{Capability: cap, Target: cloneTarget(target)})
+		}
+	}
+	return pts
+}
+
+// httpTarget validates and normalizes one endpoint into an http chaos target.
+func httpTarget(ns, service string, e httpEndpoint) (map[string]any, bool) {
+	port, err := strconv.Atoi(e.Port)
+	if err != nil || port <= 0 || port > 65535 {
+		return nil, false
+	}
+	method := strings.ToUpper(strings.TrimSpace(e.Method))
+	if !isAllowedHTTPMethod(method) {
+		return nil, false
+	}
+	rawPath := strings.TrimSpace(e.Route)
+	if isStaticResource(rawPath) {
+		return nil, false
+	}
+	path := normalizePath(rawPath)
+	if path == "" {
+		return nil, false
+	}
+	t := map[string]any{
+		"namespace": ns,
+		"app":       service,
+		"port":      port,
+		"method":    method,
+		"path":      path,
+	}
+	if e.ServerAddress != "" {
+		t["server_address"] = e.ServerAddress
+	}
+	if sn := strings.TrimSpace(e.SpanName); sn != "" {
+		t["span_name"] = normalizeSpanName(sn)
+	}
+	return t, true
+}
+
+// buildDNSPoints derives (app, domain) pairs from each service's endpoint
+// ServerAddress values (excluding self), then emits dns_error/dns_random.
+// gRPC-only pairs are filtered out — DNS chaos cannot match them.
+func buildDNSPoints(service string, d *systemData) []point {
+	grpcOnly := d.grpcOnlyPairs()
+	domains := map[string]struct{}{}
+	for _, e := range d.endpoints[service] {
+		if e.grpc || e.ServerAddress == "" || e.ServerAddress == service {
+			continue
+		}
+		if grpcOnly[service+"->"+e.ServerAddress] {
+			continue
+		}
+		domains[e.ServerAddress] = struct{}{}
+	}
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	for _, domain := range sortedKeys(domains) {
+		for _, cap := range dnsCaps {
+			pts = append(pts, point{Capability: cap, Target: map[string]any{
+				"namespace":       d.namespace,
+				"app":             app,
+				"domain_patterns": []any{domain},
+			}})
+		}
+	}
+	return pts
+}
+
+// buildNetworkPoints derives forward (source→target) pairs from each
+// service's endpoint ServerAddress values (excluding self) and emits the 6
+// network caps per pair.
+func buildNetworkPoints(service string, d *systemData) []point {
+	spansByTarget := map[string]map[string]struct{}{}
+	for _, e := range d.endpoints[service] {
+		if e.ServerAddress == "" || e.ServerAddress == service {
+			continue
+		}
+		target := appLabel(d.sysKey, e.ServerAddress)
+		if spansByTarget[target] == nil {
+			spansByTarget[target] = map[string]struct{}{}
+		}
+		if sn := strings.TrimSpace(e.SpanName); sn != "" {
+			spansByTarget[target][normalizeSpanName(sn)] = struct{}{}
+		}
+	}
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	for _, target := range sortedKeys(spansByTarget) {
+		spanNames := sortedKeys(spansByTarget[target])
+		for _, cap := range networkCaps {
+			tgt := map[string]any{
+				"namespace":      d.namespace,
+				"source_app":     app,
+				"target_service": target,
+			}
+			if len(spanNames) > 0 {
+				arr := make([]any, len(spanNames))
+				for i, s := range spanNames {
+					arr[i] = s
+				}
+				tgt["span_names"] = arr
+			}
+			pts = append(pts, point{Capability: cap, Target: tgt})
+		}
+	}
+	return pts
+}
+
+func buildJVMMethodPoints(service string, d *systemData) []point {
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	for _, cm := range d.methods[service] {
+		for _, cap := range jvmMethodCaps {
+			pts = append(pts, point{Capability: cap, Target: map[string]any{
+				"namespace": d.namespace, "app": app, "class": cm.Class, "method": cm.Method,
+			}})
+		}
+	}
+	return pts
+}
+
+func buildJVMMysqlPoints(service string, d *systemData) []point {
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	seen := map[string]struct{}{}
+	for _, op := range d.dbOps[service] {
+		if op.DBSystem != "mysql" || op.DBName == "" || op.Table == "" {
+			continue
+		}
+		sqlType := strings.ToLower(strings.TrimSpace(op.SQLType))
+		if !validMySQLTypes[sqlType] {
+			sqlType = "all"
+		}
+		key := op.DBName + "|" + op.Table + "|" + sqlType
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		for _, cap := range jvmMysqlCaps {
+			pts = append(pts, point{Capability: cap, Target: map[string]any{
+				"namespace": d.namespace, "app": app, "db_name": op.DBName, "table": op.Table, "sql_type": sqlType,
+			}})
+		}
+	}
+	return pts
+}
+
+// buildRuntimeMutatorPoints emits one jvm_runtime_mutator point per
+// (app, class, method, distinct mutation). The mutation fingerprint mirrors
+// guided/resolver.go runtimeMutatorKey: constant mutations are identified by
+// from:to, operator/string mutations by type_name:strategy.
+func buildRuntimeMutatorPoints(service string, d *systemData) []point {
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	for _, me := range d.mutators[service] {
+		seen := map[string]struct{}{}
+		for _, m := range me.Mutations {
+			typeName := m.TypeName
+			if typeName == "" {
+				typeName = mutationTypeNames[m.Type]
+			}
+			if typeName == "" {
+				continue
+			}
+			var fp string
+			if typeName == "constant" {
+				fp = "constant:" + m.From + ":" + m.To
+			} else {
+				fp = typeName + ":" + m.Strategy
+			}
+			key := me.Class + "|" + me.Method + "|" + fp
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
+			target := map[string]any{
+				"namespace":          d.namespace,
+				"app":                app,
+				"class":              me.Class,
+				"method":             me.Method,
+				"mutation_type":      m.Type,
+				"mutation_type_name": typeName,
+			}
+			if m.From != "" {
+				target["mutation_from"] = m.From
+			}
+			if m.To != "" {
+				target["mutation_to"] = m.To
+			}
+			if m.Strategy != "" {
+				target["mutation_strategy"] = m.Strategy
+			}
+			if m.Description != "" {
+				target["description"] = m.Description
+			}
+			pts = append(pts, point{Capability: "jvm_runtime_mutator", Target: target})
+		}
+	}
+	return pts
+}
+
+// grpcOnlyPairs returns the set of "source->target" pairs that communicate
+// only via gRPC (have a client gRPC op but no HTTP route). DNS chaos is
+// skipped for these.
+func (d *systemData) grpcOnlyPairs() map[string]bool {
+	grpcPairs := map[string]bool{}
+	for _, op := range d.grpcClientOps {
+		if op.Service == "" || op.ServerAddress == "" {
+			continue
+		}
+		grpcPairs[op.Service+"->"+op.ServerAddress] = true
+	}
+	httpPairs := map[string]bool{}
+	for svc, eps := range d.endpoints {
+		for _, e := range eps {
+			if e.ServerAddress == "" || e.ServerAddress == svc {
+				continue
+			}
+			if e.Route != "" && !isGRPCRoutePattern(e.Route) {
+				httpPairs[svc+"->"+e.ServerAddress] = true
+			}
+		}
+	}
+	out := map[string]bool{}
+	for pair := range grpcPairs {
+		if !httpPairs[pair] {
+			out[pair] = true
+		}
+	}
+	return out
+}
+
+// isGRPCRoutePattern reports whether a route looks like a gRPC pseudo-route
+// (/package.Service/Method): a leading slash and a dot before the next slash.
+func isGRPCRoutePattern(route string) bool {
+	if len(route) < 3 || route[0] != '/' {
+		return false
+	}
+	for i := 1; i < len(route); i++ {
+		if route[i] == '/' {
+			return false
+		}
+		if route[i] == '.' {
+			return true
+		}
+	}
+	return false
 }
 
 func isAllowedHTTPMethod(m string) bool {
@@ -324,7 +769,7 @@ func targetKey(t map[string]any) string {
 	return b.String()
 }
 
-func sortedKeys(m map[string]struct{}) []string {
+func sortedKeys[T any](m map[string]T) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
@@ -333,13 +778,29 @@ func sortedKeys(m map[string]struct{}) []string {
 	return out
 }
 
+func removeStaleA1b(sysDir string) error {
+	stale, err := filepath.Glob(filepath.Join(sysDir, "*-A1b.yaml"))
+	if err != nil {
+		return err
+	}
+	for _, p := range stale {
+		if err := os.Remove(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func printSummary(w *os.File, st stats) {
 	totalServices, totalPoints := 0, 0
 	for _, k := range orderedSystems {
 		if st.servicesBySystem[k] == 0 {
 			continue
 		}
-		fmt.Fprintf(w, "system=%-10s services=%-4d points=%d\n", systemDisplay[k], st.servicesBySystem[k], st.pointsBySystem[k])
+		fmt.Fprintf(w, "system=%-10s services=%-4d points=%-6d (httpReq=%d httpA1b=%d dns=%d net=%d jvmM=%d jvmSQL=%d mut=%d)\n",
+			systemDisplay[k], st.servicesBySystem[k], st.pointsBySystem[k],
+			st.httpReqBySystem[k], st.httpA1bBySystem[k], st.dnsBySystem[k],
+			st.networkBySystem[k], st.jvmMethodBySystem[k], st.jvmMysqlBySystem[k], st.jvmMutatorBySystem[k])
 		totalServices += st.servicesBySystem[k]
 		totalPoints += st.pointsBySystem[k]
 	}
@@ -351,22 +812,24 @@ func printSummary(w *os.File, st stats) {
 
 // ---------- Data loading via go/parser ----------
 
-// loadSystem parses the four data files under chaos-experiment/internal/<sys>/.
-// Missing subdirs are tolerated (e.g. Go-stack systems lack
-// javaclassmethods/); a missing root means the system has no data at all.
+// loadSystem parses the four data files under <chaosRoot>/<sys>/.
+// Missing subdirs are tolerated (e.g. Go-stack systems lack javaclassmethods/).
 func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 	root := filepath.Join(chaosRoot, sysKey)
 	if _, err := os.Stat(root); err != nil {
 		return nil, fmt.Errorf("system root not found: %w", err)
 	}
-	ns, ok := systemNamespace[sysKey]
+	ns, ok := systemDisplay[sysKey]
 	if !ok {
 		return nil, fmt.Errorf("no namespace mapping for %s", sysKey)
 	}
 	d := &systemData{
+		sysKey:          sysKey,
 		namespace:       ns,
 		endpoints:       map[string][]httpEndpoint{},
 		methods:         map[string][]classMethod{},
+		dbOps:           map[string][]dbOp{},
+		mutators:        map[string][]mutatorEntry{},
 		services:        map[string]struct{}{},
 		presentFamilies: map[string]bool{},
 	}
@@ -378,14 +841,14 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 	if err := loadHTTPEndpoints(sePath, d); err != nil {
 		return nil, fmt.Errorf("serviceendpoints: %w", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "grpcoperations", "grpcoperations.go")); err == nil {
+	grpcPath := filepath.Join(root, "grpcoperations", "grpcoperations.go")
+	if _, err := os.Stat(grpcPath); err == nil {
 		d.presentFamilies["grpcoperations"] = true
 	}
 	if _, err := os.Stat(filepath.Join(root, "javaclassmethods", "javaclassmethods.go")); err == nil {
 		d.presentFamilies["javaclassmethods"] = true
 	}
-	if err := loadHTTPEndpoints(filepath.Join(root, "grpcoperations", "grpcoperations.go"), d); err != nil {
-		// gRPC operations file is optional; only complain if present and unparseable.
+	if err := loadGRPCOperations(grpcPath, d); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
 			return nil, fmt.Errorf("grpcoperations: %w", err)
 		}
@@ -400,6 +863,11 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 			return nil, fmt.Errorf("javaclassmethods: %w", err)
 		}
 	}
+	if err := loadMutatorConfig(filepath.Join(root, "mutatorconfig", "mutatorconfig.go"), d); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
+			return nil, fmt.Errorf("mutatorconfig: %w", err)
+		}
+	}
 
 	dedupHTTP(d)
 	dedupMethods(d)
@@ -411,21 +879,36 @@ func dedupHTTP(d *systemData) {
 		seen := map[string]struct{}{}
 		out := make([]httpEndpoint, 0, len(list))
 		for _, e := range list {
-			k := e.Method + "|" + e.Route + "|" + e.Port
+			k := e.Method + "|" + e.Route + "|" + e.Port + "|" + e.ServerAddress
 			if _, dup := seen[k]; dup {
 				continue
 			}
 			seen[k] = struct{}{}
 			out = append(out, e)
 		}
+		// Order so that within one normalized (method, path, port) group the
+		// richest span_name sorts first — http point dedup keeps the first
+		// endpoint per group, and a templated span like
+		// "DELETE /adminorder/{uuid}/{tripid}" is a better groundtruth label
+		// than a bare "DELETE". Group by normalized path first so collapsing
+		// endpoints land adjacent regardless of their raw (pre-normalization)
+		// route.
 		sort.SliceStable(out, func(i, j int) bool {
-			if out[i].Route != out[j].Route {
-				return out[i].Route < out[j].Route
+			ni, nj := normalizePath(out[i].Route), normalizePath(out[j].Route)
+			if ni != nj {
+				return ni < nj
 			}
 			if out[i].Method != out[j].Method {
 				return out[i].Method < out[j].Method
 			}
-			return out[i].Port < out[j].Port
+			if out[i].Port != out[j].Port {
+				return out[i].Port < out[j].Port
+			}
+			si, sj := normalizeSpanName(out[i].SpanName), normalizeSpanName(out[j].SpanName)
+			if len(si) != len(sj) {
+				return len(si) > len(sj)
+			}
+			return si < sj
 		})
 		d.endpoints[svc] = out
 	}
@@ -488,7 +971,7 @@ func parseMapLiteral(path, varName string) (*ast.CompositeLit, error) {
 }
 
 func loadHTTPEndpoints(path string, d *systemData) error {
-	cl, err := parseMapLiteral(path, varNameForFile(path))
+	cl, err := parseMapLiteral(path, "ServiceEndpoints")
 	if err != nil {
 		return err
 	}
@@ -512,21 +995,64 @@ func loadHTTPEndpoints(path string, d *systemData) error {
 				continue
 			}
 			fields := structFields(rec)
-			ep := httpEndpoint{
-				Method: fields["RequestMethod"],
-				Route:  fields["Route"],
-				Port:   fields["ServerPort"],
+			d.endpoints[svc] = append(d.endpoints[svc], httpEndpoint{
+				Method:        fields["RequestMethod"],
+				Route:         fields["Route"],
+				Port:          fields["ServerPort"],
+				ServerAddress: fields["ServerAddress"],
+				SpanName:      fields["SpanName"],
+			})
+		}
+	}
+	return nil
+}
+
+// loadGRPCOperations folds gRPC operations into the endpoint family as
+// POST /RPCService/RPCMethod (a gRPC pseudo-route) and records client-side
+// ops for the DNS gRPC-only filter.
+func loadGRPCOperations(path string, d *systemData) error {
+	cl, err := parseMapLiteral(path, "GRPCOperations")
+	if err != nil {
+		return err
+	}
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		svc, ok := stringLit(kv.Key)
+		if !ok {
+			continue
+		}
+		d.services[svc] = struct{}{}
+		entries, ok := kv.Value.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		for _, entry := range entries.Elts {
+			rec, ok := entry.(*ast.CompositeLit)
+			if !ok {
+				continue
 			}
-			// gRPC operations: map RPCMethod onto Route as "/RPCService/RPCMethod"; emit as POST.
-			if ep.Route == "" {
-				if rs := fields["RPCService"]; rs != "" {
-					if rm := fields["RPCMethod"]; rm != "" {
-						ep.Route = "/" + rs + "/" + rm
-						ep.Method = "POST"
-					}
-				}
+			fields := structFields(rec)
+			route := ""
+			if fields["RPCService"] != "" && fields["RPCMethod"] != "" {
+				route = "/" + fields["RPCService"] + "/" + fields["RPCMethod"]
 			}
-			d.endpoints[svc] = append(d.endpoints[svc], ep)
+			d.endpoints[svc] = append(d.endpoints[svc], httpEndpoint{
+				Method:        "POST",
+				Route:         route,
+				Port:          fields["ServerPort"],
+				ServerAddress: fields["ServerAddress"],
+				SpanName:      fields["SpanName"],
+				grpc:          true,
+			})
+			if strings.EqualFold(fields["SpanKind"], "client") {
+				d.grpcClientOps = append(d.grpcClientOps, grpcOp{
+					Service:       svc,
+					ServerAddress: fields["ServerAddress"],
+				})
+			}
 		}
 	}
 	return nil
@@ -537,16 +1063,32 @@ func loadDatabaseOperations(path string, d *systemData) error {
 	if err != nil {
 		return err
 	}
-	// We still register the service name so it gets the workload-agnostic
-	// points (pod_kill / pod_failure), even though jvm_mysql_* is skipped
-	// for lack of class+method in the source data.
 	for _, elt := range cl.Elts {
 		kv, ok := elt.(*ast.KeyValueExpr)
 		if !ok {
 			continue
 		}
-		if svc, ok := stringLit(kv.Key); ok {
-			d.services[svc] = struct{}{}
+		svc, ok := stringLit(kv.Key)
+		if !ok {
+			continue
+		}
+		d.services[svc] = struct{}{}
+		entries, ok := kv.Value.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		for _, entry := range entries.Elts {
+			rec, ok := entry.(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+			fields := structFields(rec)
+			d.dbOps[svc] = append(d.dbOps[svc], dbOp{
+				DBName:   fields["DBName"],
+				Table:    fields["DBTable"],
+				SQLType:  fields["Operation"],
+				DBSystem: fields["DBSystem"],
+			})
 		}
 	}
 	return nil
@@ -588,15 +1130,70 @@ func loadJavaClassMethods(path string, d *systemData) error {
 	return nil
 }
 
-func varNameForFile(path string) string {
-	base := filepath.Base(path)
-	switch base {
-	case "serviceendpoints.go":
-		return "ServiceEndpoints"
-	case "grpcoperations.go":
-		return "GRPCOperations"
+func loadMutatorConfig(path string, d *systemData) error {
+	cl, err := parseMapLiteral(path, "ServiceMutatorConfig")
+	if err != nil {
+		return err
 	}
-	return ""
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		svc, ok := stringLit(kv.Key)
+		if !ok {
+			continue
+		}
+		d.services[svc] = struct{}{}
+		entries, ok := kv.Value.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		for _, entry := range entries.Elts {
+			rec, ok := entry.(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+			me := mutatorEntry{
+				Class:  structFields(rec)["ClassName"],
+				Method: structFields(rec)["MethodName"],
+			}
+			if me.Class == "" || me.Method == "" {
+				continue
+			}
+			for _, f := range rec.Elts {
+				fkv, ok := f.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				id, ok := fkv.Key.(*ast.Ident)
+				if !ok || id.Name != "Mutations" {
+					continue
+				}
+				specs, ok := fkv.Value.(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+				for _, s := range specs.Elts {
+					srec, ok := s.(*ast.CompositeLit)
+					if !ok {
+						continue
+					}
+					fields := structFields(srec)
+					me.Mutations = append(me.Mutations, mutationSpec{
+						Type:        intField(srec, "Type"),
+						TypeName:    fields["TypeName"],
+						From:        fields["From"],
+						To:          fields["To"],
+						Strategy:    fields["Strategy"],
+						Description: fields["Description"],
+					})
+				}
+			}
+			d.mutators[svc] = append(d.mutators[svc], me)
+		}
+	}
+	return nil
 }
 
 func structFields(cl *ast.CompositeLit) map[string]string {
@@ -629,9 +1226,32 @@ func stringLit(e ast.Expr) (string, bool) {
 	return s, true
 }
 
+func intField(cl *ast.CompositeLit, name string) int {
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		id, ok := kv.Key.(*ast.Ident)
+		if !ok || id.Name != name {
+			continue
+		}
+		bl, ok := kv.Value.(*ast.BasicLit)
+		if !ok || bl.Kind != token.INT {
+			return 0
+		}
+		n, err := strconv.Atoi(bl.Value)
+		if err != nil {
+			return 0
+		}
+		return n
+	}
+	return 0
+}
+
 // ---------- Manifest write ----------
 
-func writeManifest(path string, m manifest) error {
+func writeManifest(path string, meta manifestMeta, points []point) error {
 	// We control the structure; emit deterministic YAML by hand. Each
 	// generated YAML is a JSON-superset (no anchors, no folded scalars),
 	// so jsonschema validators accept it after the YAML→JSON pass that
@@ -640,14 +1260,14 @@ func writeManifest(path string, m manifest) error {
 	b.WriteString("apiVersion: " + apiVersion + "\n")
 	b.WriteString("kind: " + kind + "\n")
 	b.WriteString("metadata:\n")
-	b.WriteString("  chart_version: " + yamlString(m.Metadata.ChartVersion) + "\n")
-	b.WriteString("  instance: " + yamlString(m.Metadata.Instance) + "\n")
-	b.WriteString("  service: " + yamlString(m.Metadata.Service) + "\n")
-	b.WriteString("  system: " + yamlString(m.Metadata.System) + "\n")
+	b.WriteString("  chart_version: " + yamlString(meta.ChartVersion) + "\n")
+	b.WriteString("  instance: " + yamlString(meta.Instance) + "\n")
+	b.WriteString("  service: " + yamlString(meta.Service) + "\n")
+	b.WriteString("  system: " + yamlString(meta.System) + "\n")
 	b.WriteString("spec:\n")
-	b.WriteString("  replace_scope: " + yamlString(m.Spec.ReplaceScope) + "\n")
+	b.WriteString("  replace_scope: " + yamlString(replaceScope) + "\n")
 	b.WriteString("  points:\n")
-	for _, p := range m.Spec.Points {
+	for _, p := range points {
 		b.WriteString("    - capability: " + yamlString(p.Capability) + "\n")
 		b.WriteString("      target:\n")
 		keys := make([]string, 0, len(p.Target))
@@ -656,10 +1276,21 @@ func writeManifest(path string, m manifest) error {
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			b.WriteString("        " + k + ": " + yamlValue(p.Target[k]) + "\n")
+			writeTargetField(&b, k, p.Target[k])
 		}
 	}
 	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
+func writeTargetField(b *strings.Builder, key string, v any) {
+	if list, ok := v.([]any); ok {
+		b.WriteString("        " + key + ":\n")
+		for _, item := range list {
+			b.WriteString("          - " + yamlValue(item) + "\n")
+		}
+		return
+	}
+	b.WriteString("        " + key + ": " + yamlValue(v) + "\n")
 }
 
 func yamlString(s string) string {

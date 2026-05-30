@@ -280,6 +280,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -357,6 +363,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -447,6 +459,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -537,6 +555,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -619,6 +643,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -696,6 +726,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -780,6 +816,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -854,6 +896,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -939,6 +987,12 @@
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
+        },
+        "server_address": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
         }
       },
       "required": [
@@ -1390,15 +1444,7 @@
           "minLength": 1,
           "type": "string"
         },
-        "class": {
-          "minLength": 1,
-          "type": "string"
-        },
         "db_name": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "method": {
           "minLength": 1,
           "type": "string"
         },
@@ -1426,8 +1472,8 @@
       "required": [
         "namespace",
         "app",
-        "class",
-        "method"
+        "db_name",
+        "table"
       ],
       "type": "object"
     },
@@ -1478,15 +1524,7 @@
           "minLength": 1,
           "type": "string"
         },
-        "class": {
-          "minLength": 1,
-          "type": "string"
-        },
         "db_name": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "method": {
           "minLength": 1,
           "type": "string"
         },
@@ -1514,8 +1552,8 @@
       "required": [
         "namespace",
         "app",
-        "class",
-        "method"
+        "db_name",
+        "table"
       ],
       "type": "object"
     },
@@ -1578,16 +1616,27 @@
           "minLength": 1,
           "type": "string"
         },
+        "description": {
+          "type": "string"
+        },
         "method": {
           "minLength": 1,
           "type": "string"
         },
+        "mutation_from": {
+          "type": "string"
+        },
+        "mutation_strategy": {
+          "type": "string"
+        },
+        "mutation_to": {
+          "type": "string"
+        },
         "mutation_type": {
-          "enum": [
-            "constant",
-            "operator",
-            "string"
-          ],
+          "type": "integer"
+        },
+        "mutation_type_name": {
+          "minLength": 1,
           "type": "string"
         },
         "namespace": {
@@ -1599,7 +1648,8 @@
         "namespace",
         "app",
         "class",
-        "method"
+        "method",
+        "mutation_type_name"
       ],
       "type": "object"
     },
@@ -1612,15 +1662,6 @@
           "maximum": 3600,
           "minimum": 1,
           "type": "integer"
-        },
-        "mutation_from": {
-          "type": "string"
-        },
-        "mutation_strategy": {
-          "type": "string"
-        },
-        "mutation_to": {
-          "type": "string"
         }
       },
       "required": [],
@@ -1726,6 +1767,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -1806,6 +1853,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -1883,6 +1936,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,
@@ -1966,6 +2025,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "target_service": {
           "minLength": 1,
           "type": "string"
@@ -2035,6 +2100,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,
@@ -2112,6 +2183,12 @@
         "source_app": {
           "minLength": 1,
           "type": "string"
+        },
+        "span_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_service": {
           "minLength": 1,

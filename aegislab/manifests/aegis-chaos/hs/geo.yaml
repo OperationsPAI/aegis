@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
+        server_address: "geo"
+        span_name: "geo.Geo/Nearby"
     - capability: "http_request_delay"
       target:
         app: "geo"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
+        server_address: "geo"
+        span_name: "geo.Geo/Nearby"
     - capability: "memory_stress"
       target:
         app: "geo"

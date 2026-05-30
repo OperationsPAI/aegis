@@ -1,70 +1,130 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-admin-order-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-admin-order-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-other-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-admin-order-service
-      target_service: ts-order-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-other-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-order-service"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+          - "PUT"
+        target_service: "ts-order-service"

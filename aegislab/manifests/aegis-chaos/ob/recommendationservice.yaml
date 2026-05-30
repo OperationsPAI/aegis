@@ -25,6 +25,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/ListProducts"
     - capability: "http_request_abort"
       target:
         app: "recommendationservice"
@@ -32,6 +34,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendationservice"
+        span_name: "/hipstershop.RecommendationService/ListRecommendations"
     - capability: "http_request_delay"
       target:
         app: "recommendationservice"
@@ -39,6 +43,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/ListProducts"
     - capability: "http_request_delay"
       target:
         app: "recommendationservice"
@@ -46,6 +52,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendationservice"
+        span_name: "/hipstershop.RecommendationService/ListRecommendations"
     - capability: "memory_stress"
       target:
         app: "recommendationservice"

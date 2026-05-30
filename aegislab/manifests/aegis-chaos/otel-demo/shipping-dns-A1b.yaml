@@ -1,46 +1,46 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: shipping
-  system: otel-demo
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "shipping"
+  system: "otel-demo"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: shipping
-      domain_patterns:
-      - checkout
-      namespace: otel-demo
-  - capability: dns_error
-    target:
-      app: shipping
-      domain_patterns:
-      - load-generator
-      namespace: otel-demo
-  - capability: dns_error
-    target:
-      app: shipping
-      domain_patterns:
-      - quote
-      namespace: otel-demo
-  - capability: dns_random
-    target:
-      app: shipping
-      domain_patterns:
-      - checkout
-      namespace: otel-demo
-  - capability: dns_random
-    target:
-      app: shipping
-      domain_patterns:
-      - load-generator
-      namespace: otel-demo
-  - capability: dns_random
-    target:
-      app: shipping
-      domain_patterns:
-      - quote
-      namespace: otel-demo
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "checkout"
+        namespace: "otel-demo"
+    - capability: "dns_error"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "load-generator"
+        namespace: "otel-demo"
+    - capability: "dns_error"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "quote"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "checkout"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "load-generator"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "shipping"
+        domain_patterns:
+          - "quote"
+        namespace: "otel-demo"

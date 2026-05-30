@@ -1,40 +1,52 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: accounting
-  system: otel-demo
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "accounting"
+  system: "otel-demo"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: accounting
-      target_service: postgresql
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "accounting"
+        span_names:
+          - "DB Access"
+        target_service: "postgresql"

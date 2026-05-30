@@ -25,6 +25,8 @@ spec:
         namespace: "sn"
         path: "/UserService/RegisterUserWithId"
         port: 9090
+        server_address: "user-service"
+        span_name: "register_user_withid_server"
     - capability: "http_request_delay"
       target:
         app: "user-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "sn"
         path: "/UserService/RegisterUserWithId"
         port: 9090
+        server_address: "user-service"
+        span_name: "register_user_withid_server"
     - capability: "memory_stress"
       target:
         app: "user-service"

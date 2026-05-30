@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/MovieReviewService/ReadMovieReviews"
         port: 9090
+        server_address: "movie-review-service"
+        span_name: "ReadMovieReviews"
     - capability: "http_request_abort"
       target:
         app: "movie-review-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/MovieReviewService/UploadMovieReview"
         port: 9090
+        server_address: "movie-review-service"
+        span_name: "UploadMovieReview"
     - capability: "http_request_delay"
       target:
         app: "movie-review-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "media"
         path: "/MovieReviewService/ReadMovieReviews"
         port: 9090
+        server_address: "movie-review-service"
+        span_name: "ReadMovieReviews"
     - capability: "http_request_delay"
       target:
         app: "movie-review-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "media"
         path: "/MovieReviewService/UploadMovieReview"
         port: 9090
+        server_address: "movie-review-service"
+        span_name: "UploadMovieReview"
     - capability: "memory_stress"
       target:
         app: "movie-review-service"

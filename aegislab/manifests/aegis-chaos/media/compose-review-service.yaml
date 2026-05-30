@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadMovieId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadMovieId"
     - capability: "http_request_abort"
       target:
         app: "compose-review-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadRating"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadRating"
     - capability: "http_request_abort"
       target:
         app: "compose-review-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadText"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadText"
     - capability: "http_request_abort"
       target:
         app: "compose-review-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadUniqueId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadUniqueId"
     - capability: "http_request_abort"
       target:
         app: "compose-review-service"
@@ -53,6 +61,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadUserId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadUserId"
     - capability: "http_request_delay"
       target:
         app: "compose-review-service"
@@ -60,6 +70,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadMovieId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadMovieId"
     - capability: "http_request_delay"
       target:
         app: "compose-review-service"
@@ -67,6 +79,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadRating"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadRating"
     - capability: "http_request_delay"
       target:
         app: "compose-review-service"
@@ -74,6 +88,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadText"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadText"
     - capability: "http_request_delay"
       target:
         app: "compose-review-service"
@@ -81,6 +97,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadUniqueId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadUniqueId"
     - capability: "http_request_delay"
       target:
         app: "compose-review-service"
@@ -88,6 +106,8 @@ spec:
         namespace: "media"
         path: "/ComposeReviewService/UploadUserId"
         port: 9090
+        server_address: "compose-review-service"
+        span_name: "UploadUserId"
     - capability: "memory_stress"
       target:
         app: "compose-review-service"

@@ -1,1450 +1,1450 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-order-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-order-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.OrderApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: addcreateNewOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: calculateSoldTicket
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: createNewOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: findAllOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getTicketListByDateAndTripId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: payOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: saveOrderInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: securityInfoCheck
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: Order
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: equals
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: hashCode
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderAlterInfo
-      method: OrderAlterInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: OrderInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableStateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableTravelDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableStateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableTravelDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getLoginId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getState
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableStateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableTravelDateQuery
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: setLoginId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: addNewOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: alterOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: cancelOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkDuplicateOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkSecurityAboutOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countOrdersAfterTime
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countValidOrders
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrderById
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrdersWithFilters
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getAllOrders
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getSoldTickets
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: initOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: payOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryAlreadySoldOrders
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryForStationId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: saveChanges
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.OrderApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: addcreateNewOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: calculateSoldTicket
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: createNewOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: findAllOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getTicketListByDateAndTripId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: payOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: saveOrderInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: securityInfoCheck
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: Order
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: equals
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: hashCode
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderAlterInfo
-      method: OrderAlterInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: OrderInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableStateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableTravelDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableStateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableTravelDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getLoginId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getState
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableStateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableTravelDateQuery
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: setLoginId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: addNewOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: alterOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: cancelOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkDuplicateOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkSecurityAboutOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countOrdersAfterTime
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countValidOrders
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrderById
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrdersWithFilters
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getAllOrders
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getSoldTickets
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: initOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: payOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryAlreadySoldOrders
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryForStationId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: saveChanges
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.OrderApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: addcreateNewOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: calculateSoldTicket
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: createNewOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: findAllOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getTicketListByDateAndTripId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: payOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: saveOrderInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: securityInfoCheck
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: Order
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: equals
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: hashCode
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderAlterInfo
-      method: OrderAlterInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: OrderInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableStateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableStateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getLoginId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getState
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableStateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: setLoginId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: addNewOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: alterOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: cancelOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkDuplicateOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkSecurityAboutOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countOrdersAfterTime
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countValidOrders
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrderById
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrdersWithFilters
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getAllOrders
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getSoldTickets
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: initOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: payOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryAlreadySoldOrders
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryForStationId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: saveChanges
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.OrderApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: addcreateNewOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: calculateSoldTicket
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: createNewOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: findAllOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: getTicketListByDateAndTripId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: payOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: saveOrderInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: securityInfoCheck
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.controller.OrderController
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: Order
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: equals
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.Order
-      method: hashCode
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderAlterInfo
-      method: OrderAlterInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: OrderInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableStateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: disableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableStateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: enableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getLoginId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: getState
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableBoughtDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableStateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: isEnableTravelDateQuery
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.entity.OrderInfo
-      method: setLoginId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: addNewOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: alterOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: cancelOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkDuplicateOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: checkSecurityAboutOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countOrdersAfterTime
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: countValidOrders
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrderById
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: findOrdersWithFilters
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getAllOrders
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderById
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getOrderPrice
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: getSoldTickets
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: initOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: modifyOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: payOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryAlreadySoldOrders
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryForStationId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrders
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: queryOrdersForRefresh
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: saveChanges
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-order-service
-      class: order.service.OrderServiceImpl
-      method: updateOrder
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.OrderApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "addcreateNewOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "calculateSoldTicket"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "createNewOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "findAllOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getTicketListByDateAndTripId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "saveOrderInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "securityInfoCheck"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "Order"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "equals"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "hashCode"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderAlterInfo"
+        method: "OrderAlterInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "OrderInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getLoginId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getState"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "setLoginId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "addNewOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "alterOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "cancelOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkDuplicateOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkSecurityAboutOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countOrdersAfterTime"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countValidOrders"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrderById"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrdersWithFilters"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getSoldTickets"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "initOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryAlreadySoldOrders"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryForStationId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "saveChanges"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.OrderApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "addcreateNewOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "calculateSoldTicket"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "createNewOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "findAllOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getTicketListByDateAndTripId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "saveOrderInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "securityInfoCheck"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "Order"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "equals"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "hashCode"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderAlterInfo"
+        method: "OrderAlterInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "OrderInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getLoginId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getState"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "setLoginId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "addNewOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "alterOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "cancelOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkDuplicateOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkSecurityAboutOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countOrdersAfterTime"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countValidOrders"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrderById"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrdersWithFilters"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getSoldTickets"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "initOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryAlreadySoldOrders"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryForStationId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "saveChanges"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.OrderApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "addcreateNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "calculateSoldTicket"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "createNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "findAllOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getTicketListByDateAndTripId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "saveOrderInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "securityInfoCheck"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "Order"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "equals"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "hashCode"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderAlterInfo"
+        method: "OrderAlterInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "OrderInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getLoginId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getState"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "setLoginId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "addNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "alterOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "cancelOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkDuplicateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkSecurityAboutOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countOrdersAfterTime"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countValidOrders"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrdersWithFilters"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getSoldTickets"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "initOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryAlreadySoldOrders"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryForStationId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "saveChanges"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.OrderApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "addcreateNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "calculateSoldTicket"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "createNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "findAllOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "getTicketListByDateAndTripId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "saveOrderInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "securityInfoCheck"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.controller.OrderController"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "Order"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "equals"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.Order"
+        method: "hashCode"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderAlterInfo"
+        method: "OrderAlterInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "OrderInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "disableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "enableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getLoginId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "getState"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableBoughtDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableStateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "isEnableTravelDateQuery"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.entity.OrderInfo"
+        method: "setLoginId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "addNewOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "alterOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "cancelOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkDuplicateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "checkSecurityAboutOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countOrdersAfterTime"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "countValidOrders"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "findOrdersWithFilters"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderById"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getOrderPrice"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "getSoldTickets"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "initOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "modifyOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "payOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryAlreadySoldOrders"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryForStationId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrders"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "queryOrdersForRefresh"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "saveChanges"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-order-service"
+        class: "order.service.OrderServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"

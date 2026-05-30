@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/UniqueIdService/UploadUniqueId"
         port: 9090
+        server_address: "unique-id-service"
+        span_name: "UploadUniqueId"
     - capability: "http_request_delay"
       target:
         app: "unique-id-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/UniqueIdService/UploadUniqueId"
         port: 9090
+        server_address: "unique-id-service"
+        span_name: "UploadUniqueId"
     - capability: "memory_stress"
       target:
         app: "unique-id-service"

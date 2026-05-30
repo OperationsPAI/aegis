@@ -25,6 +25,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.AdService/GetAds"
         port: 9555
+        server_address: "adservice"
+        span_name: "hipstershop.AdService/GetAds"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -32,6 +34,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/AddItem"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/AddItem"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -39,6 +43,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/GetCart"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -46,6 +52,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
+        server_address: "checkoutservice"
+        span_name: "hipstershop.CheckoutService/PlaceOrder"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -53,6 +61,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/Convert"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -60,6 +70,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/GetSupportedCurrencies"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -67,6 +79,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/GetProduct"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -74,6 +88,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/ListProducts"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -81,6 +97,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendationservice"
+        span_name: "hipstershop.RecommendationService/ListRecommendations"
     - capability: "http_request_abort"
       target:
         app: "frontend"
@@ -88,6 +106,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/GetQuote"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -95,6 +115,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.AdService/GetAds"
         port: 9555
+        server_address: "adservice"
+        span_name: "hipstershop.AdService/GetAds"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -102,6 +124,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/AddItem"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/AddItem"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -109,6 +133,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/GetCart"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -116,6 +142,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
+        server_address: "checkoutservice"
+        span_name: "hipstershop.CheckoutService/PlaceOrder"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -123,6 +151,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/Convert"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -130,6 +160,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/GetSupportedCurrencies"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -137,6 +169,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/GetProduct"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -144,6 +178,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/ListProducts"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -151,6 +187,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendationservice"
+        span_name: "hipstershop.RecommendationService/ListRecommendations"
     - capability: "http_request_delay"
       target:
         app: "frontend"
@@ -158,6 +196,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/GetQuote"
     - capability: "memory_stress"
       target:
         app: "frontend"

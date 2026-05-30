@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/CastInfoService/ReadCastInfo"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "ReadCastInfo"
     - capability: "http_request_abort"
       target:
         app: "cast-info-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/CastInfoService/WriteCastInfo"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "WriteCastInfo"
     - capability: "http_request_abort"
       target:
         app: "cast-info-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "media"
         path: "/PageService/ReadPage"
         port: 9090
+        server_address: "page-service"
+        span_name: "ReadPage"
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "media"
         path: "/CastInfoService/ReadCastInfo"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "ReadCastInfo"
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
@@ -53,6 +61,8 @@ spec:
         namespace: "media"
         path: "/CastInfoService/WriteCastInfo"
         port: 9090
+        server_address: "cast-info-service"
+        span_name: "WriteCastInfo"
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
@@ -60,6 +70,8 @@ spec:
         namespace: "media"
         path: "/PageService/ReadPage"
         port: 9090
+        server_address: "page-service"
+        span_name: "ReadPage"
     - capability: "memory_stress"
       target:
         app: "cast-info-service"

@@ -25,20 +25,17 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "ts-execute-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/2"
+        path: "/api/v1/orderOtherService/orderOther/status/*/*"
         port: 8080
-    - capability: "http_request_abort"
-      target:
-        app: "ts-execute-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/6"
-        port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "ts-execute-service"
@@ -46,6 +43,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-execute-service"
@@ -53,20 +52,17 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-execute-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/2"
+        path: "/api/v1/orderOtherService/orderOther/status/*/*"
         port: 8080
-    - capability: "http_request_delay"
-      target:
-        app: "ts-execute-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/6"
-        port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-execute-service"
@@ -74,6 +70,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderservice/order/*"
         port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET"
     - capability: "jvm_method_latency"
       target:
         app: "ts-execute-service"

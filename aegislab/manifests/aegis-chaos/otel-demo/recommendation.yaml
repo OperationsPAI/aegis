@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "http_request_abort"
       target:
         app: "recommendation"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "/flagd.evaluation.v1.Service/ResolveBoolean"
     - capability: "http_request_abort"
       target:
         app: "recommendation"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/ListProducts"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/ListProducts"
     - capability: "http_request_abort"
       target:
         app: "recommendation"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendation"
+        span_name: "/oteldemo.RecommendationService/ListRecommendations"
     - capability: "http_request_delay"
       target:
         app: "recommendation"
@@ -53,6 +61,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "http_request_delay"
       target:
         app: "recommendation"
@@ -60,6 +70,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "/flagd.evaluation.v1.Service/ResolveBoolean"
     - capability: "http_request_delay"
       target:
         app: "recommendation"
@@ -67,6 +79,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.ProductCatalogService/ListProducts"
         port: 8080
+        server_address: "product-catalog"
+        span_name: "oteldemo.ProductCatalogService/ListProducts"
     - capability: "http_request_delay"
       target:
         app: "recommendation"
@@ -74,6 +88,8 @@ spec:
         namespace: "otel-demo"
         path: "/oteldemo.RecommendationService/ListRecommendations"
         port: 8080
+        server_address: "recommendation"
+        span_name: "/oteldemo.RecommendationService/ListRecommendations"
     - capability: "memory_stress"
       target:
         app: "recommendation"

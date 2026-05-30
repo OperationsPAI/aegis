@@ -1,22 +1,22 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: recommender
-  system: teastore
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "recommender"
+  system: "teastore"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: recommender
-      domain_patterns:
-      - teastore-registry
-      namespace: teastore
-  - capability: dns_random
-    target:
-      app: recommender
-      domain_patterns:
-      - teastore-registry
-      namespace: teastore
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "recommender"
+        domain_patterns:
+          - "teastore-registry"
+        namespace: "teastore"
+    - capability: "dns_random"
+      target:
+        app: "recommender"
+        domain_patterns:
+          - "teastore-registry"
+        namespace: "teastore"

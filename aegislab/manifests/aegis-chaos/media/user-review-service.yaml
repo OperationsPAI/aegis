@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/UserReviewService/UploadUserReview"
         port: 9090
+        server_address: "user-review-service"
+        span_name: "UploadUserReview"
     - capability: "http_request_delay"
       target:
         app: "user-review-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/UserReviewService/UploadUserReview"
         port: 9090
+        server_address: "user-review-service"
+        span_name: "UploadUserReview"
     - capability: "memory_stress"
       target:
         app: "user-review-service"

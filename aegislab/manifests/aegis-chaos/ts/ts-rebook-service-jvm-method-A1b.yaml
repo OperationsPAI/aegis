@@ -1,514 +1,490 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-rebook-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-rebook-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.RebookApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: payDifference
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: rebook
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: checkTime
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: createOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: dipatchSeat
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: drawBackMoney
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getAuthorizationHeadersFrom
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getOrderByRebookInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getTripAllDetailInformation
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifference
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifferentMoney
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: queryTrainTypeByName
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: rebook
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: tripGD
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.RebookApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: payDifference
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: rebook
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: checkTime
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: createOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: dipatchSeat
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: drawBackMoney
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getAuthorizationHeadersFrom
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getOrderByRebookInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getTripAllDetailInformation
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifference
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifferentMoney
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: queryTrainTypeByName
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: rebook
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: tripGD
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.RebookApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: payDifference
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: rebook
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: checkTime
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: createOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: dipatchSeat
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: drawBackMoney
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getAuthorizationHeadersFrom
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getOrderByRebookInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getTripAllDetailInformation
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifference
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifferentMoney
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: queryTrainTypeByName
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: rebook
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: tripGD
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.RebookApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: payDifference
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.controller.RebookController
-      method: rebook
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: checkTime
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: createOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: deleteOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: dipatchSeat
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: drawBackMoney
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getAuthorizationHeadersFrom
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getOrderByRebookInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: getTripAllDetailInformation
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifference
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: payDifferentMoney
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: queryTrainTypeByName
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: rebook
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: tripGD
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-rebook-service
-      class: rebook.service.RebookServiceImpl
-      method: updateOrder
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.RebookApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "checkTime"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "createOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "dipatchSeat"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "drawBackMoney"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getAuthorizationHeadersFrom"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getOrderByRebookInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getTripAllDetailInformation"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifferentMoney"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "queryTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "tripGD"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.RebookApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "checkTime"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "createOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "dipatchSeat"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "drawBackMoney"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getAuthorizationHeadersFrom"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getOrderByRebookInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getTripAllDetailInformation"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifferentMoney"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "queryTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "tripGD"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.RebookApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "checkTime"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "createOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "dipatchSeat"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "drawBackMoney"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getAuthorizationHeadersFrom"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getOrderByRebookInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getTripAllDetailInformation"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifferentMoney"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "queryTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "tripGD"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.RebookApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.controller.RebookController"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "checkTime"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "createOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "dipatchSeat"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "drawBackMoney"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getAuthorizationHeadersFrom"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getOrderByRebookInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "getTripAllDetailInformation"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifference"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "payDifferentMoney"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "queryTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "rebook"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "tripGD"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-rebook-service"
+        class: "rebook.service.RebookServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"

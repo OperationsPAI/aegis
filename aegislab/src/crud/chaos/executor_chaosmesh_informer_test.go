@@ -22,13 +22,14 @@ import (
 func newAllChaosSchemeForTest() (*runtime.Scheme, map[schema.GroupVersionResource]string) {
 	scheme := runtime.NewScheme()
 	kindByResource := map[string]string{
-		"podchaos":     "PodChaos",
-		"networkchaos": "NetworkChaos",
-		"stresschaos":  "StressChaos",
-		"timechaos":    "TimeChaos",
-		"dnschaos":     "DNSChaos",
-		"jvmchaos":     "JVMChaos",
-		"httpchaos":    "HTTPChaos",
+		"podchaos":            "PodChaos",
+		"networkchaos":        "NetworkChaos",
+		"stresschaos":         "StressChaos",
+		"timechaos":           "TimeChaos",
+		"dnschaos":            "DNSChaos",
+		"jvmchaos":            "JVMChaos",
+		"httpchaos":           "HTTPChaos",
+		"runtimemutatorchaos": "RuntimeMutatorChaos",
 	}
 	listKinds := make(map[schema.GroupVersionResource]string, len(kindByResource))
 	for resource, kind := range kindByResource {
@@ -178,4 +179,3 @@ func TestChaosMeshExecutor_StatusFallsBackOnCacheMiss(t *testing.T) {
 var _ interface {
 	WatchStatus(context.Context) error
 } = (*ChaosMeshExecutor)(nil)
-

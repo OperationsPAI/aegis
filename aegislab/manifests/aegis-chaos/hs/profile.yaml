@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/profile.Profile/GetProfiles"
         port: 8081
+        server_address: "profile"
+        span_name: "profile.Profile/GetProfiles"
     - capability: "http_request_delay"
       target:
         app: "profile"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/profile.Profile/GetProfiles"
         port: 8081
+        server_address: "profile"
+        span_name: "profile.Profile/GetProfiles"
     - capability: "memory_stress"
       target:
         app: "profile"

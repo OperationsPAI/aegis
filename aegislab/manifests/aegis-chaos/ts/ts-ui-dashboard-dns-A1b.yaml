@@ -1,310 +1,310 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-ui-dashboard
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-ui-dashboard"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-basic-info-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-order-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-route-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-travel-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-user-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-assurance-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-auth-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-cancel-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-consign-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-contacts-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-execute-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-food-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-inside-payment-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-order-other-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-order-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-preserve-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-rabbitmq
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-rebook-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-route-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-train-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel-plan-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel2-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-user-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-verification-code-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-basic-info-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-order-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-route-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-travel-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-admin-user-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-assurance-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-auth-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-cancel-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-consign-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-contacts-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-execute-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-food-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-inside-payment-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-order-other-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-order-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-preserve-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-rabbitmq
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-rebook-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-route-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-train-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel-plan-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-travel2-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-user-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-ui-dashboard
-      domain_patterns:
-      - ts-verification-code-service
-      namespace: ts
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-travel-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-user-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-assurance-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-auth-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-cancel-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-consign-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-execute-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-food-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-order-other-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-preserve-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-rabbitmq"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-rebook-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel-plan-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-user-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-admin-user-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-assurance-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-auth-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-cancel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-consign-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-execute-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-food-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-order-other-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-preserve-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-rabbitmq"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-rebook-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel-plan-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-user-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-ui-dashboard"
+        domain_patterns:
+          - "ts-verification-code-service"
+        namespace: "ts"

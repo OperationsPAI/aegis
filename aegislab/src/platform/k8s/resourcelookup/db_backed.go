@@ -75,6 +75,8 @@ func familyOf(capability string) string {
 		return "dns"
 	case strings.HasPrefix(capability, "jvm_mysql_"):
 		return "db"
+	case capability == "jvm_runtime_mutator":
+		return "runtime-mutator"
 	case strings.HasPrefix(capability, "jvm_"):
 		return "jvm"
 	case strings.HasPrefix(capability, "grpc_"):
@@ -307,4 +309,72 @@ func extractDatabaseOperations(rows []ChaosPointRow) []AppDatabasePair {
 		return out[i].OperationType < out[j].OperationType
 	})
 	return out
+}
+
+func extractRuntimeMutatorTargets(rows []ChaosPointRow) []AppRuntimeMutatorTarget {
+	type key struct{ app, cls, mth, name, from, to, strat string }
+	seen := make(map[key]struct{})
+	out := make([]AppRuntimeMutatorTarget, 0)
+	for _, row := range rows {
+		if familyOf(row.CapabilityName) != "runtime-mutator" {
+			continue
+		}
+		t := AppRuntimeMutatorTarget{
+			AppName:          asString(row.Target, "app"),
+			ClassName:        asString(row.Target, "class"),
+			MethodName:       asString(row.Target, "method"),
+			MutationType:     asInt(row.Target, "mutation_type"),
+			MutationTypeName: asString(row.Target, "mutation_type_name"),
+			MutationFrom:     asString(row.Target, "mutation_from"),
+			MutationTo:       asString(row.Target, "mutation_to"),
+			MutationStrategy: asString(row.Target, "mutation_strategy"),
+			Description:      asString(row.Target, "description"),
+		}
+		if t.AppName == "" || t.ClassName == "" || t.MethodName == "" || t.MutationTypeName == "" {
+			continue
+		}
+		k := key{t.AppName, t.ClassName, t.MethodName, t.MutationTypeName, t.MutationFrom, t.MutationTo, t.MutationStrategy}
+		if _, dup := seen[k]; dup {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, t)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].AppName != out[j].AppName {
+			return out[i].AppName < out[j].AppName
+		}
+		if out[i].ClassName != out[j].ClassName {
+			return out[i].ClassName < out[j].ClassName
+		}
+		if out[i].MethodName != out[j].MethodName {
+			return out[i].MethodName < out[j].MethodName
+		}
+		if out[i].MutationType != out[j].MutationType {
+			return out[i].MutationType < out[j].MutationType
+		}
+		if out[i].MutationStrategy != out[j].MutationStrategy {
+			return out[i].MutationStrategy < out[j].MutationStrategy
+		}
+		if out[i].MutationFrom != out[j].MutationFrom {
+			return out[i].MutationFrom < out[j].MutationFrom
+		}
+		return out[i].MutationTo < out[j].MutationTo
+	})
+	return out
+}
+
+func asInt(m map[string]any, k string) int {
+	if m == nil {
+		return 0
+	}
+	switch t := m[k].(type) {
+	case float64:
+		return int(t)
+	case int:
+		return t
+	case int64:
+		return int(t)
+	}
+	return 0
 }

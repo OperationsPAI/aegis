@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/MovieInfoService/ReadMovieInfo"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "ReadMovieInfo"
     - capability: "http_request_abort"
       target:
         app: "movie-info-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/MovieInfoService/WriteMovieInfo"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "WriteMovieInfo"
     - capability: "http_request_delay"
       target:
         app: "movie-info-service"
@@ -39,6 +43,8 @@ spec:
         namespace: "media"
         path: "/MovieInfoService/ReadMovieInfo"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "ReadMovieInfo"
     - capability: "http_request_delay"
       target:
         app: "movie-info-service"
@@ -46,6 +52,8 @@ spec:
         namespace: "media"
         path: "/MovieInfoService/WriteMovieInfo"
         port: 9090
+        server_address: "movie-info-service"
+        span_name: "WriteMovieInfo"
     - capability: "memory_stress"
       target:
         app: "movie-info-service"

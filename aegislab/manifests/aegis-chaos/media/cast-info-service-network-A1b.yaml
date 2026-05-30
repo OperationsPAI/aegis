@@ -1,40 +1,52 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: cast-info-service
-  system: media
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "cast-info-service"
+  system: "media"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: cast-info-service
-      target_service: page-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "cast-info-service"
+        span_names:
+          - "ReadPage"
+        target_service: "page-service"

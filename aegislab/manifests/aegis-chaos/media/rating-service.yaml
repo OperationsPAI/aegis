@@ -25,6 +25,8 @@ spec:
         namespace: "media"
         path: "/RatingService/UploadRating"
         port: 9090
+        server_address: "rating-service"
+        span_name: "UploadRating"
     - capability: "http_request_delay"
       target:
         app: "rating-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "media"
         path: "/RatingService/UploadRating"
         port: 9090
+        server_address: "rating-service"
+        span_name: "UploadRating"
     - capability: "memory_stress"
       target:
         app: "rating-service"

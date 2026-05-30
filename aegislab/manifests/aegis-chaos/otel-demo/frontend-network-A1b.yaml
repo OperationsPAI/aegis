@@ -1,190 +1,286 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: frontend
-  system: otel-demo
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "frontend"
+  system: "otel-demo"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: ad
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: cart
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: checkout
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: load-generator
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: product-catalog
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: frontend
-      target_service: recommendation
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "GET"
+          - "GET /api/cart"
+          - "POST /api/cart"
+          - "POST /api/checkout"
+        target_service: "load-generator"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "grpc.oteldemo.CartService/GetCart"
+          - "oteldemo.CartService/AddItem"
+        target_service: "cart"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"

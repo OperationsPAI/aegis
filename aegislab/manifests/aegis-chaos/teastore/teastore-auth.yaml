@@ -25,6 +25,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_abort"
       target:
         app: "auth"
@@ -32,6 +34,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/cart/add/*"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
     - capability: "http_request_abort"
       target:
         app: "auth"
@@ -39,6 +43,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
     - capability: "http_request_abort"
       target:
         app: "auth"
@@ -46,6 +52,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/login"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
     - capability: "http_request_abort"
       target:
         app: "auth"
@@ -53,6 +61,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/logout"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
     - capability: "http_request_abort"
       target:
         app: "auth"
@@ -60,6 +70,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -67,6 +79,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -74,6 +88,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/cart/add/*"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -81,6 +97,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -88,6 +106,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/login"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -95,6 +115,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.auth/rest/useractions/logout"
         port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
     - capability: "http_request_delay"
       target:
         app: "auth"
@@ -102,6 +124,8 @@ spec:
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth"
         port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT"
     - capability: "jvm_method_latency"
       target:
         app: "auth"

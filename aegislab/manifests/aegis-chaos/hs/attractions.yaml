@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyCinema"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyCinema"
     - capability: "http_request_abort"
       target:
         app: "attractions"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyMus"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyMus"
     - capability: "http_request_abort"
       target:
         app: "attractions"
@@ -39,6 +43,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyRest"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyRest"
     - capability: "http_request_delay"
       target:
         app: "attractions"
@@ -46,6 +52,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyCinema"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyCinema"
     - capability: "http_request_delay"
       target:
         app: "attractions"
@@ -53,6 +61,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyMus"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyMus"
     - capability: "http_request_delay"
       target:
         app: "attractions"
@@ -60,6 +70,8 @@ spec:
         namespace: "hs"
         path: "/attractions.Attractions/NearbyRest"
         port: 8089
+        server_address: "attractions"
+        span_name: "attractions.Attractions/NearbyRest"
     - capability: "memory_stress"
       target:
         app: "attractions"

@@ -1,322 +1,322 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-route-plan-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-route-plan-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.RoutePlanApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getCheapestRoutes
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getMinStopStations
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getQuickestRoutes
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getStationList
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromHighSpeedTravelServive
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromNormalTrainTravelService
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchCheapestResult
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchMinStopStations
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchQuickestResult
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.RoutePlanApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getCheapestRoutes
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getMinStopStations
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getQuickestRoutes
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getStationList
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromHighSpeedTravelServive
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromNormalTrainTravelService
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchCheapestResult
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchMinStopStations
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchQuickestResult
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.RoutePlanApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getCheapestRoutes
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getMinStopStations
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getQuickestRoutes
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getStationList
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromHighSpeedTravelServive
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromNormalTrainTravelService
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchCheapestResult
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchMinStopStations
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchQuickestResult
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.RoutePlanApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getCheapestRoutes
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getMinStopStations
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: getQuickestRoutes
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.controller.RoutePlanController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getStationList
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromHighSpeedTravelServive
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: getTripFromNormalTrainTravelService
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchCheapestResult
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchMinStopStations
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-route-plan-service
-      class: plan.service.RoutePlanServiceImpl
-      method: searchQuickestResult
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.RoutePlanApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getCheapestRoutes"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getQuickestRoutes"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getStationList"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromHighSpeedTravelServive"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromNormalTrainTravelService"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchCheapestResult"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchQuickestResult"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.RoutePlanApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getCheapestRoutes"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getQuickestRoutes"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getStationList"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromHighSpeedTravelServive"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromNormalTrainTravelService"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchCheapestResult"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchQuickestResult"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.RoutePlanApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getCheapestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getQuickestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getStationList"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromHighSpeedTravelServive"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromNormalTrainTravelService"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchCheapestResult"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchQuickestResult"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.RoutePlanApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getCheapestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getQuickestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getStationList"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromHighSpeedTravelServive"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromNormalTrainTravelService"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchCheapestResult"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchQuickestResult"
+        namespace: "ts"

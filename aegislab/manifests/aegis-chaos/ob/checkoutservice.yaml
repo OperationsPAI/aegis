@@ -25,6 +25,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/EmptyCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/EmptyCart"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -32,6 +34,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/GetCart"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -39,6 +43,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
+        server_address: "checkoutservice"
+        span_name: "hipstershop.CheckoutService/PlaceOrder"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -46,6 +52,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/Convert"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -53,6 +61,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
+        server_address: "emailservice"
+        span_name: "hipstershop.EmailService/SendOrderConfirmation"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -60,6 +70,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
+        server_address: "paymentservice"
+        span_name: "hipstershop.PaymentService/Charge"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -67,6 +79,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/GetProduct"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -74,6 +88,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/GetQuote"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
@@ -81,6 +97,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/ShipOrder"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/ShipOrder"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -88,6 +106,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/EmptyCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/EmptyCart"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -95,6 +115,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
+        server_address: "cartservice"
+        span_name: "hipstershop.CartService/GetCart"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -102,6 +124,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
+        server_address: "checkoutservice"
+        span_name: "hipstershop.CheckoutService/PlaceOrder"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -109,6 +133,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
+        server_address: "currencyservice"
+        span_name: "hipstershop.CurrencyService/Convert"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -116,6 +142,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
+        server_address: "emailservice"
+        span_name: "hipstershop.EmailService/SendOrderConfirmation"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -123,6 +151,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
+        server_address: "paymentservice"
+        span_name: "hipstershop.PaymentService/Charge"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -130,6 +160,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
+        server_address: "productcatalogservice"
+        span_name: "hipstershop.ProductCatalogService/GetProduct"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -137,6 +169,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/GetQuote"
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
@@ -144,6 +178,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.ShippingService/ShipOrder"
         port: 50051
+        server_address: "shippingservice"
+        span_name: "hipstershop.ShippingService/ShipOrder"
     - capability: "memory_stress"
       target:
         app: "checkoutservice"

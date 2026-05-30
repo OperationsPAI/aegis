@@ -1,190 +1,268 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: checkout
-  system: otel-demo
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "checkout"
+  system: "otel-demo"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: cart
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: currency
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: email
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: payment
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: product-catalog
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: checkout
-      target_service: shipping
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "email"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "HTTP POST"
+        target_service: "shipping"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CartService/EmptyCart"
+          - "oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.CurrencyService/Convert"
+        target_service: "currency"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.PaymentService/Charge"
+        target_service: "payment"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"

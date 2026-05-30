@@ -25,6 +25,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "http_request_abort"
       target:
         app: "flagd"
@@ -32,6 +34,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/ResolveBoolean"
     - capability: "http_request_abort"
       target:
         app: "flagd"
@@ -39,6 +43,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveInt"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/ResolveInt"
     - capability: "http_request_delay"
       target:
         app: "flagd"
@@ -46,6 +52,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/EventStream"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/EventStream"
     - capability: "http_request_delay"
       target:
         app: "flagd"
@@ -53,6 +61,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveBoolean"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/ResolveBoolean"
     - capability: "http_request_delay"
       target:
         app: "flagd"
@@ -60,6 +70,8 @@ spec:
         namespace: "otel-demo"
         path: "/flagd.evaluation.v1.Service/ResolveInt"
         port: 8013
+        server_address: "flagd"
+        span_name: "flagd.evaluation.v1.Service/ResolveInt"
     - capability: "memory_stress"
       target:
         app: "flagd"

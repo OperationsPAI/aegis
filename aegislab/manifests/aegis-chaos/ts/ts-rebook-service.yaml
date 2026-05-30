@@ -25,6 +25,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "ts-rebook-service"
@@ -32,6 +34,8 @@ spec:
         namespace: "ts"
         path: "/api/v1/orderOtherService/orderOther/*"
         port: 8080
+        server_address: "ts-order-other-service"
+        span_name: "GET"
     - capability: "jvm_method_latency"
       target:
         app: "ts-rebook-service"

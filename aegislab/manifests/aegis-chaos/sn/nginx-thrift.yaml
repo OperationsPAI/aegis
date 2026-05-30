@@ -25,6 +25,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/home-timeline/read"
         port: 9090
+        server_address: "home-timeline-service"
+        span_name: "/wrk2-api/home-timeline/read"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
@@ -32,6 +34,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user-timeline/read"
         port: 9090
+        server_address: "user-timeline-service"
+        span_name: "/wrk2-api/user-timeline/read"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
@@ -39,6 +43,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/post/compose"
         port: 9090
+        server_address: "compose-post-service"
+        span_name: "/wrk2-api/post/compose"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
@@ -46,6 +52,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/follow"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "/wrk2-api/user/follow"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
@@ -53,6 +61,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/register"
         port: 9090
+        server_address: "user-service"
+        span_name: "/wrk2-api/user/register"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
@@ -60,6 +70,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/unfollow"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "/wrk2-api/user/unfollow"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -67,6 +79,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/home-timeline/read"
         port: 9090
+        server_address: "home-timeline-service"
+        span_name: "/wrk2-api/home-timeline/read"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -74,6 +88,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user-timeline/read"
         port: 9090
+        server_address: "user-timeline-service"
+        span_name: "/wrk2-api/user-timeline/read"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -81,6 +97,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/post/compose"
         port: 9090
+        server_address: "compose-post-service"
+        span_name: "/wrk2-api/post/compose"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -88,6 +106,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/follow"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "/wrk2-api/user/follow"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -95,6 +115,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/register"
         port: 9090
+        server_address: "user-service"
+        span_name: "/wrk2-api/user/register"
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
@@ -102,6 +124,8 @@ spec:
         namespace: "sn"
         path: "/wrk2-api/user/unfollow"
         port: 9090
+        server_address: "social-graph-service"
+        span_name: "/wrk2-api/user/unfollow"
     - capability: "memory_stress"
       target:
         app: "nginx-thrift"

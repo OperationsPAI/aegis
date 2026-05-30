@@ -4,9 +4,10 @@ import (
 	"testing"
 )
 
-// TestJVMRendererRegistry locks in that the 8 JVM renderers register
-// under their `jvm_*` capability names. jvm_runtime_mutator is
-// deliberately absent — no chaos-mesh JVMChaos action maps to it.
+// TestJVMRendererRegistry locks in that the 8 JVM renderers register under
+// their `jvm_*` capability names. jvm_runtime_mutator also registers, but via
+// runtimeMutatorRenderer (RuntimeMutatorChaos), not as a JVMChaos action — see
+// TestRuntimeMutatorRender.
 func TestJVMRendererRegistry(t *testing.T) {
 	want := []string{
 		"jvm_cpu_stress",
@@ -30,11 +31,123 @@ func TestJVMRendererRegistry(t *testing.T) {
 			t.Errorf("%s must be %q, got %q", w, CapExperimental, got[w])
 		}
 	}
-	if _, ok := got["jvm_runtime_mutator"]; ok {
-		t.Error("jvm_runtime_mutator must not be registered (no chaos-mesh JVMChaos action)")
+	for _, cap := range jvmCapabilities {
+		if cap == "jvm_runtime_mutator" {
+			t.Error("jvm_runtime_mutator must not be in jvmCapabilities (RuntimeMutatorChaos, not JVMChaos)")
+		}
 	}
 	if _, err := lookupRenderer("jvm_method_latency"); err != nil {
 		t.Errorf("lookup jvm_method_latency: %v", err)
+	}
+}
+
+// TestRuntimeMutatorRender verifies jvm_runtime_mutator renders a
+// RuntimeMutatorChaos CR with the action and mutation fields mapped 1:1 from
+// the target. constant carries from/to; operator/string carry strategy.
+func TestRuntimeMutatorRender(t *testing.T) {
+	r, err := lookupRenderer("jvm_runtime_mutator")
+	if err != nil {
+		t.Fatalf("lookupRenderer: %v", err)
+	}
+	if r.GVR().Resource != "runtimemutatorchaos" {
+		t.Errorf("GVR.Resource = %q, want runtimemutatorchaos", r.GVR().Resource)
+	}
+
+	constTarget := map[string]any{
+		"namespace": "ts", "app": "ts-order-service",
+		"class": "order.OrderController", "method": "create",
+		"mutation_type_name": "constant", "mutation_type": 0,
+		"mutation_from": `"/create"`, "mutation_to": `"mutated_/create"`,
+	}
+	if err := r.ValidateTarget(constTarget); err != nil {
+		t.Fatalf("ValidateTarget(constant): %v", err)
+	}
+	cr, err := r.RenderCR(SystemContext{}, "aegis-jvmmut-abc", "ts", constTarget, map[string]any{"duration_s": 60})
+	if err != nil {
+		t.Fatalf("RenderCR(constant): %v", err)
+	}
+	if cr.Object["kind"] != "RuntimeMutatorChaos" {
+		t.Errorf("kind = %v, want RuntimeMutatorChaos", cr.Object["kind"])
+	}
+	spec := cr.Object["spec"].(map[string]any)
+	if spec["action"] != "constant" {
+		t.Errorf("action = %v, want constant", spec["action"])
+	}
+	if spec["class"] != "order.OrderController" || spec["method"] != "create" {
+		t.Errorf("class/method = %v/%v", spec["class"], spec["method"])
+	}
+	if spec["from"] != `"/create"` || spec["to"] != `"mutated_/create"` {
+		t.Errorf("from/to = %v/%v", spec["from"], spec["to"])
+	}
+	if _, ok := spec["strategy"]; ok {
+		t.Error("constant action must not carry strategy")
+	}
+	if spec["duration"] != "60s" {
+		t.Errorf("duration = %v, want 60s", spec["duration"])
+	}
+	sel := spec["selector"].(map[string]any)["labelSelectors"].(map[string]any)
+	if sel["app"] != "ts-order-service" {
+		t.Errorf("selector.app = %v", sel["app"])
+	}
+
+	strTarget := map[string]any{
+		"namespace": "ts", "app": "ts-order-service",
+		"class": "order.OrderController", "method": "create",
+		"mutation_type_name": "string", "mutation_type": 2,
+		"mutation_strategy": "reverse",
+	}
+	cr2, err := r.RenderCR(SystemContext{}, "aegis-jvmmut-def", "ts", strTarget, nil)
+	if err != nil {
+		t.Fatalf("RenderCR(string): %v", err)
+	}
+	spec2 := cr2.Object["spec"].(map[string]any)
+	if spec2["action"] != "string" {
+		t.Errorf("action = %v, want string", spec2["action"])
+	}
+	if spec2["strategy"] != "reverse" {
+		t.Errorf("strategy = %v, want reverse", spec2["strategy"])
+	}
+	if _, ok := spec2["from"]; ok {
+		t.Error("string action must not carry from")
+	}
+}
+
+// TestRuntimeMutatorValidateTarget locks ValidateTarget to the fork's
+// RuntimeMutatorChaos admission webhook (constant needs from+to & rejects
+// strategy; operator/string need strategy & reject from/to). Without this, a
+// malformed import point passes server validation but is rejected opaquely at
+// cluster apply.
+func TestRuntimeMutatorValidateTarget(t *testing.T) {
+	r, err := lookupRenderer("jvm_runtime_mutator")
+	if err != nil {
+		t.Fatalf("lookupRenderer: %v", err)
+	}
+	base := func(extra map[string]any) map[string]any {
+		t := map[string]any{"namespace": "ts", "app": "a", "class": "C", "method": "m"}
+		for k, v := range extra {
+			t[k] = v
+		}
+		return t
+	}
+	cases := []struct {
+		name    string
+		target  map[string]any
+		wantErr bool
+	}{
+		{"constant ok", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`, "mutation_to": `"y"`}), false},
+		{"constant missing to", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`}), true},
+		{"constant with strategy", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`, "mutation_to": `"y"`, "mutation_strategy": "empty"}), true},
+		{"string ok", base(map[string]any{"mutation_type_name": "string", "mutation_strategy": "reverse"}), false},
+		{"string missing strategy", base(map[string]any{"mutation_type_name": "string"}), true},
+		{"string with from", base(map[string]any{"mutation_type_name": "string", "mutation_strategy": "reverse", "mutation_from": `"x"`}), true},
+		{"operator ok", base(map[string]any{"mutation_type_name": "operator", "mutation_strategy": "add_to_sub"}), false},
+		{"unknown action", base(map[string]any{"mutation_type_name": "bogus"}), true},
+	}
+	for _, tc := range cases {
+		err := r.ValidateTarget(tc.target)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("%s: err=%v, wantErr=%v", tc.name, err, tc.wantErr)
+		}
 	}
 }
 

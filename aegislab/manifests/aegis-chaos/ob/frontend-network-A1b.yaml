@@ -1,220 +1,322 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: frontend
-  system: ob
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "frontend"
+  system: "ob"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_bandwidth
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_corrupt
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_delay
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_duplicate
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_loss
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: adservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: cartservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: checkoutservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: currencyservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: productcatalogservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: recommendationservice
-  - capability: network_partition
-    target:
-      namespace: ob
-      source_app: frontend
-      target_service: shippingservice
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_delay"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_loss"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.AdService/GetAds"
+        target_service: "adservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CartService/AddItem"
+          - "hipstershop.CartService/GetCart"
+        target_service: "cartservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CheckoutService/PlaceOrder"
+        target_service: "checkoutservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.CurrencyService/Convert"
+          - "hipstershop.CurrencyService/GetSupportedCurrencies"
+        target_service: "currencyservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ProductCatalogService/GetProduct"
+          - "hipstershop.ProductCatalogService/ListProducts"
+        target_service: "productcatalogservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.RecommendationService/ListRecommendations"
+        target_service: "recommendationservice"
+    - capability: "network_partition"
+      target:
+        namespace: "ob"
+        source_app: "frontend"
+        span_names:
+          - "hipstershop.ShippingService/GetQuote"
+        target_service: "shippingservice"

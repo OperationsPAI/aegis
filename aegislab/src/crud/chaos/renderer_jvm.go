@@ -13,10 +13,10 @@ func init() {
 	}
 }
 
-// jvm_runtime_mutator is deliberately omitted: chaos-mesh JVMChaos has no
-// matching action enum (latency;return;exception;stress;gc;ruleData;mysql).
-// In the OperationsPAI fork it ships as a separate RuntimeMutatorChaos CRD,
-// which is out of scope for this step (JVMChaos family only).
+// jvm_runtime_mutator is not a JVMChaos action (latency;return;exception;
+// stress;gc;ruleData;mysql). In the OperationsPAI fork it ships as a separate
+// RuntimeMutatorChaos CRD, rendered by runtimeMutatorRenderer
+// (renderer_runtimemutator.go).
 var jvmCapabilities = []string{
 	"jvm_cpu_stress",
 	"jvm_gc",

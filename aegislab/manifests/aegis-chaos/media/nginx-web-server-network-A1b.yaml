@@ -1,190 +1,274 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: nginx-web-server
-  system: media
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "nginx-web-server"
+  system: "media"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_bandwidth
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_corrupt
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_delay
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_duplicate
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_loss
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: cast-info-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: compose-review-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: movie-info-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: page-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: plot-service
-  - capability: network_partition
-    target:
-      namespace: media
-      source_app: nginx-web-server
-      target_service: user-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_delay"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_loss"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/cast-info/write"
+        target_service: "cast-info-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie-info/write"
+          - "/wrk2-api/movie/read-info"
+        target_service: "movie-info-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/read-page"
+        target_service: "page-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/movie/register"
+          - "/wrk2-api/review/compose"
+        target_service: "compose-review-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/plot/write"
+        target_service: "plot-service"
+    - capability: "network_partition"
+      target:
+        namespace: "media"
+        source_app: "nginx-web-server"
+        span_names:
+          - "/wrk2-api/user/register"
+        target_service: "user-service"

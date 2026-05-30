@@ -175,6 +175,10 @@ __debug*
 .deploy
 temp
 ts
+# vendored chaos-experiment data for manifestgen — the bare `ts` rule above
+# would otherwise swallow data/ts/. Re-include the dir and everything under it.
+!tools/manifestgen/data/
+!tools/manifestgen/data/**
 .worktrees/
 logs/
 .codebuddy

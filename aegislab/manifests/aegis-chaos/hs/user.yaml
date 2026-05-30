@@ -25,6 +25,8 @@ spec:
         namespace: "hs"
         path: "/user.User/CheckUser"
         port: 8086
+        server_address: "user"
+        span_name: "user.User/CheckUser"
     - capability: "http_request_delay"
       target:
         app: "user"
@@ -32,6 +34,8 @@ spec:
         namespace: "hs"
         path: "/user.User/CheckUser"
         port: 8086
+        server_address: "user"
+        span_name: "user.User/CheckUser"
     - capability: "memory_stress"
       target:
         app: "user"

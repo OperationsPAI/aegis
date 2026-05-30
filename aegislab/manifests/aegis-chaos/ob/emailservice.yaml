@@ -25,6 +25,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
+        server_address: "emailservice"
+        span_name: "/hipstershop.EmailService/SendOrderConfirmation"
     - capability: "http_request_delay"
       target:
         app: "emailservice"
@@ -32,6 +34,8 @@ spec:
         namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
+        server_address: "emailservice"
+        span_name: "/hipstershop.EmailService/SendOrderConfirmation"
     - capability: "memory_stress"
       target:
         app: "emailservice"
