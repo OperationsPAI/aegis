@@ -19,8 +19,6 @@ const (
 	MetadataNetworkDependencies MetadataType = "network_dependencies"
 	// MetadataGRPCOperations represents gRPC operation metadata.
 	MetadataGRPCOperations MetadataType = "grpc_operations"
-	// MetadataRuntimeMutatorTargets represents JVM runtime mutator target metadata.
-	MetadataRuntimeMutatorTargets MetadataType = "runtime_mutator_targets"
 )
 
 // MetadataProvider is a shared capability for metadata providers.
@@ -97,26 +95,6 @@ type JavaClassMethodData struct {
 	MethodName string
 }
 
-// RuntimeMutatorProvider provides JVM runtime mutator target data.
-type RuntimeMutatorProvider interface {
-	MetadataProvider
-	// GetTargetsByService returns runtime mutator targets for a specific service.
-	GetTargetsByService(serviceName string) []RuntimeMutatorTargetData
-}
-
-// RuntimeMutatorTargetData represents a flattened runtime mutator target.
-type RuntimeMutatorTargetData struct {
-	AppName          string
-	ClassName        string
-	MethodName       string
-	MutationType     int
-	MutationTypeName string
-	MutationFrom     string
-	MutationTo       string
-	MutationStrategy string
-	Description      string
-}
-
 // MetadataRegistry holds registered metadata providers for each system.
 type MetadataRegistry struct {
 	mu                 sync.RWMutex
@@ -124,7 +102,6 @@ type MetadataRegistry struct {
 	databaseOperations map[SystemType]DatabaseOperationProvider
 	grpcOperations     map[SystemType]GRPCOperationProvider
 	javaClassMethods   map[SystemType]JavaClassMethodProvider
-	runtimeMutators    map[SystemType]RuntimeMutatorProvider
 }
 
 var (
@@ -140,7 +117,6 @@ func GetRegistry() *MetadataRegistry {
 			databaseOperations: make(map[SystemType]DatabaseOperationProvider),
 			grpcOperations:     make(map[SystemType]GRPCOperationProvider),
 			javaClassMethods:   make(map[SystemType]JavaClassMethodProvider),
-			runtimeMutators:    make(map[SystemType]RuntimeMutatorProvider),
 		}
 	})
 	return globalRegistry
@@ -183,16 +159,6 @@ func (r *MetadataRegistry) RegisterJavaClassMethodProvider(system SystemType, pr
 	r.javaClassMethods[system] = provider
 	if router := getMetadataStoreRouter(); router != nil {
 		router.RegisterJavaClassMethodProvider(system, provider)
-	}
-}
-
-// RegisterRuntimeMutatorProvider registers a runtime mutator provider for a system.
-func (r *MetadataRegistry) RegisterRuntimeMutatorProvider(system SystemType, provider RuntimeMutatorProvider) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.runtimeMutators[system] = provider
-	if router := getMetadataStoreRouter(); router != nil {
-		router.RegisterRuntimeMutatorProvider(system, provider)
 	}
 }
 
@@ -244,18 +210,6 @@ func (r *MetadataRegistry) GetJavaClassMethodProvider() (JavaClassMethodProvider
 	return provider, nil
 }
 
-// GetRuntimeMutatorProvider returns the runtime mutator provider for the current system.
-func (r *MetadataRegistry) GetRuntimeMutatorProvider() (RuntimeMutatorProvider, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	provider, exists := r.runtimeMutators[GetCurrentSystem()]
-	if !exists {
-		return nil, fmt.Errorf("no runtime mutator provider registered for system: %s", GetCurrentSystem())
-	}
-	return provider, nil
-}
-
 // HasServiceEndpointProvider checks if a service endpoint provider is registered for the current system.
 func (r *MetadataRegistry) HasServiceEndpointProvider() bool {
 	r.mu.RLock()
@@ -292,15 +246,6 @@ func (r *MetadataRegistry) HasJavaClassMethodProvider() bool {
 	return exists
 }
 
-// HasRuntimeMutatorProvider checks if a runtime mutator provider is registered for the current system.
-func (r *MetadataRegistry) HasRuntimeMutatorProvider() bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	_, exists := r.runtimeMutators[GetCurrentSystem()]
-	return exists
-}
-
 // Clear removes all registered providers. Useful for testing.
 func (r *MetadataRegistry) Clear() {
 	r.mu.Lock()
@@ -310,7 +255,6 @@ func (r *MetadataRegistry) Clear() {
 	r.databaseOperations = make(map[SystemType]DatabaseOperationProvider)
 	r.grpcOperations = make(map[SystemType]GRPCOperationProvider)
 	r.javaClassMethods = make(map[SystemType]JavaClassMethodProvider)
-	r.runtimeMutators = make(map[SystemType]RuntimeMutatorProvider)
 	if router := getMetadataStoreRouter(); router != nil {
 		router.ClearInternal()
 	}
@@ -325,7 +269,6 @@ func (r *MetadataRegistry) UnregisterSystem(system SystemType) {
 	delete(r.databaseOperations, system)
 	delete(r.grpcOperations, system)
 	delete(r.javaClassMethods, system)
-	delete(r.runtimeMutators, system)
 	if router := getMetadataStoreRouter(); router != nil {
 		router.UnregisterSystem(system)
 	}
