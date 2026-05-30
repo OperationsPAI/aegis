@@ -750,6 +750,10 @@ definitions:
         type: array
       superseded:
         type: integer
+      superseded_ids:
+        items:
+          type: string
+        type: array
       upserted:
         type: integer
     type: object

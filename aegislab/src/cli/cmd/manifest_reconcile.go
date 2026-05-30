@@ -68,6 +68,11 @@ func runManifestReconcileDir(_ *cobra.Command, args []string) error {
 	}
 
 	activeBySystem := map[string]map[string]struct{}{}
+	// Points each system's imports transition to superseded. Under --dry-run
+	// the import tx is rolled back, so these stay 'active' in the listing the
+	// would-deprecate preview reads; subtracting them keeps the preview in
+	// line with a committed run, where import supersedes them before sweep.
+	supersededBySystem := map[string]map[string]struct{}{}
 	// A system with any failed import has a non-authoritative active set;
 	// sweeping it would deprecate Points the failed manifest still covers.
 	failedSystems := map[string]struct{}{}
@@ -111,13 +116,21 @@ func runManifestReconcileDir(_ *cobra.Command, args []string) error {
 		for _, id := range res.GetPointIds() {
 			activeBySystem[c.System][id] = struct{}{}
 		}
+		if sup := res.GetSupersededIds(); len(sup) > 0 {
+			if supersededBySystem[c.System] == nil {
+				supersededBySystem[c.System] = map[string]struct{}{}
+			}
+			for _, id := range sup {
+				supersededBySystem[c.System][id] = struct{}{}
+			}
+		}
 		if !flagQuiet {
 			fmt.Fprintf(os.Stderr, "  import %s (system=%s upserted=%d superseded=%d)\n",
 				f, c.System, res.GetUpserted(), res.GetSuperseded())
 		}
 	}
 
-	results, err := reconcileSweepSystems(ctx, cli, activeBySystem, failedSystems)
+	results, err := reconcileSweepSystems(ctx, cli, activeBySystem, supersededBySystem, failedSystems)
 	if err != nil {
 		return err
 	}
@@ -144,7 +157,7 @@ type reconcileSystemResult struct {
 	SkipReason string
 }
 
-func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, activeBySystem map[string]map[string]struct{}, failedSystems map[string]struct{}) ([]reconcileSystemResult, error) {
+func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, activeBySystem, supersededBySystem map[string]map[string]struct{}, failedSystems map[string]struct{}) ([]reconcileSystemResult, error) {
 	seen := map[string]struct{}{}
 	systems := make([]string, 0, len(activeBySystem)+len(failedSystems))
 	for s := range activeBySystem {
@@ -178,7 +191,7 @@ func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, active
 			continue
 		}
 		if flagDryRun {
-			n, err := reconcileWouldDeprecate(ctx, cli, system, activeBySystem[system])
+			n, err := reconcileWouldDeprecate(ctx, cli, system, activeBySystem[system], supersededBySystem[system])
 			if err != nil {
 				return nil, err
 			}
@@ -201,9 +214,10 @@ func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, active
 }
 
 // reconcileWouldDeprecate counts active Points the sweep would deprecate by
-// listing the system's current active Points and subtracting the imported set.
-// Only used for --dry-run, where no sweep is issued.
-func reconcileWouldDeprecate(ctx context.Context, cli *apiclient.APIClient, system string, active map[string]struct{}) (int, error) {
+// listing the system's current active Points and subtracting both the imported
+// set and the set the import would supersede. Only used for --dry-run, where
+// the import tx was rolled back so superseded points still read as active.
+func reconcileWouldDeprecate(ctx context.Context, cli *apiclient.APIClient, system string, active, superseded map[string]struct{}) (int, error) {
 	count := 0
 	var offset int32
 	const page = int32(500)
@@ -218,9 +232,14 @@ func reconcileWouldDeprecate(ctx context.Context, cli *apiclient.APIClient, syst
 		}
 		pts := resp.Data.Points
 		for _, p := range pts {
-			if _, kept := active[strDeref(p.Id)]; !kept {
-				count++
+			id := strDeref(p.Id)
+			if _, kept := active[id]; kept {
+				continue
 			}
+			if _, willSupersede := superseded[id]; willSupersede {
+				continue
+			}
+			count++
 		}
 		if int32(len(pts)) < page {
 			break

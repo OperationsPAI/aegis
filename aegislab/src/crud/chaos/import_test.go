@@ -119,6 +119,67 @@ func TestImportPoints_ReplaceScopeService_Supersedes(t *testing.T) {
 	}
 }
 
+// TestImportPoints_DryRun_ReportsWouldBeSuperseded: the would-deprecate
+// preview in `manifest reconcile-dir --dry-run` over-counts unless import
+// reports which active points it would supersede. A committed re-import
+// supersedes the drifted point; a dry-run rolls back, so the point stays
+// active in any later listing — so the dry-run result must still enumerate
+// that id under SupersededIDs, letting the CLI subtract it instead of
+// counting it as a deprecation. Asserts the dry-run set matches the
+// committed set exactly.
+func TestImportPoints_DryRun_ReportsWouldBeSuperseded(t *testing.T) {
+	mgr := newImportTestManager(t)
+
+	first := baseManifest()
+	first.Spec.Points = []PointManifestEntry{
+		{Capability: "pod_kill", Target: map[string]any{"namespace": "ts", "app": "frontend"}},
+		{Capability: "pod_kill", Target: map[string]any{"namespace": "ts", "app": "frontend-v2"}},
+	}
+	firstRes, err := mgr.ImportPoints(t.Context(), "ts", first, false)
+	if err != nil {
+		t.Fatalf("first import: %v", err)
+	}
+
+	// Re-import frontend with only the first point — the v2 point drifts out
+	// and is the one that would be superseded.
+	second := baseManifest()
+	keptID := firstRes.PointIDs[0]
+	wantSuperseded := firstRes.PointIDs[1]
+
+	dryRes, err := mgr.ImportPoints(t.Context(), "ts", second, true)
+	if err != nil {
+		t.Fatalf("dry-run re-import: %v", err)
+	}
+	if dryRes.PointIDs[0] != keptID {
+		t.Fatalf("dry-run kept id = %s, want %s", dryRes.PointIDs[0], keptID)
+	}
+	if got := dryRes.SupersededIDs; len(got) != 1 || got[0] != wantSuperseded {
+		t.Fatalf("dry-run SupersededIDs = %v, want [%s]", got, wantSuperseded)
+	}
+
+	// The dry-run rolled back: the drifted point is still active, so a
+	// would-deprecate preview listing active points would see it. The fix is
+	// for the CLI to subtract SupersededIDs — confirm the row stayed active.
+	var status string
+	if err := mgr.DB.Model(&Point{}).Select("status").
+		Where("id = ?", wantSuperseded).Take(&status).Error; err != nil {
+		t.Fatalf("lookup drifted point: %v", err)
+	}
+	if status != PointActive {
+		t.Fatalf("dry-run must leave drifted point active; got %q", status)
+	}
+
+	// A committed re-import supersedes exactly that id — proving the dry-run
+	// preview matched real behaviour.
+	commitRes, err := mgr.ImportPoints(t.Context(), "ts", second, false)
+	if err != nil {
+		t.Fatalf("committed re-import: %v", err)
+	}
+	if got := commitRes.SupersededIDs; len(got) != 1 || got[0] != wantSuperseded {
+		t.Fatalf("committed SupersededIDs = %v, want [%s]", got, wantSuperseded)
+	}
+}
+
 func TestImportPoints_RejectsReplaceScopeSystem(t *testing.T) {
 	mgr := newImportTestManager(t)
 	m := baseManifest()
