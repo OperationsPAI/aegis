@@ -14,6 +14,14 @@ containers:
       - name: 1.0.1
         image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260514-stable-023ccd2-r1
         command: bash /entrypoint.sh
+      # Bumped 1.0.1 -> 1.0.2 (PR #506): pedestal registry only had short
+      # names mm/tea, but the backend passes BENCHMARK_SYSTEM as the system
+      # code (media/teastore) -> get_pedestal raised KeyError -> detector
+      # crashed at algorithm.run on every media/teastore datapack. 1.0.2
+      # registers the media/teastore aliases.
+      - name: 1.0.2
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260530-951b87ec-pedestal-aliases
+        command: bash /entrypoint.sh
   - type: 0
     name: random
     is_public: true
