@@ -21086,6 +21086,12 @@ const docTemplate = `{
                 "superseded": {
                     "type": "integer"
                 },
+                "superseded_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "upserted": {
                     "type": "integer"
                 }

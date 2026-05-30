@@ -23,6 +23,7 @@ type ChaosChaosImportPointsResp struct {
 	DryRun               *bool    `json:"dry_run,omitempty"`
 	PointIds             []string `json:"point_ids,omitempty"`
 	Superseded           *int32   `json:"superseded,omitempty"`
+	SupersededIds        []string `json:"superseded_ids,omitempty"`
 	Upserted             *int32   `json:"upserted,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
@@ -142,6 +143,38 @@ func (o *ChaosChaosImportPointsResp) SetSuperseded(v int32) {
 	o.Superseded = &v
 }
 
+// GetSupersededIds returns the SupersededIds field value if set, zero value otherwise.
+func (o *ChaosChaosImportPointsResp) GetSupersededIds() []string {
+	if o == nil || IsNil(o.SupersededIds) {
+		var ret []string
+		return ret
+	}
+	return o.SupersededIds
+}
+
+// GetSupersededIdsOk returns a tuple with the SupersededIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ChaosChaosImportPointsResp) GetSupersededIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.SupersededIds) {
+		return nil, false
+	}
+	return o.SupersededIds, true
+}
+
+// HasSupersededIds returns a boolean if a field has been set.
+func (o *ChaosChaosImportPointsResp) HasSupersededIds() bool {
+	if o != nil && !IsNil(o.SupersededIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetSupersededIds gets a reference to the given []string and assigns it to the SupersededIds field.
+func (o *ChaosChaosImportPointsResp) SetSupersededIds(v []string) {
+	o.SupersededIds = v
+}
+
 // GetUpserted returns the Upserted field value if set, zero value otherwise.
 func (o *ChaosChaosImportPointsResp) GetUpserted() int32 {
 	if o == nil || IsNil(o.Upserted) {
@@ -193,6 +226,9 @@ func (o ChaosChaosImportPointsResp) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Superseded) {
 		toSerialize["superseded"] = o.Superseded
 	}
+	if !IsNil(o.SupersededIds) {
+		toSerialize["superseded_ids"] = o.SupersededIds
+	}
 	if !IsNil(o.Upserted) {
 		toSerialize["upserted"] = o.Upserted
 	}
@@ -221,6 +257,7 @@ func (o *ChaosChaosImportPointsResp) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "dry_run")
 		delete(additionalProperties, "point_ids")
 		delete(additionalProperties, "superseded")
+		delete(additionalProperties, "superseded_ids")
 		delete(additionalProperties, "upserted")
 		o.AdditionalProperties = additionalProperties
 	}

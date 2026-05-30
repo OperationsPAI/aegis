@@ -100,10 +100,11 @@ type ChaosImportPointsReqEntry struct {
 
 // ChaosImportPointsResp summarises the result of an import (or its dry-run).
 type ChaosImportPointsResp struct {
-	Upserted   int      `json:"upserted"`
-	Superseded int      `json:"superseded"`
-	DryRun     bool     `json:"dry_run"`
-	PointIDs   []string `json:"point_ids"`
+	Upserted      int      `json:"upserted"`
+	Superseded    int      `json:"superseded"`
+	DryRun        bool     `json:"dry_run"`
+	PointIDs      []string `json:"point_ids"`
+	SupersededIDs []string `json:"superseded_ids"`
 }
 
 // ChaosSweepPointsReq is the request body for

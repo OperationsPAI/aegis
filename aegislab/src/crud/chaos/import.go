@@ -46,6 +46,11 @@ type ImportResult struct {
 	Superseded int      `json:"superseded"`
 	DryRun     bool     `json:"dry_run"`
 	PointIDs   []string `json:"point_ids"`
+	// SupersededIDs are the ids of points this import transitions from
+	// active to superseded under replace_scope=service. On dry_run the tx is
+	// rolled back, so these are the ids that *would* be superseded — which
+	// reconcile-dir subtracts from its would-deprecate preview.
+	SupersededIDs []string `json:"superseded_ids"`
 }
 
 // ImportPoints applies a PointManifest under §6 / ADR-0011 semantics.
@@ -175,6 +180,7 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 				return nil, err
 			}
 			out.Superseded++
+			out.SupersededIDs = append(out.SupersededIDs, p.ID)
 		}
 	}
 
