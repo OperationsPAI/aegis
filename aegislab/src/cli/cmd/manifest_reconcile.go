@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
-	sigsyaml "sigs.k8s.io/yaml"
 )
 
 var flagReconcileSystem string
@@ -70,53 +68,56 @@ func runManifestReconcileDir(_ *cobra.Command, args []string) error {
 	}
 
 	activeBySystem := map[string]map[string]struct{}{}
+	// A system with any failed import has a non-authoritative active set;
+	// sweeping it would deprecate Points the failed manifest still covers.
+	failedSystems := map[string]struct{}{}
 	imported, skipped, failed := 0, 0, 0
 	var firstErr error
+	recordFail := func(file, system string, ferr error) {
+		failed++
+		if system != "" {
+			failedSystems[system] = struct{}{}
+		}
+		if firstErr == nil {
+			firstErr = ferr
+		}
+		if !flagQuiet {
+			fmt.Fprintf(os.Stderr, "  FAIL   %s: %v\n", file, ferr)
+		}
+	}
 	for _, f := range files {
-		req, system, ok, ferr := reconcileLoadManifest(f)
-		if ferr != nil {
-			failed++
-			if firstErr == nil {
-				firstErr = ferr
-			}
-			if !flagQuiet {
-				fmt.Fprintf(os.Stderr, "  FAIL   %s: %v\n", f, ferr)
-			}
+		c := classifyManifestFile(f)
+		if c.Err != nil {
+			recordFail(f, c.System, c.Err)
 			continue
 		}
-		if !ok {
+		if c.Skipped {
 			skipped++
 			continue
 		}
-		if flagReconcileSystem != "" && system != flagReconcileSystem {
+		if flagReconcileSystem != "" && c.System != flagReconcileSystem {
 			skipped++
 			continue
 		}
-		res, ierr := importManifest(ctx, cli, system, req, flagDryRun)
+		res, ierr := importManifest(ctx, cli, c.System, c.Req, flagDryRun)
 		if ierr != nil {
-			failed++
-			if firstErr == nil {
-				firstErr = ierr
-			}
-			if !flagQuiet {
-				fmt.Fprintf(os.Stderr, "  FAIL   %s: %v\n", f, ierr)
-			}
+			recordFail(f, c.System, ierr)
 			continue
 		}
 		imported++
-		if activeBySystem[system] == nil {
-			activeBySystem[system] = map[string]struct{}{}
+		if activeBySystem[c.System] == nil {
+			activeBySystem[c.System] = map[string]struct{}{}
 		}
 		for _, id := range res.GetPointIds() {
-			activeBySystem[system][id] = struct{}{}
+			activeBySystem[c.System][id] = struct{}{}
 		}
 		if !flagQuiet {
 			fmt.Fprintf(os.Stderr, "  import %s (system=%s upserted=%d superseded=%d)\n",
-				f, system, res.GetUpserted(), res.GetSuperseded())
+				f, c.System, res.GetUpserted(), res.GetSuperseded())
 		}
 	}
 
-	results, err := reconcileSweepSystems(ctx, cli, activeBySystem)
+	results, err := reconcileSweepSystems(ctx, cli, activeBySystem, failedSystems)
 	if err != nil {
 		return err
 	}
@@ -135,42 +136,27 @@ func runManifestReconcileDir(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func reconcileLoadManifest(file string) (apiclient.ChaosChaosImportPointsReq, string, bool, error) {
-	raw, err := os.ReadFile(file)
-	if err != nil {
-		return apiclient.ChaosChaosImportPointsReq{}, "", false, fmt.Errorf("read: %w", err)
-	}
-	docJSON, err := sigsyaml.YAMLToJSON(raw)
-	if err != nil {
-		return apiclient.ChaosChaosImportPointsReq{}, "", false, nil
-	}
-	var probe struct {
-		APIVersion string `json:"apiVersion"`
-		Kind       string `json:"kind"`
-	}
-	if err := json.Unmarshal(docJSON, &probe); err != nil {
-		return apiclient.ChaosChaosImportPointsReq{}, "", false, nil
-	}
-	if probe.APIVersion != "aegis-chaos/v1beta" || probe.Kind != "PointManifest" {
-		return apiclient.ChaosChaosImportPointsReq{}, "", false, nil
-	}
-	req, system, err := manifestToImportReq(raw)
-	if err != nil {
-		return apiclient.ChaosChaosImportPointsReq{}, "", false, err
-	}
-	return req, system, true, nil
-}
-
 type reconcileSystemResult struct {
 	System     string
 	ActiveIDs  int
 	Deprecated int
+	Skipped    bool
+	SkipReason string
 }
 
-func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, activeBySystem map[string]map[string]struct{}) ([]reconcileSystemResult, error) {
-	systems := make([]string, 0, len(activeBySystem))
+func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, activeBySystem map[string]map[string]struct{}, failedSystems map[string]struct{}) ([]reconcileSystemResult, error) {
+	seen := map[string]struct{}{}
+	systems := make([]string, 0, len(activeBySystem)+len(failedSystems))
 	for s := range activeBySystem {
+		seen[s] = struct{}{}
 		systems = append(systems, s)
+	}
+	// Failed systems with zero successful imports never landed in
+	// activeBySystem, but their skipped sweep must still be reported.
+	for s := range failedSystems {
+		if _, ok := seen[s]; !ok {
+			systems = append(systems, s)
+		}
 	}
 	sort.Strings(systems)
 
@@ -178,6 +164,15 @@ func reconcileSweepSystems(ctx context.Context, cli *apiclient.APIClient, active
 	for _, system := range systems {
 		ids := sortedSet(activeBySystem[system])
 		r := reconcileSystemResult{System: system, ActiveIDs: len(ids)}
+		if _, bad := failedSystems[system]; bad {
+			r.Skipped = true
+			r.SkipReason = "import had failures; active set not authoritative"
+			if !flagQuiet {
+				fmt.Fprintf(os.Stderr, "  skip-sweep %s (%s)\n", system, r.SkipReason)
+			}
+			out = append(out, r)
+			continue
+		}
 		if len(ids) == 0 {
 			out = append(out, r)
 			continue
@@ -254,11 +249,16 @@ func renderReconcileSummary(s reconcileSummary) {
 	if output.OutputFormat(flagOutput) == output.FormatJSON {
 		sysOut := make([]map[string]any, 0, len(s.Systems))
 		for _, r := range s.Systems {
-			sysOut = append(sysOut, map[string]any{
+			entry := map[string]any{
 				"system":     r.System,
 				"active_ids": r.ActiveIDs,
 				"deprecated": r.Deprecated,
-			})
+				"swept":      !r.Skipped,
+			}
+			if r.Skipped {
+				entry["skip_reason"] = r.SkipReason
+			}
+			sysOut = append(sysOut, entry)
 		}
 		output.PrintJSON(map[string]any{
 			"imported": s.Imported,
@@ -269,10 +269,16 @@ func renderReconcileSummary(s reconcileSummary) {
 		})
 		return
 	}
-	headers := []string{"SYSTEM", "ACTIVE_IDS", "DEPRECATED"}
+	headers := []string{"SYSTEM", "ACTIVE_IDS", "DEPRECATED", "SWEPT"}
 	rows := make([][]string, 0, len(s.Systems))
 	for _, r := range s.Systems {
-		rows = append(rows, []string{r.System, fmt.Sprintf("%d", r.ActiveIDs), fmt.Sprintf("%d", r.Deprecated)})
+		swept := "yes"
+		dep := fmt.Sprintf("%d", r.Deprecated)
+		if r.Skipped {
+			swept = "no (" + r.SkipReason + ")"
+			dep = "-"
+		}
+		rows = append(rows, []string{r.System, fmt.Sprintf("%d", r.ActiveIDs), dep, swept})
 	}
 	output.PrintTable(headers, rows)
 	if !flagQuiet {

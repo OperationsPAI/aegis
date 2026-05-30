@@ -188,20 +188,15 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 	return out, nil
 }
 
-// ErrSweepEmpty guards against deprecating an entire system: a sweep with no
-// active_point_ids would mark every active Point deprecated, which is almost
-// always an accidental empty-set call rather than an intentional teardown.
+// ErrSweepEmpty guards against an empty activeIDs set silently deprecating
+// every active Point in the system.
 var ErrSweepEmpty = errors.New("chaos: sweep requires a non-empty active_point_ids set")
 
-// SweepPoints reconciles the active catalog for a system against an
-// authoritative set of Point ids. Every status='active' Point in the system
-// whose id is absent from activeIDs transitions to 'deprecated' in one
-// transaction. This is the catalog counterpart to ImportPoints's
-// replace_scope=service supersede: import only supersedes points that share a
-// service identity, so points whose natural key drifted out of the manifest
-// set (e.g. a renamed service prefix) survive as zombies until a sweep
-// retires them. Deprecation is soft (reversible, auditable) — points are
-// never hard-deleted.
+// SweepPoints deprecates every status='active' Point in the system whose id is
+// absent from activeIDs, in one transaction. Unlike import's
+// replace_scope=service supersede, which only touches points sharing a service
+// identity, this retires points whose natural key drifted out of the manifest
+// set entirely.
 func (s *Manager) SweepPoints(ctx context.Context, systemName string, activeIDs []string) (int, error) {
 	if len(activeIDs) == 0 {
 		return 0, ErrSweepEmpty
