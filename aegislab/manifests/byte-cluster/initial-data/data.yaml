@@ -987,6 +987,64 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 0.1.8 → 0.1.9 for fork PR LGU-SE-Internal/DeathStarBench#64
+      # (enriched OTLP logs: INFO at every RPC handler so normal-window
+      # normal_logs.parquet is non-empty — was failing datapack build).
+      # ALL sn images (services + loader) are now the same build, so
+      # global.defaultImageVersion AND the loader override both point at
+      # 20260530-e7ad889 (supersedes 0.1.8's split 9397c2e/04e3cb6 tags).
+      - name: 0.1.9
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.2
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
   - type: 2
     name: media
     is_public: true
@@ -1186,6 +1244,64 @@ containers:
               category: 3
               value_type: 0
               default_value: 20260529-04e3cb6
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.8 → 0.1.9 for fork PR LGU-SE-Internal/DeathStarBench#64
+      # (enriched OTLP logs: INFO at every RPC handler so normal-window
+      # normal_logs.parquet is non-empty — was failing datapack build).
+      # ALL media images (services + loader) are now the same build, so
+      # global.defaultImageVersion AND the loader override both point at
+      # 20260530-e7ad889 (supersedes 0.1.8's split 9397c2e/04e3cb6 tags).
+      - name: 0.1.9
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.2
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
               overridable: true
             - key: aegis.points.enabled
               type: 0
