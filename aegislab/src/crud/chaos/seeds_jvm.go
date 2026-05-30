@@ -168,9 +168,12 @@ func jvmRuntimeMutatorParamSchema() JSONMap {
 }
 
 func jvmRuntimeMutatorObservableContract() JSONMap {
+	// No generic observable contract: a mutator's effect is app-semantic
+	// (changed constant, flipped operator, swapped string), so no universal
+	// trace/metric assertion holds. Functional checks are per-mutation.
 	return JSONMap{
 		"name":     "jvm_runtime_mutator",
-		"contract": "TODO: mutator effect is app-semantic (changed constant, flipped operator, swapped string); no generic trace assertion holds.",
+		"contract": nil,
 	}
 }
 

@@ -112,6 +112,45 @@ func TestRuntimeMutatorRender(t *testing.T) {
 	}
 }
 
+// TestRuntimeMutatorValidateTarget locks ValidateTarget to the fork's
+// RuntimeMutatorChaos admission webhook (constant needs from+to & rejects
+// strategy; operator/string need strategy & reject from/to). Without this, a
+// malformed import point passes server validation but is rejected opaquely at
+// cluster apply.
+func TestRuntimeMutatorValidateTarget(t *testing.T) {
+	r, err := lookupRenderer("jvm_runtime_mutator")
+	if err != nil {
+		t.Fatalf("lookupRenderer: %v", err)
+	}
+	base := func(extra map[string]any) map[string]any {
+		t := map[string]any{"namespace": "ts", "app": "a", "class": "C", "method": "m"}
+		for k, v := range extra {
+			t[k] = v
+		}
+		return t
+	}
+	cases := []struct {
+		name    string
+		target  map[string]any
+		wantErr bool
+	}{
+		{"constant ok", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`, "mutation_to": `"y"`}), false},
+		{"constant missing to", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`}), true},
+		{"constant with strategy", base(map[string]any{"mutation_type_name": "constant", "mutation_from": `"x"`, "mutation_to": `"y"`, "mutation_strategy": "empty"}), true},
+		{"string ok", base(map[string]any{"mutation_type_name": "string", "mutation_strategy": "reverse"}), false},
+		{"string missing strategy", base(map[string]any{"mutation_type_name": "string"}), true},
+		{"string with from", base(map[string]any{"mutation_type_name": "string", "mutation_strategy": "reverse", "mutation_from": `"x"`}), true},
+		{"operator ok", base(map[string]any{"mutation_type_name": "operator", "mutation_strategy": "add_to_sub"}), false},
+		{"unknown action", base(map[string]any{"mutation_type_name": "bogus"}), true},
+	}
+	for _, tc := range cases {
+		err := r.ValidateTarget(tc.target)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("%s: err=%v, wantErr=%v", tc.name, err, tc.wantErr)
+		}
+	}
+}
+
 // TestJVMMethodLatencyRender exercises the latency action end-to-end —
 // it carries the largest set of method-targeted fields (class, method,
 // latency, port, duration) and is the most likely to break on a

@@ -45,8 +45,32 @@ func (runtimeMutatorRenderer) ValidateTarget(target map[string]any) error {
 			return fmt.Errorf("chaos-mesh jvm_runtime_mutator: target.%s is required", k)
 		}
 	}
-	if _, err := runtimeMutatorAction(target); err != nil {
+	action, err := runtimeMutatorAction(target)
+	if err != nil {
 		return err
+	}
+	// Mirror the fork's RuntimeMutatorChaos admission webhook: constant needs
+	// from+to and rejects strategy; operator/string need strategy and reject
+	// from/to. Catch the mismatch here so a malformed point fails at import
+	// instead of opaquely at cluster apply.
+	from, _ := target["mutation_from"].(string)
+	to, _ := target["mutation_to"].(string)
+	strategy, _ := target["mutation_strategy"].(string)
+	switch action {
+	case "constant":
+		if from == "" || to == "" {
+			return fmt.Errorf("chaos-mesh jvm_runtime_mutator: constant mutation requires mutation_from and mutation_to")
+		}
+		if strategy != "" {
+			return fmt.Errorf("chaos-mesh jvm_runtime_mutator: constant mutation must not set mutation_strategy")
+		}
+	case "operator", "string":
+		if strategy == "" {
+			return fmt.Errorf("chaos-mesh jvm_runtime_mutator: %s mutation requires mutation_strategy", action)
+		}
+		if from != "" || to != "" {
+			return fmt.Errorf("chaos-mesh jvm_runtime_mutator: %s mutation must not set mutation_from/mutation_to", action)
+		}
 	}
 	return nil
 }
