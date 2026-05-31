@@ -569,16 +569,35 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		// lock, index extraction, and the FaultInjection handoff below still
 		// run unchanged. Falls through to a real install if the release is
 		// missing, in a non-deployed state, or the status check errors out.
+		//
+		// The skip decision must reflect the cluster RIGHT NOW, not a cached
+		// "already deployed" assumption: the idle-namespace reclaimer can
+		// drop the helm release + namespace between rounds for systems with
+		// no organic traffic (DSB sn/media). A deployed-status release with
+		// zero workloads (e.g. release secret lingered but pods are gone)
+		// would otherwise skip install and hand off to an empty namespace,
+		// surfacing as fault.injection.failed when the dispatcher finds no
+		// pods. Require both a deployed release AND live workloads before
+		// skipping.
 		skippedInstall := false
 		if payload.skipInstall {
 			deployed, checkErr := helmGateway.IsReleaseDeployed(namespace, namespace)
-			if checkErr != nil {
+			switch {
+			case checkErr != nil:
 				logEntry.Warnf("skip_install requested but status check failed (%v); falling back to install", checkErr)
-			} else if deployed {
-				logEntry.Infof("skip_install: release %s/%s already deployed; skipping helm install", namespace, namespace)
-				skippedInstall = true
-			} else {
+			case !deployed:
 				logEntry.Infof("skip_install requested but release %s/%s not deployed; installing", namespace, namespace)
+			default:
+				hasWorkload, wlErr := deps.K8sGateway.NamespaceHasWorkload(childCtx, namespace)
+				switch {
+				case wlErr != nil:
+					logEntry.Warnf("skip_install requested but workload check failed (%v); falling back to install", wlErr)
+				case !hasWorkload:
+					logEntry.Infof("skip_install requested but namespace %s has no workloads (reclaimed?); installing", namespace)
+				default:
+					logEntry.Infof("skip_install: release %s/%s already deployed with live workloads; skipping helm install", namespace, namespace)
+					skippedInstall = true
+				}
 			}
 		}
 
