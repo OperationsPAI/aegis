@@ -1566,6 +1566,8 @@ instrumentation:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: grpc
 
   nodejs: {}
 
@@ -1630,6 +1632,8 @@ extraObjects:
         env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4317
+          - name: OTEL_EXPORTER_OTLP_PROTOCOL
+            value: grpc
       python:
         env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -1677,6 +1681,8 @@ extraObjects:
         env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4317
+          - name: OTEL_EXPORTER_OTLP_PROTOCOL
+            value: grpc
       python:
         env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
