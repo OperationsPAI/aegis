@@ -89,9 +89,9 @@ blob:
 rustfs:
   enabled: true
   image:
-    # Mirror via opspai/rustfs:latest works for kind (Docker Hub reachable).
+    # Mirror via opspai/rustfs works for kind (Docker Hub reachable).
     name: docker.io/opspai/rustfs
-    tag: latest
+    tag: 1.0.0-beta.6
   persistence:
     storageClass: "standard"
     size: 20Gi

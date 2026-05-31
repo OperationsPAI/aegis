@@ -415,6 +415,48 @@ def stat(
     asyncio.run(benchmark.stat())
 
 
+# ── report ─────────────────────────────────────────────────────────────
+@app.command()
+def report(
+    config_path: ConfigPathArg,
+    exp_id: ExpIdOpt = None,
+    output_dir: Annotated[
+        str,
+        typer.Option("--output-dir", "-o", help="Output directory for report artifacts"),
+    ] = "output/reports",
+) -> None:
+    """Generate analysis report with charts from judged samples."""
+    from pathlib import Path
+
+    from ..sdk.llm_eval.eval import BaseBenchmark
+    from ..sdk.llm_eval.eval.report import EvalReportGenerator
+
+    config = _load_config(config_path, exp_id)
+    benchmark = BaseBenchmark(config)
+    samples = benchmark.dataset.get_samples(
+        stage="judged",
+        agent_type=benchmark.agent_type,
+        model_name=benchmark.model_name,
+        tags=benchmark.tags,
+        exclude_trajectories=True,
+    )
+
+    if not samples:
+        console.print("[yellow]No judged samples found.[/]")
+        raise typer.Exit(1)
+
+    out = Path(output_dir) / config.exp_id
+    generator = EvalReportGenerator(
+        samples=samples,
+        output_dir=out,
+        exp_id=config.exp_id,
+        agent_type=config.agent_type,
+        model_name=config.model_name,
+    )
+    report_path = generator.generate()
+    console.print(f"[green]Report generated:[/] {report_path}")
+
+
 # ── agents ─────────────────────────────────────────────────────────────
 @app.command()
 def agents() -> None:

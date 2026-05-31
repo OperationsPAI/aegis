@@ -37,7 +37,7 @@ dependencies:
     repository: ""
     condition: sso.enabled
   - name: rustfs
-    version: "0.1.0"
+    version: "0.2.0"
     repository: ""
     condition: rustfs.enabled
   - name: blob

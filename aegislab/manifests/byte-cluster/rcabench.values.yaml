@@ -126,7 +126,7 @@ rustfs:
   enabled: true
   image:
     name: pair-cn-shanghai.cr.volces.com/opspai/rustfs
-    tag: latest
+    tag: 1.0.0-beta.6
   initBuckets:
     image:
       name: pair-cn-shanghai.cr.volces.com/opspai/mc

@@ -2,5 +2,5 @@ apiVersion: v2
 name: rustfs
 description: In-cluster S3-compatible storage backend for aegis-blob (extracted from rcabench monolith chart)
 type: application
-version: 0.1.0
-appVersion: "1.0.0"
+version: 0.2.0
+appVersion: "1.0.0-beta.6"

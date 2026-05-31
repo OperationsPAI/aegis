@@ -454,7 +454,7 @@ rustfs:
   enabled: false
   image:
     name: docker.io/opspai/rustfs
-    tag: latest
+    tag: 1.0.0-beta.6
     pullPolicy: IfNotPresent
   auth:
     # When set, the chart skips the Secret render and points envFrom at this
