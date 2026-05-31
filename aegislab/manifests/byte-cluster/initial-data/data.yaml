@@ -639,6 +639,69 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 1.1.5 → 1.1.6: images rebuilt with fork PR #27 (delete
+      # app-bundled OTel SDK/logback-appender, let agent 2.23.0 auto-bridge
+      # logback → OTLP logs) + Instrumentation CR patched with
+      # OTEL_EXPORTER_OTLP_PROTOCOL=grpc (fixes http/protobuf→gRPC port
+      # Connection reset that silently dropped all agent exports).
+      - name: 1.1.6
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        helm_config:
+          version: 1.2.2
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/otel-instr-sockshop
+              overridable: true
+            - key: otel.collectorEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            - key: otelCollector.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
     # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
