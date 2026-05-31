@@ -12,7 +12,11 @@ enabled: false
 
 image:
   name: docker.io/opspai/rustfs
-  tag: latest
+  # Pinned: beta.1 marks NAS/virtual disks faulty on scanner walk_dir timeouts
+  # (rustfs#2658/#2686) -> ErasureWriteQuorum -> "Storage resources are
+  # insufficient". beta.4 (#2996) stops scanner walk timeouts from offlining
+  # drives; beta.6 (#3100) also gates readiness on lock-quorum health.
+  tag: 1.0.0-beta.6
   pullPolicy: IfNotPresent
 
 auth:
