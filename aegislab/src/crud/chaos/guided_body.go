@@ -155,7 +155,7 @@ func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) (map[str
 			out["memory_type"] = cfg.MemType
 		}
 	case "network_delay":
-		derefOr(cfg.LatencyMs, "latency_ms")
+		derefOr(cfg.Latency, "latency_ms")
 		derefOr(cfg.Jitter, "jitter_ms")
 		derefOr(cfg.Correlation, "correlation_pct")
 	case "network_loss":
