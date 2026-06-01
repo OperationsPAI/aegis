@@ -476,9 +476,13 @@ func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *
 // pointing at the original timestamped snapshot and helm silently installs
 // stale values.
 //
-// No-op when: source overlay missing, current value_file empty, or bytes
-// identical. The new-version INSERT branch is left alone — it already takes
-// the same snapshot at row creation time.
+// No-op when: source overlay missing, or current snapshot bytes already match
+// the overlay. When the stored value_file is empty/missing (never captured, or
+// the snapshot file was deleted) but an overlay exists, this BACKFILLS it —
+// that is the ts case from issue #360 fix A, where a chart bump shipped a
+// volces-registry overlay the DB row never picked up. The new-version INSERT
+// branch is left alone — it already takes the same snapshot at row creation
+// time.
 func resnapshotHelmValueFileIfDrifted(db *gorm.DB, version *model.ContainerVersion, systemName, valuesDir string, dryRun bool, report *ReseedReport) error {
 	var helm model.HelmConfig
 	if err := db.Where("container_version_id = ?", version.ID).First(&helm).Error; err != nil {
@@ -486,9 +490,6 @@ func resnapshotHelmValueFileIfDrifted(db *gorm.DB, version *model.ContainerVersi
 			return nil
 		}
 		return fmt.Errorf("lookup helm_config for value_file resnapshot: %w", err)
-	}
-	if helm.ValueFile == "" {
-		return nil
 	}
 	srcPath := filepath.Join(valuesDir, fmt.Sprintf("%s.yaml", systemName))
 	srcBytes, err := os.ReadFile(srcPath)
@@ -505,13 +506,17 @@ func resnapshotHelmValueFileIfDrifted(db *gorm.DB, version *model.ContainerVersi
 	if err == nil && bytes.Equal(curBytes, srcBytes) {
 		return nil
 	}
+	note := "value_file overlay drift; re-snapshotting from CM source"
+	if helm.ValueFile == "" {
+		note = "value_file empty; backfilling snapshot from CM source"
+	}
 	act := ReseedAction{
 		Layer:    "helm_configs",
 		System:   systemName,
 		Key:      version.Name,
 		OldValue: helm.ValueFile,
 		NewValue: "<new snapshot from " + srcPath + ">",
-		Note:     "value_file overlay drift; re-snapshotting from CM source",
+		Note:     note,
 	}
 	if dryRun {
 		report.Actions = append(report.Actions, act)

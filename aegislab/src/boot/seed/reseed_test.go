@@ -1282,7 +1282,13 @@ func TestReseedResnapshotNoOpWhenOverlayMissing(t *testing.T) {
 	}
 }
 
-func TestReseedResnapshotNoOpWhenValueFileEmpty(t *testing.T) {
+// TestReseedBackfillsHelmValueFileWhenEmpty pins issue #360 fix A: a
+// container_version whose helm_configs.value_file was never captured (empty in
+// DB) must have the snapshot BACKFILLED from the CM overlay on reseed. This is
+// the concrete ts-on-byte-cluster failure — the volces-registry overlay
+// existed in the CM but the empty value_file meant helm installed with the
+// chart's docker.io defaults → ImagePullBackOff.
+func TestReseedBackfillsHelmValueFileWhenEmpty(t *testing.T) {
 	db := newReseedTestDB(t)
 	basePath := t.TempDir()
 	setViperForTest(t, "jfs.dataset_path", basePath)
@@ -1297,13 +1303,59 @@ func TestReseedResnapshotNoOpWhenValueFileEmpty(t *testing.T) {
 	seed := writeSeedFile(t, minimalSeedFor(system))
 	writeOverlayBesideSeed(t, seed, system, "imageTag: fresh\n")
 
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	var got struct{ ValueFile string }
+	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
+	if got.ValueFile == "" {
+		t.Fatalf("value_file still empty; backfill did not run")
+	}
+	newBytes, err := os.ReadFile(got.ValueFile)
+	if err != nil {
+		t.Fatalf("read backfilled snapshot: %v", err)
+	}
+	if string(newBytes) != "imageTag: fresh\n" {
+		t.Fatalf("backfilled snapshot bytes = %q, want %q", string(newBytes), "imageTag: fresh\n")
+	}
+
+	found := false
+	for _, a := range report.Actions {
+		if a.Layer == "helm_configs" && a.Applied && a.OldValue == "" && a.Note == "value_file empty; backfilling snapshot from CM source" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected applied backfill action, got %+v", report.Actions)
+	}
+}
+
+// TestReseedNoOpWhenValueFileEmptyAndOverlayMissing guards the other empty
+// case: no value_file snapshot AND no CM overlay on disk must stay empty
+// rather than erroring on the empty path read.
+func TestReseedNoOpWhenValueFileEmptyAndOverlayMissing(t *testing.T) {
+	db := newReseedTestDB(t)
+	basePath := t.TempDir()
+	setViperForTest(t, "jfs.dataset_path", basePath)
+
+	system := "otel-demo"
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, ?, 2, 1)`, system)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db,
+		`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name, value_file) VALUES (20, ?, '0.1.0', 10, 'https://x', 'r', '')`,
+		system)
+
+	seed := writeSeedFile(t, minimalSeedFor(system))
+
 	if _, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed}); err != nil {
 		t.Fatalf("reseed: %v", err)
 	}
 	var got struct{ ValueFile string }
 	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
 	if got.ValueFile != "" {
-		t.Fatalf("value_file populated when initially empty: %s", got.ValueFile)
+		t.Fatalf("value_file populated when no overlay exists: %s", got.ValueFile)
 	}
 }
 
