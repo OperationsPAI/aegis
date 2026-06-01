@@ -37,7 +37,7 @@ from rcabench_platform.v3.sdk.pedestals import Pedestal, get_pedestal
 from rcabench_platform.v3.sdk.pedestals import (
     generic as _generic_pedestals,  # noqa: F401  # registers hs / otel-demo / tea / sn / mm / sockshop
 )
-from rcabench_platform.v3.sdk.utils.fmap import fmap_processpool
+from rcabench_platform.v3.sdk.utils.fmap import fmap_processpool, fmap_threadpool
 
 load_dotenv(Path.cwd() / ".env")
 
@@ -451,6 +451,38 @@ def _resolve_input_path(raw: str) -> Path:
     if "://" in raw:
         return _stage_s3_input_locally(raw)
     return Path(raw)
+
+
+def _upload_dir_to_s3(src: Path, dst_url: str) -> int:
+    """Upload every regular file under ``src`` to ``<dst_url>/<basename>``.
+
+    Mirrors prepare_inputs._upload_dir_to_s3 (including the rustfs 0-byte NUL
+    stub) so converted/ persists back to the datapack blob; staged inputs live
+    in an atexit-deleted tempdir, so without this the parquets vanish at exit.
+    """
+    import shutil
+
+    import fsspec  # lazy import: only needed for the s3 codepath
+
+    base = dst_url.rstrip("/")
+    endpoint = os.environ.get("AWS_ENDPOINT_URL_S3") or os.environ.get("AWS_ENDPOINT_URL")
+    storage_options: dict[str, Any] = {"client_kwargs": {"endpoint_url": endpoint}} if endpoint else {}
+
+    def _upload_one(file: Path) -> None:
+        # rustfs / older MinIO builds persist 0-byte PUTs as an xl.meta stub
+        # with no part files, then 404 on GetObject for the same key; a single
+        # NUL byte stands in so existence-checked markers (.finished) survive.
+        if file.stat().st_size == 0:
+            with fsspec.open(f"{base}/{file.name}", "wb", **storage_options) as f_dst:
+                f_dst.write(b"\x00")  # type: ignore[union-attr]
+            return
+        with open(file, "rb") as f_src, fsspec.open(f"{base}/{file.name}", "wb", **storage_options) as f_dst:
+            shutil.copyfileobj(f_src, f_dst)  # type: ignore[arg-type]
+
+    files = [file for file in src.iterdir() if file.is_file()]
+    tasks = [functools.partial(_upload_one, file) for file in files]
+    fmap_threadpool(tasks, parallel=8)
+    return len(files)
 
 
 def setup_paths_and_validation(in_p: Path | None, ou_p: Path | None) -> tuple[Path, Path]:
@@ -934,6 +966,15 @@ def platform_convert(
         skip_finished=False,
     )
     logger.info(f"Successfully converted datapack for {injection_name}")
+
+    # In s3 mode input_path is an atexit-deleted tempdir staged from
+    # INPUT_PATH=s3://.../<name>; mirror converted/ back to that prefix so a
+    # re-download of the datapack includes it. The local patch_detection flow
+    # (input_path == ou_p == real datapack dir) already has converted/ on disk.
+    raw_input = os.environ.get("INPUT_PATH", "")
+    if "://" in raw_input:
+        n = _upload_dir_to_s3(converted_input_path, f"{raw_input.rstrip('/')}/converted")
+        logger.info("Uploaded converted/ ({} files) to {}/converted/", n, raw_input.rstrip("/"))
 
 
 @app.command()
