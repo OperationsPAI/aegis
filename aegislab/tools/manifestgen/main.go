@@ -432,8 +432,9 @@ func hasHTTPEligibleEndpoint(d *systemData) bool {
 
 // buildBasePoints emits the workload-agnostic baseline plus the canonical
 // http_request_delay/abort pair and jvm_method_latency. http request points
-// are emitted for every endpoint including gRPC pseudo-routes (unchanged
-// from the historical base behavior).
+// are emitted only for HTTP/1.x routes; gRPC pseudo-routes are skipped since
+// HTTPChaos cannot exercise them. The pod/cpu/mem/time and jvm-method points
+// are protocol-agnostic and emitted for every service.
 func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []point {
 	ns := d.namespace
 	// WHY container=app: chaos-experiment data carries no container name,
