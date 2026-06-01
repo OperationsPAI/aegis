@@ -64,6 +64,17 @@ When aegisctl ships the offline RCA-grading query:
 2. Re-grade past rounds in a single pass and patch `memory.md` with the corrections; your simulated difficulty may have been optimistic or pessimistic.
 3. Bias future rounds toward whichever simulation patterns aligned with offline reality.
 
+## Discovering what to inject — DO NOT use `chaos points list` for this
+
+**The catalog has thousands of points per system** (ts = 31847, teastore = 10986). `aegisctl chaos points list` defaults to `--limit 100` and returns the first page sorted by insertion order — which is typically all `jvm_runtime_mutator` points, hiding every `pod_kill` / `network_*` / `http_*` you actually want. **Do NOT use unfiltered `chaos points list` to decide what's injectable** — you will see a skewed subset and miss entire capability families.
+
+Instead, to discover injectable targets:
+- **For services:** `aegisctl chaos points list --system <sys> --capability pod_kill --limit 500` — filter by capability to see which services support it.
+- **For capabilities on a service:** `aegisctl chaos points list --system <sys> --service <svc> --limit 500` — shows all capabilities for that service.
+- **Or just use `inject guided`** — the guided resolver knows the full catalog (it queries by exact service+capability, no pagination) and will tell you if a (service, chaos_type) pair is valid.
+
+The inject loop's preflight (`catalog_preflight.go`) queries `GET /v1beta/systems/{sys}/points?service=X&capability=Y&limit=50` — it filters precisely and is never affected by the default page limit. The list endpoint's page limit is a CLI display issue, not a data issue.
+
 ## Each round (you do, or `loop.sh` drives)
 
 1. **Read state.** Open `~/.aegisctl/injection-author/<system>/metadata.json` and `memory.md`. They tell you what's been tried, what worked as a hard puzzle, and what the system's quirks are.

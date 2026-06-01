@@ -91,8 +91,13 @@ func renderChaosPoints(p *apiclient.ChaosChaosListPointsResp) error {
 	output.PrintTable(headers, rows)
 	if !flagQuiet {
 		total := int32Deref(p.Total)
+		shown := int32(len(p.Points))
 		fmt.Fprintf(os.Stderr, "total=%d shown=%d limit=%d offset=%d\n",
-			total, len(p.Points), int32Deref(p.Limit), int32Deref(p.Offset))
+			total, shown, int32Deref(p.Limit), int32Deref(p.Offset))
+		if total > shown {
+			fmt.Fprintf(os.Stderr, "⚠ %d points not shown (total %d > page %d). Use --capability/--service to filter, or --limit 500 to see more.\n",
+				total-shown, total, shown)
+		}
 	}
 	return nil
 }
