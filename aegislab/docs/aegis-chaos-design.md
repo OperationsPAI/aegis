@@ -534,6 +534,31 @@ These may live as aegisctl helper subcommands, standalone scripts in
 chart repos, or pieces of the `register-aegis-system` skill workflow.
 aegis-chaos sees only the resulting manifest.
 
+### Repo-wide reconcile gate (catalog drift)
+
+The per-chart helm hook (ADR-0009) only keeps a Service's Points current
+when *that chart* is (re)installed. A repo-wide `just manifestgen` regen
+— which restores whole capability families across every system at once
+— has no install event behind it, so nothing pushes the new manifests
+into a running catalog. The `chaos_points` table is fed *exclusively* by
+`aegisctl manifest reconcile-dir` (the manifests are not in the backend
+image; backend startup and the seed-update cycle never touch the table),
+so a regen that nobody reconciled lets the live catalog silently fall
+behind the repo. PR #505 hit this: the repo manifests would produce 4471
+active Points but sockshop's DB held 525, with dns / network /
+jvm-runtime-mutator at 0 active across all eight systems — entire
+capability families were silently unreachable by the inject loop.
+
+`scripts/chaos-catalog-reconcile.sh` (just `chaos-reconcile-check` /
+`chaos-reconcile`) closes this the same way `system diff-seed` (§15)
+guards helm values: it dry-run reconciles the committed manifests against
+the live aegis-chaos and exits non-zero when any system's live active set
+differs from what the manifests produce. Wire `chaos-reconcile-check`
+into the seed-update cycle and CI-against-a-cluster; run `chaos-reconcile`
+to apply. After a `manifestgen` regen the catalog either follows or the
+operator is loudly told to reconcile — it can never again fall 8x behind
+unnoticed.
+
 ## 7. Data Model (SQL sketch)
 
 ```sql
