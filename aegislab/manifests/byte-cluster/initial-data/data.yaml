@@ -1460,7 +1460,7 @@ containers:
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
-          version: 0.1.5
+          version: 0.1.7
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
