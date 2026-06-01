@@ -373,6 +373,28 @@ Important behavior:
 - `aegisctl regression run` currently false-negatives the pod preflight on this Byte cluster even when the target namespace is healthy, so use `--skip-preflight`
 - repeated submissions against the same regression spec can be deduped by the backend; change the namespace/spec or wait for cooldown before retrying
 
+## 7.1 Reconcile the chaos-point catalog (every seed-update cycle)
+
+The `chaos_points` catalog is fed ONLY by `aegisctl manifest reconcile-dir`
+— backend startup, the helm install, and the reseed step never touch it,
+and the manifests are not in the backend image. So after any `just
+manifestgen` regen (or a fresh install) the catalog must be reconciled
+explicitly, and the seed-update cycle must gate on it. Point the script at
+the forwarded gateway from §7:
+
+```bash
+cd aegislab
+export AEGIS_CHAOS_SERVER=http://127.0.0.1:8082
+just chaos-reconcile-check   # FAILS loudly if live catalog ≠ committed manifests
+just chaos-reconcile         # import + sweep, then re-check
+cd ..
+```
+
+`chaos-reconcile-check` is the catalog analog of `system diff-seed` (the
+helm-values drift gate): run it after every reseed so a manifest regen
+nobody reconciled can never again leave whole capability families
+(dns / network / jvm-runtime-mutator) silently at 0 active points.
+
 ## 8. Smoke / regression validation
 
 Build `aegisctl` and validate the environment:

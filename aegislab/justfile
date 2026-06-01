@@ -375,6 +375,22 @@ lint-manifests:
     fi
     printf "{{green}}✅ %d PointManifest(s) pass schema lint{{reset}}\n" "$count"
 
+# 🔍 Fail if the live chaos_points catalog drifts from the committed manifests.
+# Dry-run only; needs AEGIS_CHAOS_SERVER pointed at a live aegis-chaos.
+# Run this in the seed-update cycle (and CI-against-a-cluster) so a manifestgen
+# regen that nobody reconciled can never silently fall behind the catalog.
+chaos-reconcile-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    AEGISCTL_BIN="${AEGISCTL_BIN:-aegisctl}" {{root}}/scripts/chaos-catalog-reconcile.sh --check
+
+# 🧬 Reconcile the live chaos_points catalog to the committed manifests
+# (import + sweep), then re-check. Needs AEGIS_CHAOS_SERVER.
+chaos-reconcile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    AEGISCTL_BIN="${AEGISCTL_BIN:-aegisctl}" {{root}}/scripts/chaos-catalog-reconcile.sh --apply
+
 # 👁️ Preview unreleased changes
 changelog-preview:
     #!/usr/bin/env bash
