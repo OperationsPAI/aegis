@@ -90,43 +90,35 @@ func runManifestReconcileDir(_ *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "  FAIL   %s: %v\n", file, ferr)
 		}
 	}
-	for _, f := range files {
-		c := classifyManifestFile(f)
-		if c.Err != nil {
-			recordFail(f, c.System, c.Err)
-			continue
-		}
-		if c.Skipped {
-			skipped++
-			continue
-		}
-		if flagReconcileSystem != "" && c.System != flagReconcileSystem {
-			skipped++
-			continue
-		}
-		res, ierr := importManifest(ctx, cli, c.System, c.Req, flagDryRun)
+	groups, classifyFails := groupManifestsByService(files, flagReconcileSystem, &skipped)
+	for _, cf := range classifyFails {
+		recordFail(cf.file, cf.system, cf.err)
+	}
+	for _, g := range groups {
+		f := g.label
+		res, ierr := importManifest(ctx, cli, g.system, g.req, flagDryRun)
 		if ierr != nil {
-			recordFail(f, c.System, ierr)
+			recordFail(f, g.system, ierr)
 			continue
 		}
 		imported++
-		if activeBySystem[c.System] == nil {
-			activeBySystem[c.System] = map[string]struct{}{}
+		if activeBySystem[g.system] == nil {
+			activeBySystem[g.system] = map[string]struct{}{}
 		}
 		for _, id := range res.GetPointIds() {
-			activeBySystem[c.System][id] = struct{}{}
+			activeBySystem[g.system][id] = struct{}{}
 		}
 		if sup := res.GetSupersededIds(); len(sup) > 0 {
-			if supersededBySystem[c.System] == nil {
-				supersededBySystem[c.System] = map[string]struct{}{}
+			if supersededBySystem[g.system] == nil {
+				supersededBySystem[g.system] = map[string]struct{}{}
 			}
 			for _, id := range sup {
-				supersededBySystem[c.System][id] = struct{}{}
+				supersededBySystem[g.system][id] = struct{}{}
 			}
 		}
 		if !flagQuiet {
 			fmt.Fprintf(os.Stderr, "  import %s (system=%s upserted=%d superseded=%d)\n",
-				f, c.System, res.GetUpserted(), res.GetSuperseded())
+				f, g.system, res.GetUpserted(), res.GetSuperseded())
 		}
 	}
 
@@ -247,6 +239,79 @@ func reconcileWouldDeprecate(ctx context.Context, cli *apiclient.APIClient, syst
 		offset += page
 	}
 	return count, nil
+}
+
+type serviceGroup struct {
+	system string
+	label  string
+	req    apiclient.ChaosChaosImportPointsReq
+}
+
+type classifyFailure struct {
+	file   string
+	system string
+	err    error
+}
+
+// groupManifestsByService merges every manifest file that targets the same
+// (system, service, instance, chart_version) into one import request, unioning
+// their points. manifestgen (#505) emits several files per service — endpoint,
+// http, dns, network, jvm — each with replace_scope=service. Imported
+// separately, each file's service-scope supersede retires the points its
+// siblings just activated. Merging them so the supersede sees the full active
+// set is what makes replace_scope=service authoritative for the whole service.
+func groupManifestsByService(files []string, onlySystem string, skipped *int) ([]serviceGroup, []classifyFailure) {
+	type acc struct {
+		req   apiclient.ChaosChaosImportPointsReq
+		files []string
+		order int
+	}
+	groups := map[string]*acc{}
+	var fails []classifyFailure
+	next := 0
+	for _, f := range files {
+		c := classifyManifestFile(f)
+		if c.Err != nil {
+			fails = append(fails, classifyFailure{file: f, system: c.System, err: c.Err})
+			continue
+		}
+		if c.Skipped {
+			*skipped++
+			continue
+		}
+		if onlySystem != "" && c.System != onlySystem {
+			*skipped++
+			continue
+		}
+		md := c.Req.GetMetadata()
+		key := strings.Join([]string{
+			c.System, md.GetService(), md.GetInstance(), md.GetChartVersion(),
+		}, "\x00")
+		g, ok := groups[key]
+		if !ok {
+			g = &acc{req: c.Req, order: next}
+			next++
+			groups[key] = g
+		} else {
+			spec := g.req.GetSpec()
+			incoming := c.Req.GetSpec()
+			merged := append(spec.GetPoints(), incoming.GetPoints()...)
+			spec.SetPoints(merged)
+			g.req.SetSpec(spec)
+		}
+		g.files = append(g.files, f)
+	}
+
+	out := make([]serviceGroup, len(groups))
+	for _, g := range groups {
+		label := g.files[0]
+		if len(g.files) > 1 {
+			label = fmt.Sprintf("%s (+%d files)", g.files[0], len(g.files)-1)
+		}
+		md := g.req.GetMetadata()
+		out[g.order] = serviceGroup{system: md.GetSystem(), label: label, req: g.req}
+	}
+	return out, fails
 }
 
 func sortedSet(m map[string]struct{}) []string {

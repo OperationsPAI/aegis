@@ -180,6 +180,44 @@ func TestImportPoints_DryRun_ReportsWouldBeSuperseded(t *testing.T) {
 	}
 }
 
+// TestImportPoints_MultiCapabilityManifest_AllActive pins the contract the
+// reconcile-dir merge relies on: one replace_scope=service manifest carrying
+// disjoint capability families (http + network) under the same service keeps
+// every point active. The #505 regression came from importing those families
+// as separate files, each clobbering the other's points; merging them into one
+// manifest — which is what reconcile-dir now does — is correct only if a single
+// multi-capability manifest activates them all.
+func TestImportPoints_MultiCapabilityManifest_AllActive(t *testing.T) {
+	mgr := newImportTestManager(t)
+
+	m := baseManifest()
+	m.Spec.Points = []PointManifestEntry{
+		{Capability: "pod_kill", Target: map[string]any{"namespace": "ts", "app": "frontend"}},
+		{Capability: "pod_failure", Target: map[string]any{"namespace": "ts", "app": "frontend"}},
+	}
+	res, err := mgr.ImportPoints(t.Context(), "ts", m, false)
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+
+	for _, id := range res.PointIDs {
+		var status string
+		if err := mgr.DB.Model(&Point{}).Select("status").
+			Where("id = ?", id).Take(&status).Error; err != nil {
+			t.Fatalf("lookup point %s: %v", id, err)
+		}
+		if status != PointActive {
+			t.Fatalf("point %s not active after merged import; got %q", id, status)
+		}
+	}
+
+	var active int64
+	mgr.DB.Model(&Point{}).Where("status = ?", PointActive).Count(&active)
+	if active != 2 {
+		t.Fatalf("expected 2 active points, got %d", active)
+	}
+}
+
 func TestImportPoints_RejectsReplaceScopeSystem(t *testing.T) {
 	mgr := newImportTestManager(t)
 	m := baseManifest()

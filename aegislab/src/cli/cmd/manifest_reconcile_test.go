@@ -75,6 +75,94 @@ func TestReconcileDir_FailedImportSkipsItsSystemSweep(t *testing.T) {
 	}
 }
 
+// TestGroupManifestsByService_MergesSiblingFiles pins the #505 reconcile fix:
+// manifestgen emits one file per capability family for a service, all sharing
+// metadata and replace_scope=service. Imported separately each file's
+// service-scope supersede clobbered its siblings' points, leaving whole
+// families (network/dns/jvm_runtime_mutator) 0-active. reconcile-dir now merges
+// every file for the same (system, service, instance, chart_version) into one
+// import request so the service-scope supersede sees the union of points.
+func TestGroupManifestsByService_MergesSiblingFiles(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	const meta = `apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  system: "hs"
+  service: "frontend"
+  instance: "seed"
+  chart_version: "seed-genesis"
+spec:
+  replace_scope: "service"
+  points:
+`
+	write("frontend.yaml", meta+`    - capability: "pod_kill"
+      target: {namespace: "hs", app: "frontend"}
+`)
+	write("frontend-network-A1b.yaml", meta+`    - capability: "network_delay"
+      target: {namespace: "hs", source_app: "frontend", target_service: "user"}
+`)
+	write("attractions.yaml", `apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata: {system: "hs", service: "attractions", instance: "seed", chart_version: "seed-genesis"}
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target: {namespace: "hs", app: "attractions"}
+`)
+
+	var files []string
+	for _, n := range []string{"frontend.yaml", "frontend-network-A1b.yaml", "attractions.yaml"} {
+		files = append(files, filepath.Join(dir, n))
+	}
+
+	skipped := 0
+	groups, fails := groupManifestsByService(files, "", &skipped)
+	if len(fails) != 0 {
+		t.Fatalf("unexpected classify failures: %v", fails)
+	}
+	if skipped != 0 {
+		t.Fatalf("unexpected skipped=%d", skipped)
+	}
+	if len(groups) != 2 {
+		t.Fatalf("expected 2 service groups, got %d", len(groups))
+	}
+
+	byService := map[string][]string{}
+	for _, g := range groups {
+		spec := g.req.GetSpec()
+		caps := make([]string, 0, len(spec.GetPoints()))
+		for _, p := range spec.GetPoints() {
+			caps = append(caps, p.GetCapability())
+		}
+		md := g.req.GetMetadata()
+		byService[md.GetService()] = caps
+	}
+
+	front := byService["frontend"]
+	hasNetwork, hasPod := false, false
+	for _, c := range front {
+		switch c {
+		case "network_delay":
+			hasNetwork = true
+		case "pod_kill":
+			hasPod = true
+		}
+	}
+	if len(front) != 2 || !hasNetwork || !hasPod {
+		t.Fatalf("frontend group must union both files (pod_kill + network_delay); got %v", front)
+	}
+	if caps := byService["attractions"]; len(caps) != 1 {
+		t.Fatalf("attractions group must stay separate with 1 point; got %v", caps)
+	}
+}
+
 func writeManifest(t *testing.T, path, system, service string) {
 	t.Helper()
 	doc := `apiVersion: aegis-chaos/v1beta
