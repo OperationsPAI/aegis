@@ -94,8 +94,42 @@ func GuidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[str
 	}
 }
 
-// GuidedToChaosParams extracts the capability-specific param map.
-func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) map[string]any {
+// requiredParamsByCapability mirrors the param_schema `required` array of each
+// seeded capability (crud/chaos/seeds_*.go). GuidedToChaosParams asserts every
+// listed key is emitted before dispatch so a missing emitter fails fast here
+// with an attributable error instead of as an opaque 400 ErrSchemaValidation
+// from chaos-service. schema_validate_test.go pins this map against the seeds.
+var requiredParamsByCapability = map[string][]string{
+	"cpu_stress":                  {"load_pct"},
+	"memory_stress":               {"size_mib"},
+	"network_delay":               {"latency_ms"},
+	"network_loss":                {"loss_pct"},
+	"network_duplicate":           {"duplicate_pct"},
+	"network_corrupt":             {"corrupt_pct"},
+	"network_bandwidth":           {"rate_kbps", "limit", "buffer"},
+	"time_skew":                   {"offset_s"},
+	"jvm_cpu_stress":              {"cpu_count"},
+	"jvm_method_latency":          {"delay_ms"},
+	"jvm_method_return":           {"return_type"},
+	"jvm_mysql_latency":           {"delay_ms"},
+	"http_request_delay":          {"delay_ms"},
+	"http_response_delay":         {"delay_ms"},
+	"http_request_replace_method": {"new_method"},
+	"http_request_replace_path":   {"new_path"},
+	"http_response_replace_code":  {"status_code"},
+}
+
+// GuidedToChaosParams extracts the capability-specific param map. It returns an
+// error when the guided config omits a value the capability's param_schema
+// marks required, so the dispatcher rejects an incomplete body before the
+// chaos-service round-trip turns it into an opaque 400.
+//
+// For delay/latency-class faults `delay_ms` is the agent-chosen fault SEVERITY
+// (how much latency to inject), not a time window — duration is backend-pinned.
+// The guided value is passed through verbatim and is never defaulted: a missing
+// severity is a deliberate-choice gap and must fail fast rather than be
+// silently substituted.
+func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) (map[string]any, error) {
 	// GuidedConfig.Duration is in minutes (pinned to FixedAbnormalWindowMinutes
 	// upstream in api_types.go). chaos service expects seconds.
 	durationS := consts.FixedAbnormalWindowSeconds
@@ -145,7 +179,7 @@ func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) map[stri
 		if cfg.MemType != "" {
 			out["memory_type"] = cfg.MemType
 		}
-	case "jvm_method_latency":
+	case "jvm_method_latency", "jvm_mysql_latency":
 		derefOr(cfg.LatencyDuration, "delay_ms")
 	case "jvm_method_exception":
 		if cfg.ExceptionOpt != "" {
@@ -158,8 +192,16 @@ func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) map[stri
 		if cfg.ReturnValueOpt != "" {
 			out["value_mode"] = cfg.ReturnValueOpt
 		}
+	case "http_request_delay", "http_response_delay":
+		derefOr(cfg.DelayDuration, "delay_ms")
 	}
-	return out
+
+	for _, key := range requiredParamsByCapability[capability] {
+		if _, ok := out[key]; !ok {
+			return nil, fmt.Errorf("via-chaos: capability %s requires param %q but the guided config did not supply it (set the delay/latency severity flag)", capability, key)
+		}
+	}
+	return out, nil
 }
 
 // GuidedChaosPointID derives the Point ID for a finalized guided config using

@@ -111,9 +111,9 @@ func (c *sdkChaosServiceClient) newAPIClient() *apiclient.APIClient {
 
 func (c *sdkChaosServiceClient) CreateInjection(ctx context.Context, body apiclient.ChaosChaosCreateInjectionReq) (string, error) {
 	cli := c.newAPIClient()
-	resp, _, err := cli.ChaosAPI.ChaosCreateInjection(ctx).ChaosChaosCreateInjectionReq(body).Execute()
+	resp, httpResp, err := cli.ChaosAPI.ChaosCreateInjection(ctx).ChaosChaosCreateInjectionReq(body).Execute()
 	if err != nil {
-		return "", err
+		return "", chaosServiceErr(err, httpResp)
 	}
 	if resp == nil || resp.Data == nil || resp.Data.Id == nil {
 		return "", errors.New("chaos service: empty injection_id in ACK")
@@ -123,14 +123,33 @@ func (c *sdkChaosServiceClient) CreateInjection(ctx context.Context, body apicli
 
 func (c *sdkChaosServiceClient) CreateInjectionBatch(ctx context.Context, body apiclient.ChaosChaosCreateInjectionBatchReq) (string, error) {
 	cli := c.newAPIClient()
-	resp, _, err := cli.ChaosAPI.ChaosCreateInjectionBatch(ctx).ChaosChaosCreateInjectionBatchReq(body).Execute()
+	resp, httpResp, err := cli.ChaosAPI.ChaosCreateInjectionBatch(ctx).ChaosChaosCreateInjectionBatchReq(body).Execute()
 	if err != nil {
-		return "", err
+		return "", chaosServiceErr(err, httpResp)
 	}
 	if resp == nil || resp.Data == nil || resp.Data.Id == nil {
 		return "", errors.New("chaos service: empty batch_id in ACK")
 	}
 	return *resp.Data.Id, nil
+}
+
+// chaosServiceErr augments the SDK's status-line-only error with the response
+// body chaos-service returned. The generated GenericOpenAPIError.Error()
+// surfaces only "400 Bad Request"; the schema-validation leaves that explain
+// *why* (e.g. a missing required param) live in the body, so a bare status
+// line makes a rejection undiagnosable from the worker log.
+func chaosServiceErr(err error, httpResp *http.Response) error {
+	var apiErr *apiclient.GenericOpenAPIError
+	if errors.As(err, &apiErr) {
+		if b := apiErr.Body(); len(b) > 0 {
+			status := ""
+			if httpResp != nil {
+				status = httpResp.Status + ": "
+			}
+			return fmt.Errorf("%s: %s%s", err.Error(), status, strings.TrimSpace(string(b)))
+		}
+	}
+	return err
 }
 
 func (c *sdkChaosServiceClient) DeleteInjectionByTask(ctx context.Context, taskID string) error {
@@ -244,7 +263,10 @@ func dispatchViaChaosService(
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: derive point_id: %w", err)
 		}
-		params := chaoscrud.GuidedToChaosParams(capabilityOf(configs[0]), configs[0])
+		params, err := chaoscrud.GuidedToChaosParams(capabilityOf(configs[0]), configs[0])
+		if err != nil {
+			return nil, fmt.Errorf("dispatcher: %w", err)
+		}
 		idemKey := deps.traceID + ":" + pid
 		body := *apiclient.NewChaosChaosCreateInjectionReq()
 		body.PointId = &pid
@@ -270,7 +292,10 @@ func dispatchViaChaosService(
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: spec[%d]: derive point_id: %w", i, err)
 		}
-		params := chaoscrud.GuidedToChaosParams(capabilityOf(cfg), cfg)
+		params, err := chaoscrud.GuidedToChaosParams(capabilityOf(cfg), cfg)
+		if err != nil {
+			return nil, fmt.Errorf("dispatcher: spec[%d]: %w", i, err)
+		}
 		childKey := fmt.Sprintf("%s:%d:%s", deps.traceID, i, pid)
 		pidCopy := pid
 		children = append(children, apiclient.ChaosChaosCreateBatchChildReq{
