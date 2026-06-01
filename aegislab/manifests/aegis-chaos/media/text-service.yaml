@@ -18,24 +18,6 @@ spec:
         app: "text-service"
         container: "text-service"
         namespace: "media"
-    - capability: "http_request_abort"
-      target:
-        app: "text-service"
-        method: "POST"
-        namespace: "media"
-        path: "/TextService/UploadText"
-        port: 9090
-        server_address: "text-service"
-        span_name: "UploadText"
-    - capability: "http_request_delay"
-      target:
-        app: "text-service"
-        method: "POST"
-        namespace: "media"
-        path: "/TextService/UploadText"
-        port: 9090
-        server_address: "text-service"
-        span_name: "UploadText"
     - capability: "memory_stress"
       target:
         app: "text-service"

@@ -18,24 +18,6 @@ spec:
         app: "rate"
         container: "rate"
         namespace: "hs"
-    - capability: "http_request_abort"
-      target:
-        app: "rate"
-        method: "POST"
-        namespace: "hs"
-        path: "/rate.Rate/GetRates"
-        port: 8084
-        server_address: "rate"
-        span_name: "rate.Rate/GetRates"
-    - capability: "http_request_delay"
-      target:
-        app: "rate"
-        method: "POST"
-        namespace: "hs"
-        path: "/rate.Rate/GetRates"
-        port: 8084
-        server_address: "rate"
-        span_name: "rate.Rate/GetRates"
     - capability: "memory_stress"
       target:
         app: "rate"

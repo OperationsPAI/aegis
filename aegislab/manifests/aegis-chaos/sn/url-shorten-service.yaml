@@ -18,24 +18,6 @@ spec:
         app: "url-shorten-service"
         container: "url-shorten-service"
         namespace: "sn"
-    - capability: "http_request_abort"
-      target:
-        app: "url-shorten-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/UrlShortenService/ComposeUrls"
-        port: 9090
-        server_address: "url-shorten-service"
-        span_name: "compose_urls_server"
-    - capability: "http_request_delay"
-      target:
-        app: "url-shorten-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/UrlShortenService/ComposeUrls"
-        port: 9090
-        server_address: "url-shorten-service"
-        span_name: "compose_urls_server"
     - capability: "memory_stress"
       target:
         app: "url-shorten-service"

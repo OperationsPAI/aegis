@@ -18,42 +18,6 @@ spec:
         app: "ad"
         container: "ad"
         namespace: "otel-demo"
-    - capability: "http_request_abort"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/flagd.evaluation.v1.Service/EventStream"
-        port: 8013
-        server_address: "flagd"
-        span_name: "flagd.evaluation.v1.Service/EventStream"
-    - capability: "http_request_abort"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.AdService/GetAds"
-        port: 8080
-        server_address: "ad"
-        span_name: "oteldemo.AdService/GetAds"
-    - capability: "http_request_delay"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/flagd.evaluation.v1.Service/EventStream"
-        port: 8013
-        server_address: "flagd"
-        span_name: "flagd.evaluation.v1.Service/EventStream"
-    - capability: "http_request_delay"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.AdService/GetAds"
-        port: 8080
-        server_address: "ad"
-        span_name: "oteldemo.AdService/GetAds"
     - capability: "jvm_method_latency"
       target:
         app: "ad"

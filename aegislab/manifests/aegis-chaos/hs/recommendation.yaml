@@ -18,24 +18,6 @@ spec:
         app: "recommendation"
         container: "recommendation"
         namespace: "hs"
-    - capability: "http_request_abort"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "hs"
-        path: "/recommendation.Recommendation/GetRecommendations"
-        port: 8085
-        server_address: "recommendation"
-        span_name: "recommendation.Recommendation/GetRecommendations"
-    - capability: "http_request_delay"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "hs"
-        path: "/recommendation.Recommendation/GetRecommendations"
-        port: 8085
-        server_address: "recommendation"
-        span_name: "recommendation.Recommendation/GetRecommendations"
     - capability: "memory_stress"
       target:
         app: "recommendation"

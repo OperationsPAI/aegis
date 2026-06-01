@@ -18,24 +18,6 @@ spec:
         app: "emailservice"
         container: "emailservice"
         namespace: "ob"
-    - capability: "http_request_abort"
-      target:
-        app: "emailservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.EmailService/SendOrderConfirmation"
-        port: 5000
-        server_address: "emailservice"
-        span_name: "/hipstershop.EmailService/SendOrderConfirmation"
-    - capability: "http_request_delay"
-      target:
-        app: "emailservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.EmailService/SendOrderConfirmation"
-        port: 5000
-        server_address: "emailservice"
-        span_name: "/hipstershop.EmailService/SendOrderConfirmation"
     - capability: "memory_stress"
       target:
         app: "emailservice"

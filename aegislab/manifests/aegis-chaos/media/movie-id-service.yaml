@@ -18,42 +18,6 @@ spec:
         app: "movie-id-service"
         container: "movie-id-service"
         namespace: "media"
-    - capability: "http_request_abort"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/RegisterMovieId"
-        port: 9090
-        server_address: "movie-id-service"
-        span_name: "RegisterMovieId"
-    - capability: "http_request_abort"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/UploadMovieId"
-        port: 9090
-        server_address: "movie-id-service"
-        span_name: "UploadMovieId"
-    - capability: "http_request_delay"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/RegisterMovieId"
-        port: 9090
-        server_address: "movie-id-service"
-        span_name: "RegisterMovieId"
-    - capability: "http_request_delay"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/UploadMovieId"
-        port: 9090
-        server_address: "movie-id-service"
-        span_name: "UploadMovieId"
     - capability: "memory_stress"
       target:
         app: "movie-id-service"

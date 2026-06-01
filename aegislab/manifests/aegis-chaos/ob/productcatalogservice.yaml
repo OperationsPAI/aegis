@@ -18,42 +18,6 @@ spec:
         app: "productcatalogservice"
         container: "productcatalogservice"
         namespace: "ob"
-    - capability: "http_request_abort"
-      target:
-        app: "productcatalogservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.ProductCatalogService/GetProduct"
-        port: 3550
-        server_address: "productcatalogservice"
-        span_name: "hipstershop.ProductCatalogService/GetProduct"
-    - capability: "http_request_abort"
-      target:
-        app: "productcatalogservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.ProductCatalogService/ListProducts"
-        port: 3550
-        server_address: "productcatalogservice"
-        span_name: "hipstershop.ProductCatalogService/ListProducts"
-    - capability: "http_request_delay"
-      target:
-        app: "productcatalogservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.ProductCatalogService/GetProduct"
-        port: 3550
-        server_address: "productcatalogservice"
-        span_name: "hipstershop.ProductCatalogService/GetProduct"
-    - capability: "http_request_delay"
-      target:
-        app: "productcatalogservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.ProductCatalogService/ListProducts"
-        port: 3550
-        server_address: "productcatalogservice"
-        span_name: "hipstershop.ProductCatalogService/ListProducts"
     - capability: "memory_stress"
       target:
         app: "productcatalogservice"

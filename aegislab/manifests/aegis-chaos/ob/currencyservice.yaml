@@ -18,42 +18,6 @@ spec:
         app: "currencyservice"
         container: "currencyservice"
         namespace: "ob"
-    - capability: "http_request_abort"
-      target:
-        app: "currencyservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.CurrencyService/Convert"
-        port: 7000
-        server_address: "currencyservice"
-        span_name: "grpc.hipstershop.CurrencyService/Convert"
-    - capability: "http_request_abort"
-      target:
-        app: "currencyservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
-        port: 7000
-        server_address: "currencyservice"
-        span_name: "grpc.hipstershop.CurrencyService/GetSupportedCurrencies"
-    - capability: "http_request_delay"
-      target:
-        app: "currencyservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.CurrencyService/Convert"
-        port: 7000
-        server_address: "currencyservice"
-        span_name: "grpc.hipstershop.CurrencyService/Convert"
-    - capability: "http_request_delay"
-      target:
-        app: "currencyservice"
-        method: "POST"
-        namespace: "ob"
-        path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
-        port: 7000
-        server_address: "currencyservice"
-        span_name: "grpc.hipstershop.CurrencyService/GetSupportedCurrencies"
     - capability: "memory_stress"
       target:
         app: "currencyservice"

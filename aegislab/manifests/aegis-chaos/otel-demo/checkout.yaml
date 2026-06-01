@@ -32,60 +32,6 @@ spec:
         app: "checkout"
         method: "POST"
         namespace: "otel-demo"
-        path: "/oteldemo.CartService/EmptyCart"
-        port: 8080
-        server_address: "cart"
-        span_name: "oteldemo.CartService/EmptyCart"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CartService/GetCart"
-        port: 8080
-        server_address: "cart"
-        span_name: "oteldemo.CartService/GetCart"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CheckoutService/PlaceOrder"
-        port: 8080
-        server_address: "checkout"
-        span_name: "oteldemo.CheckoutService/PlaceOrder"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        port: 8080
-        server_address: "currency"
-        span_name: "oteldemo.CurrencyService/Convert"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.PaymentService/Charge"
-        port: 8080
-        server_address: "payment"
-        span_name: "oteldemo.PaymentService/Charge"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.ProductCatalogService/GetProduct"
-        port: 8080
-        server_address: "product-catalog"
-        span_name: "oteldemo.ProductCatalogService/GetProduct"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
         path: "/send_order_confirmation"
         port: 8080
         server_address: "email"
@@ -108,60 +54,6 @@ spec:
         port: 8080
         server_address: "shipping"
         span_name: "HTTP POST"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CartService/EmptyCart"
-        port: 8080
-        server_address: "cart"
-        span_name: "oteldemo.CartService/EmptyCart"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CartService/GetCart"
-        port: 8080
-        server_address: "cart"
-        span_name: "oteldemo.CartService/GetCart"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CheckoutService/PlaceOrder"
-        port: 8080
-        server_address: "checkout"
-        span_name: "oteldemo.CheckoutService/PlaceOrder"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        port: 8080
-        server_address: "currency"
-        span_name: "oteldemo.CurrencyService/Convert"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.PaymentService/Charge"
-        port: 8080
-        server_address: "payment"
-        span_name: "oteldemo.PaymentService/Charge"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.ProductCatalogService/GetProduct"
-        port: 8080
-        server_address: "product-catalog"
-        span_name: "oteldemo.ProductCatalogService/GetProduct"
     - capability: "http_request_delay"
       target:
         app: "checkout"

@@ -197,11 +197,17 @@ type httpEndpoint struct {
 	Port          string
 	ServerAddress string
 	SpanName      string
-	// grpc marks an endpoint folded from gRPC operations. Such endpoints
-	// still seed http_request_delay/abort in the base manifest, but are
-	// excluded from the http A1b response/replace family — chaos-mesh
-	// HTTPChaos cannot act on gRPC/HTTP-2 calls.
+	// grpc marks an endpoint folded from gRPC operations. Such endpoints are
+	// excluded from every http_request_* family — chaos-mesh HTTPChaos only
+	// matches HTTP/1.x, so points on them dispatch but silently no-op.
 	grpc bool
+}
+
+// isGRPCRoute reports whether an endpoint is a gRPC/Thrift pseudo-route that
+// HTTPChaos can never exercise: either explicitly flagged from grpcoperations,
+// or a dotted /pkg.Service/Method route.
+func isGRPCRoute(e httpEndpoint) bool {
+	return e.grpc || grpcRoutePattern.MatchString(e.Route)
 }
 
 type classMethod struct {
@@ -390,10 +396,13 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 
 		// Sanity floor: a present family file must yield non-zero points.
 		// Mismatch means the source was truncated, the AST var name drifted,
-		// or the loader silently swallowed a parse error.
+		// or the loader silently swallowed a parse error. An all-gRPC system
+		// (every loaded route is a gRPC pseudo-route) legitimately yields zero
+		// http_request_* points — HTTPChaos never matches it — so the floor
+		// only fires when at least one http-eligible endpoint was loaded.
 		var mismatches []string
-		if (data.presentFamilies["serviceendpoints"] || data.presentFamilies["grpcoperations"]) && st.httpReqBySystem[sysKey] == 0 {
-			mismatches = append(mismatches, "http (serviceendpoints/grpcoperations file present, 0 http_request_* points)")
+		if data.presentFamilies["serviceendpoints"] && hasHTTPEligibleEndpoint(data) && st.httpReqBySystem[sysKey] == 0 {
+			mismatches = append(mismatches, "http (serviceendpoints file present with http endpoints, 0 http_request_* points)")
 		}
 		if data.presentFamilies["javaclassmethods"] && st.jvmMethodBySystem[sysKey] == 0 {
 			mismatches = append(mismatches, "jvm-method (javaclassmethods file present, 0 jvm-method A1b points)")
@@ -405,6 +414,20 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 
 	printSummary(os.Stdout, st)
 	return nil
+}
+
+// hasHTTPEligibleEndpoint reports whether any loaded endpoint is a real
+// HTTP/1.x route (not a gRPC pseudo-route) — i.e. one that the http_request_*
+// builders would actually emit a point for.
+func hasHTTPEligibleEndpoint(d *systemData) bool {
+	for _, eps := range d.endpoints {
+		for _, e := range eps {
+			if !isGRPCRoute(e) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // buildBasePoints emits the workload-agnostic baseline plus the canonical
@@ -435,6 +458,9 @@ func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []
 
 	httpSeen := map[string]struct{}{}
 	for _, e := range d.endpoints[service] {
+		if isGRPCRoute(e) {
+			continue
+		}
 		target, ok := httpTarget(ns, app, e)
 		if !ok {
 			continue
@@ -467,7 +493,7 @@ func buildHTTPA1bPoints(service string, d *systemData) []point {
 	var pts []point
 	seen := map[string]struct{}{}
 	for _, e := range d.endpoints[service] {
-		if e.grpc || grpcRoutePattern.MatchString(e.Route) {
+		if isGRPCRoute(e) {
 			continue
 		}
 		target, ok := httpTarget(d.namespace, app, e)

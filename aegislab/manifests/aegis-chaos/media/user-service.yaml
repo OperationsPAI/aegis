@@ -18,24 +18,6 @@ spec:
         app: "user-service"
         container: "user-service"
         namespace: "media"
-    - capability: "http_request_abort"
-      target:
-        app: "user-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UserService/RegisterUser"
-        port: 9090
-        server_address: "user-service"
-        span_name: "RegisterUser"
-    - capability: "http_request_delay"
-      target:
-        app: "user-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UserService/RegisterUser"
-        port: 9090
-        server_address: "user-service"
-        span_name: "RegisterUser"
     - capability: "memory_stress"
       target:
         app: "user-service"

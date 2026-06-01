@@ -18,42 +18,6 @@ spec:
         app: "plot-service"
         container: "plot-service"
         namespace: "media"
-    - capability: "http_request_abort"
-      target:
-        app: "plot-service"
-        method: "POST"
-        namespace: "media"
-        path: "/PlotService/ReadPlot"
-        port: 9090
-        server_address: "plot-service"
-        span_name: "ReadPlot"
-    - capability: "http_request_abort"
-      target:
-        app: "plot-service"
-        method: "POST"
-        namespace: "media"
-        path: "/PlotService/WritePlot"
-        port: 9090
-        server_address: "plot-service"
-        span_name: "WritePlot"
-    - capability: "http_request_delay"
-      target:
-        app: "plot-service"
-        method: "POST"
-        namespace: "media"
-        path: "/PlotService/ReadPlot"
-        port: 9090
-        server_address: "plot-service"
-        span_name: "ReadPlot"
-    - capability: "http_request_delay"
-      target:
-        app: "plot-service"
-        method: "POST"
-        namespace: "media"
-        path: "/PlotService/WritePlot"
-        port: 9090
-        server_address: "plot-service"
-        span_name: "WritePlot"
     - capability: "memory_stress"
       target:
         app: "plot-service"

@@ -18,42 +18,6 @@ spec:
         app: "review-storage-service"
         container: "review-storage-service"
         namespace: "media"
-    - capability: "http_request_abort"
-      target:
-        app: "review-storage-service"
-        method: "POST"
-        namespace: "media"
-        path: "/ReviewStorageService/ReadReviews"
-        port: 9090
-        server_address: "review-storage-service"
-        span_name: "ReadReviews"
-    - capability: "http_request_abort"
-      target:
-        app: "review-storage-service"
-        method: "POST"
-        namespace: "media"
-        path: "/ReviewStorageService/StoreReview"
-        port: 9090
-        server_address: "review-storage-service"
-        span_name: "StoreReview"
-    - capability: "http_request_delay"
-      target:
-        app: "review-storage-service"
-        method: "POST"
-        namespace: "media"
-        path: "/ReviewStorageService/ReadReviews"
-        port: 9090
-        server_address: "review-storage-service"
-        span_name: "ReadReviews"
-    - capability: "http_request_delay"
-      target:
-        app: "review-storage-service"
-        method: "POST"
-        namespace: "media"
-        path: "/ReviewStorageService/StoreReview"
-        port: 9090
-        server_address: "review-storage-service"
-        span_name: "StoreReview"
     - capability: "memory_stress"
       target:
         app: "review-storage-service"

@@ -18,24 +18,6 @@ spec:
         app: "currency"
         container: "currency"
         namespace: "otel-demo"
-    - capability: "http_request_abort"
-      target:
-        app: "currency"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        port: 8080
-        server_address: "currency"
-        span_name: "Currency/Convert"
-    - capability: "http_request_delay"
-      target:
-        app: "currency"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        port: 8080
-        server_address: "currency"
-        span_name: "Currency/Convert"
     - capability: "memory_stress"
       target:
         app: "currency"
