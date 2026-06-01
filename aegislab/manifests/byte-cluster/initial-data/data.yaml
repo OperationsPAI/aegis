@@ -1075,7 +1075,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260530-e7ad889
+              default_value: 20260531-9d7d2a1
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1475,7 +1475,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-2b3fd43
+              default_value: 20260531-e5a6495
               overridable: true
             - key: opentelemetry.otlpEndpoint
               type: 0
