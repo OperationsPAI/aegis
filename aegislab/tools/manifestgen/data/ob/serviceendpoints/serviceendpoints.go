@@ -11,6 +11,7 @@ type ServiceEndpoint struct {
 	ServerAddress  string
 	ServerPort     string
 	SpanName       string
+	Grpc           bool
 }
 
 // ServiceEndpoints maps service names to their endpoints
@@ -23,7 +24,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.CartService/EmptyCart",
 			ServerAddress:  "cartservice",
 			ServerPort:     "7070",
-			SpanName:       "hipstershop.CartService/EmptyCart",
+			SpanName:       "hipstershop.CartService/EmptyCart", Grpc: true,
 		},
 		{
 			ServiceName:    "checkoutservice",
@@ -32,7 +33,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.CurrencyService/Convert",
 			ServerAddress:  "currencyservice",
 			ServerPort:     "7000",
-			SpanName:       "hipstershop.CurrencyService/Convert",
+			SpanName:       "hipstershop.CurrencyService/Convert", Grpc: true,
 		},
 		{
 			ServiceName:    "checkoutservice",
@@ -41,7 +42,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.EmailService/SendOrderConfirmation",
 			ServerAddress:  "emailservice",
 			ServerPort:     "5000",
-			SpanName:       "hipstershop.EmailService/SendOrderConfirmation",
+			SpanName:       "hipstershop.EmailService/SendOrderConfirmation", Grpc: true,
 		},
 		{
 			ServiceName:    "checkoutservice",
@@ -50,7 +51,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.PaymentService/Charge",
 			ServerAddress:  "paymentservice",
 			ServerPort:     "50051",
-			SpanName:       "hipstershop.PaymentService/Charge",
+			SpanName:       "hipstershop.PaymentService/Charge", Grpc: true,
 		},
 		{
 			ServiceName:    "checkoutservice",
@@ -59,7 +60,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.ProductCatalogService/GetProduct",
 			ServerAddress:  "productcatalogservice",
 			ServerPort:     "3550",
-			SpanName:       "hipstershop.ProductCatalogService/GetProduct",
+			SpanName:       "hipstershop.ProductCatalogService/GetProduct", Grpc: true,
 		},
 		{
 			ServiceName:    "checkoutservice",
@@ -68,7 +69,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.ShippingService/GetQuote",
 			ServerAddress:  "shippingservice",
 			ServerPort:     "50051",
-			SpanName:       "hipstershop.ShippingService/GetQuote",
+			SpanName:       "hipstershop.ShippingService/GetQuote", Grpc: true,
 		},
 	},
 	"frontend": {
@@ -79,7 +80,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.AdService/GetAds",
 			ServerAddress:  "adservice",
 			ServerPort:     "9555",
-			SpanName:       "hipstershop.AdService/GetAds",
+			SpanName:       "hipstershop.AdService/GetAds", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -88,7 +89,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.CartService/AddItem",
 			ServerAddress:  "cartservice",
 			ServerPort:     "7070",
-			SpanName:       "hipstershop.CartService/AddItem",
+			SpanName:       "hipstershop.CartService/AddItem", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -97,7 +98,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.CheckoutService/PlaceOrder",
 			ServerAddress:  "checkoutservice",
 			ServerPort:     "5050",
-			SpanName:       "hipstershop.CheckoutService/PlaceOrder",
+			SpanName:       "hipstershop.CheckoutService/PlaceOrder", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -106,7 +107,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.CurrencyService/Convert",
 			ServerAddress:  "currencyservice",
 			ServerPort:     "7000",
-			SpanName:       "hipstershop.CurrencyService/Convert",
+			SpanName:       "hipstershop.CurrencyService/Convert", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -115,7 +116,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.ProductCatalogService/GetProduct",
 			ServerAddress:  "productcatalogservice",
 			ServerPort:     "3550",
-			SpanName:       "hipstershop.ProductCatalogService/GetProduct",
+			SpanName:       "hipstershop.ProductCatalogService/GetProduct", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -124,7 +125,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.RecommendationService/ListRecommendations",
 			ServerAddress:  "recommendationservice",
 			ServerPort:     "8080",
-			SpanName:       "hipstershop.RecommendationService/ListRecommendations",
+			SpanName:       "hipstershop.RecommendationService/ListRecommendations", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -133,7 +134,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.ShippingService/GetQuote",
 			ServerAddress:  "shippingservice",
 			ServerPort:     "50051",
-			SpanName:       "hipstershop.ShippingService/GetQuote",
+			SpanName:       "hipstershop.ShippingService/GetQuote", Grpc: true,
 		},
 	},
 	"recommendationservice": {
@@ -144,7 +145,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/hipstershop.ProductCatalogService/ListProducts",
 			ServerAddress:  "productcatalogservice",
 			ServerPort:     "3550",
-			SpanName:       "hipstershop.ProductCatalogService/ListProducts",
+			SpanName:       "hipstershop.ProductCatalogService/ListProducts", Grpc: true,
 		},
 	},
 }

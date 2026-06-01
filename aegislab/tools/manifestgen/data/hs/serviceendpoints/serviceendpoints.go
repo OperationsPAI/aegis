@@ -11,6 +11,7 @@ type ServiceEndpoint struct {
 	ServerAddress  string
 	ServerPort     string
 	SpanName       string
+	Grpc           bool
 }
 
 // ServiceEndpoints maps service names to their endpoints
@@ -23,7 +24,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/attractions.Attractions/NearbyCinema",
 			ServerAddress:  "attractions",
 			ServerPort:     "8089",
-			SpanName:       "attractions.Attractions/NearbyCinema",
+			SpanName:       "attractions.Attractions/NearbyCinema", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -32,7 +33,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/profile.Profile/GetProfiles",
 			ServerAddress:  "profile",
 			ServerPort:     "8081",
-			SpanName:       "profile.Profile/GetProfiles",
+			SpanName:       "profile.Profile/GetProfiles", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -41,7 +42,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/recommendation.Recommendation/GetRecommendations",
 			ServerAddress:  "recommendation",
 			ServerPort:     "8085",
-			SpanName:       "recommendation.Recommendation/GetRecommendations",
+			SpanName:       "recommendation.Recommendation/GetRecommendations", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -50,7 +51,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/reservation.Reservation/CheckAvailability",
 			ServerAddress:  "reservation",
 			ServerPort:     "8087",
-			SpanName:       "reservation.Reservation/CheckAvailability",
+			SpanName:       "reservation.Reservation/CheckAvailability", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -59,7 +60,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/search.Search/Nearby",
 			ServerAddress:  "search",
 			ServerPort:     "8082",
-			SpanName:       "search.Search/Nearby",
+			SpanName:       "search.Search/Nearby", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -68,7 +69,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/user.User/CheckUser",
 			ServerAddress:  "user",
 			ServerPort:     "8086",
-			SpanName:       "user.User/CheckUser",
+			SpanName:       "user.User/CheckUser", Grpc: true,
 		},
 	},
 	"search": {
@@ -79,7 +80,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/geo.Geo/Nearby",
 			ServerAddress:  "geo",
 			ServerPort:     "8083",
-			SpanName:       "geo.Geo/Nearby",
+			SpanName:       "geo.Geo/Nearby", Grpc: true,
 		},
 		{
 			ServiceName:    "search",
@@ -88,7 +89,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/rate.Rate/GetRates",
 			ServerAddress:  "rate",
 			ServerPort:     "8084",
-			SpanName:       "rate.Rate/GetRates",
+			SpanName:       "rate.Rate/GetRates", Grpc: true,
 		},
 	},
 }

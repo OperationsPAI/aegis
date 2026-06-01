@@ -11,6 +11,7 @@ type ServiceEndpoint struct {
 	ServerAddress  string
 	ServerPort     string
 	SpanName       string
+	Grpc           bool
 }
 
 // ServiceEndpoints maps service names to their endpoints
@@ -77,7 +78,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CartService/EmptyCart",
 			ServerAddress:  "cart",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.CartService/EmptyCart",
+			SpanName:       "oteldemo.CartService/EmptyCart", Grpc: true,
 		},
 		{
 			ServiceName:    "checkout",
@@ -86,7 +87,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CurrencyService/Convert",
 			ServerAddress:  "currency",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.CurrencyService/Convert",
+			SpanName:       "oteldemo.CurrencyService/Convert", Grpc: true,
 		},
 		{
 			ServiceName:    "checkout",
@@ -95,7 +96,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.PaymentService/Charge",
 			ServerAddress:  "payment",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.PaymentService/Charge",
+			SpanName:       "oteldemo.PaymentService/Charge", Grpc: true,
 		},
 		{
 			ServiceName:    "checkout",
@@ -104,7 +105,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.ProductCatalogService/GetProduct",
 			ServerAddress:  "product-catalog",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.ProductCatalogService/GetProduct",
+			SpanName:       "oteldemo.ProductCatalogService/GetProduct", Grpc: true,
 		},
 	},
 	"shipping": {
@@ -193,7 +194,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/EventStream",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "flagd.evaluation.v1.Service/EventStream",
+			SpanName:       "flagd.evaluation.v1.Service/EventStream", Grpc: true,
 		},
 	},
 	"cart": {
@@ -204,7 +205,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/EventStream",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "POST",
+			SpanName:       "POST", Grpc: true,
 		},
 		{
 			ServiceName:    "cart",
@@ -213,7 +214,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/ResolveBoolean",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "POST",
+			SpanName:       "POST", Grpc: true,
 		},
 		{
 			ServiceName:    "cart",
@@ -222,7 +223,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CartService/AddItem",
 			ServerAddress:  "cart",
 			ServerPort:     "8080",
-			SpanName:       "POST /oteldemo.CartService/AddItem",
+			SpanName:       "POST /oteldemo.CartService/AddItem", Grpc: true,
 		},
 		{
 			ServiceName:    "cart",
@@ -231,7 +232,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CartService/EmptyCart",
 			ServerAddress:  "cart",
 			ServerPort:     "8080",
-			SpanName:       "POST /oteldemo.CartService/EmptyCart",
+			SpanName:       "POST /oteldemo.CartService/EmptyCart", Grpc: true,
 		},
 		{
 			ServiceName:    "cart",
@@ -240,7 +241,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CartService/GetCart",
 			ServerAddress:  "cart",
 			ServerPort:     "8080",
-			SpanName:       "POST /oteldemo.CartService/GetCart",
+			SpanName:       "POST /oteldemo.CartService/GetCart", Grpc: true,
 		},
 		{
 			ServiceName:    "cart",
@@ -258,7 +259,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/EventStream",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "flagd.evaluation.v1.Service/EventStream",
+			SpanName:       "flagd.evaluation.v1.Service/EventStream", Grpc: true,
 		},
 	},
 	"email": {
@@ -433,7 +434,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.AdService/GetAds",
 			ServerAddress:  "ad",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.AdService/GetAds",
+			SpanName:       "oteldemo.AdService/GetAds", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -442,7 +443,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CartService/AddItem",
 			ServerAddress:  "cart",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.CartService/AddItem",
+			SpanName:       "oteldemo.CartService/AddItem", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -451,7 +452,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.CheckoutService/PlaceOrder",
 			ServerAddress:  "checkout",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.CheckoutService/PlaceOrder",
+			SpanName:       "oteldemo.CheckoutService/PlaceOrder", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -460,7 +461,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.ProductCatalogService/GetProduct",
 			ServerAddress:  "product-catalog",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.ProductCatalogService/GetProduct",
+			SpanName:       "oteldemo.ProductCatalogService/GetProduct", Grpc: true,
 		},
 		{
 			ServiceName:    "frontend",
@@ -469,7 +470,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.RecommendationService/ListRecommendations",
 			ServerAddress:  "recommendation",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.RecommendationService/ListRecommendations",
+			SpanName:       "oteldemo.RecommendationService/ListRecommendations", Grpc: true,
 		},
 	},
 	"accounting": {
@@ -491,7 +492,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/EventStream",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "flagd.evaluation.v1.Service/EventStream",
+			SpanName:       "flagd.evaluation.v1.Service/EventStream", Grpc: true,
 		},
 	},
 	"recommendation": {
@@ -502,7 +503,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/flagd.evaluation.v1.Service/EventStream",
 			ServerAddress:  "flagd",
 			ServerPort:     "8013",
-			SpanName:       "flagd.evaluation.v1.Service/EventStream",
+			SpanName:       "flagd.evaluation.v1.Service/EventStream", Grpc: true,
 		},
 		{
 			ServiceName:    "recommendation",
@@ -511,7 +512,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			Route:          "/oteldemo.ProductCatalogService/ListProducts",
 			ServerAddress:  "product-catalog",
 			ServerPort:     "8080",
-			SpanName:       "oteldemo.ProductCatalogService/ListProducts",
+			SpanName:       "oteldemo.ProductCatalogService/ListProducts", Grpc: true,
 		},
 	},
 }

@@ -197,17 +197,19 @@ type httpEndpoint struct {
 	Port          string
 	ServerAddress string
 	SpanName      string
-	// grpc marks an endpoint folded from gRPC operations. Such endpoints are
-	// excluded from every http_request_* family — chaos-mesh HTTPChaos only
-	// matches HTTP/1.x, so points on them dispatch but silently no-op.
+	// grpc marks an endpoint as gRPC — either folded from grpcoperations or
+	// declared Grpc:true in serviceendpoints. Such endpoints are excluded from
+	// every http_request_* family: chaos-mesh HTTPChaos only matches HTTP/1.x,
+	// so points on them dispatch but silently no-op.
 	grpc bool
 }
 
-// isGRPCRoute reports whether an endpoint is a gRPC/Thrift pseudo-route that
-// HTTPChaos can never exercise: either explicitly flagged from grpcoperations,
-// or a dotted /pkg.Service/Method route.
+// isGRPCRoute reports whether an endpoint is gRPC and thus unexercisable by
+// HTTPChaos. Protocol must be declared explicitly — the dotted-route shape is
+// ambiguous (teastore's REST servlets share it with real gRPC), so route shape
+// is only a lint signal (see warnUnmarkedGRPCShape), never an exclusion.
 func isGRPCRoute(e httpEndpoint) bool {
-	return e.grpc || grpcRoutePattern.MatchString(e.Route)
+	return e.grpc
 }
 
 type classMethod struct {
@@ -333,6 +335,7 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 			st.skippedSystems = append(st.skippedSystems, sysKey)
 			continue
 		}
+		warnUnmarkedGRPCShape(sysKey, data)
 
 		sysDir := filepath.Join(outRoot, systemDisplay[sysKey])
 		if err := os.MkdirAll(sysDir, 0o755); err != nil {
@@ -414,6 +417,27 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 
 	printSummary(os.Stdout, st)
 	return nil
+}
+
+// warnUnmarkedGRPCShape flags dotted /pkg.Service/Method routes that are
+// treated as HTTP because nothing declared them gRPC. teastore's REST servlets
+// legitimately share this shape, so it is a warning (catch protocol drift in
+// new data), not an exclusion.
+func warnUnmarkedGRPCShape(sysKey string, d *systemData) {
+	seen := map[string]struct{}{}
+	for svc, eps := range d.endpoints {
+		for _, e := range eps {
+			if e.grpc || !grpcRoutePattern.MatchString(e.Route) {
+				continue
+			}
+			key := svc + " " + e.Route
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
+			fmt.Fprintf(os.Stderr, "warn: %s/%s route %q has gRPC shape but is not marked Grpc — confirm protocol (treating as HTTP)\n", sysKey, svc, e.Route)
+		}
+	}
 }
 
 // hasHTTPEligibleEndpoint reports whether any loaded endpoint is a real
@@ -1030,6 +1054,7 @@ func loadHTTPEndpoints(path string, d *systemData) error {
 				Port:          fields["ServerPort"],
 				ServerAddress: fields["ServerAddress"],
 				SpanName:      fields["SpanName"],
+				grpc:          fields["Grpc"] == "true",
 			})
 		}
 	}
@@ -1238,6 +1263,8 @@ func structFields(cl *ast.CompositeLit) map[string]string {
 		}
 		if v, ok := stringLit(kv.Value); ok {
 			out[id.Name] = v
+		} else if lit, ok := kv.Value.(*ast.Ident); ok {
+			out[id.Name] = lit.Name
 		}
 	}
 	return out
