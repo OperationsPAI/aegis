@@ -691,7 +691,10 @@ func runInjectDownload(name string) error {
 		if timeoutSec <= 0 {
 			timeoutSec = flagRequestTimeout
 		}
-		httpClient := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
+		httpClient := &http.Client{
+			Timeout:   time.Duration(timeoutSec) * time.Second,
+			Transport: client.TransportFor(resolveTLSOptions()),
+		}
 
 		if injectDownloadDir != "" {
 			outDir := filepathJoin(injectDownloadDir, name)
@@ -831,7 +834,10 @@ Examples:
 			return err
 		}
 
-		httpClient := &http.Client{Timeout: time.Duration(flagRequestTimeout) * time.Second}
+		httpClient := &http.Client{
+			Timeout:   time.Duration(flagRequestTimeout) * time.Second,
+			Transport: client.TransportFor(resolveTLSOptions()),
+		}
 		jobs := make(chan batchTarget, len(targets))
 		results := make(chan batchResult, len(targets))
 
