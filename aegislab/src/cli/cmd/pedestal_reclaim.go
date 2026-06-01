@@ -69,15 +69,6 @@ func init() {
 	pedestalCmd.AddCommand(pedestalReclaimCmd)
 }
 
-// helmReleaseRecord is the CLI projection of `helm list -A -o json` rows.
-// Only the fields the reclaim predicates touch.
-type helmReleaseRecord struct {
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
-	Updated    string `json:"updated"`
-	Status     string `json:"status"`
-}
-
 // cliReclaimDecision matches the backend ReclaimDecision shape for output.
 type cliReclaimDecision struct {
 	Namespace    string
@@ -100,7 +91,7 @@ var systemNsPatterns = map[string]string{
 }
 
 func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHours int, includeUnlabeled, autoNs bool) error {
-	if idleTTLHours <= 0 {
+	if idleTTLHours < 0 {
 		idleTTLHours = 6
 	}
 
@@ -131,75 +122,40 @@ func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHour
 		return fmt.Errorf("no systems matched filter %q (known: %s)", systemFilter, strings.Join(sortedKeys(source), ", "))
 	}
 
-	releases, err := listHelmReleases()
+	namespaces, err := listClusterNamespaces()
 	if err != nil {
-		return fmt.Errorf("list helm releases: %w", err)
+		return fmt.Errorf("list namespaces: %w", err)
 	}
 
 	now := time.Now()
 	idleTTL := time.Duration(idleTTLHours) * time.Hour
-	cutoff := now.Add(-idleTTL)
 
 	var decisions []cliReclaimDecision
-	for _, rel := range releases {
-		sys, ok := matchPattern(rel.Namespace, patterns)
+	for _, ns := range namespaces {
+		sys, ok := matchPattern(ns, patterns)
 		if !ok {
 			continue
 		}
-		updated, err := parseHelmTime(rel.Updated)
-		if err != nil {
-			decisions = append(decisions, cliReclaimDecision{
-				Namespace: rel.Namespace,
-				System:    sys,
-				Decision:  "skip",
-				Reason:    fmt.Sprintf("unparseable helm updated time %q: %v", rel.Updated, err),
-			})
-			continue
-		}
-		age := now.Sub(updated)
-		dec := cliReclaimDecision{
-			Namespace:    rel.Namespace,
-			System:       sys,
-			LastDeployed: updated,
-			AgeHours:     age.Hours(),
-		}
+
+		snap := reclaimSnapshot{Namespace: ns, System: sys}
 		if !includeUnlabeled {
-			labeled, lerr := namespaceHasManagedByLabel(rel.Namespace)
+			labeled, lerr := namespaceHasManagedByLabel(ns)
 			if lerr != nil {
-				dec.Decision = "skip"
-				dec.Reason = fmt.Sprintf("label check failed: %v", lerr)
-				decisions = append(decisions, dec)
-				continue
+				snap.LabelErr = lerr
 			}
-			if !labeled {
-				dec.Decision = "skip"
-				dec.Reason = "missing app.kubernetes.io/managed-by=aegis (use --include-unlabeled)"
-				decisions = append(decisions, dec)
-				continue
-			}
+			snap.HasManagedByLabel = labeled
 		}
-		chaos, cerr := countActiveChaosResources(rel.Namespace)
+		chaos, cerr := countActiveChaosResources(ns)
 		if cerr != nil {
-			dec.Decision = "skip"
-			dec.Reason = fmt.Sprintf("chaos-list failed: %v", cerr)
-			decisions = append(decisions, dec)
-			continue
+			snap.ChaosErr = cerr
 		}
-		if chaos > 0 {
-			dec.Decision = "skip"
-			dec.Reason = fmt.Sprintf("%d active chaos CRs", chaos)
-			decisions = append(decisions, dec)
-			continue
-		}
-		if updated.After(cutoff) {
-			dec.Decision = "skip"
-			dec.Reason = fmt.Sprintf("idle %s < ttl %s", age.Round(time.Second), idleTTL)
-			decisions = append(decisions, dec)
-			continue
-		}
-		dec.Decision = "reclaim"
-		dec.Reason = fmt.Sprintf("idle %s >= ttl %s", age.Round(time.Second), idleTTL)
-		decisions = append(decisions, dec)
+		snap.ActiveChaosCount = chaos
+		last, found, herr := helmReleaseLastDeployed(ns)
+		snap.HelmReleaseFound = found
+		snap.LastDeployed = last
+		snap.HelmErr = herr
+
+		decisions = append(decisions, decideReclaim(snap, idleTTL, includeUnlabeled, now))
 	}
 
 	sort.SliceStable(decisions, func(i, j int) bool {
@@ -235,6 +191,82 @@ func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHour
 	return nil
 }
 
+// reclaimSnapshot is the per-namespace state the decision function consumes.
+// Fetch errors are carried so decideReclaim can surface them as a conservative
+// "skip" without the enumeration loop having to branch on every source.
+type reclaimSnapshot struct {
+	Namespace         string
+	System            string
+	HasManagedByLabel bool
+	LabelErr          error
+	ActiveChaosCount  int
+	ChaosErr          error
+	HelmReleaseFound  bool
+	LastDeployed      time.Time
+	HelmErr           error
+}
+
+// decideReclaim mirrors the backend NamespaceReclaimer predicate order. A
+// namespace that matched a system pattern is reclaimable once it is unlabeled-ok,
+// chaos-free, and its helm release (if any) is idle past the TTL. A matched
+// namespace with no helm release is still reclaimable when idle — the goal is to
+// drop the orphaned namespace, not to require a release that may have been
+// installed via raw manifests.
+func decideReclaim(s reclaimSnapshot, idleTTL time.Duration, includeUnlabeled bool, now time.Time) cliReclaimDecision {
+	dec := cliReclaimDecision{
+		Namespace:    s.Namespace,
+		System:       s.System,
+		LastDeployed: s.LastDeployed,
+	}
+	if !s.LastDeployed.IsZero() {
+		dec.AgeHours = now.Sub(s.LastDeployed).Hours()
+	}
+
+	if !includeUnlabeled {
+		if s.LabelErr != nil {
+			dec.Decision = "skip"
+			dec.Reason = fmt.Sprintf("label check failed: %v", s.LabelErr)
+			return dec
+		}
+		if !s.HasManagedByLabel {
+			dec.Decision = "skip"
+			dec.Reason = "missing app.kubernetes.io/managed-by=aegis (use --include-unlabeled)"
+			return dec
+		}
+	}
+	if s.ChaosErr != nil {
+		dec.Decision = "skip"
+		dec.Reason = fmt.Sprintf("chaos-list failed: %v", s.ChaosErr)
+		return dec
+	}
+	if s.ActiveChaosCount > 0 {
+		dec.Decision = "skip"
+		dec.Reason = fmt.Sprintf("%d active chaos CRs", s.ActiveChaosCount)
+		return dec
+	}
+	if s.HelmErr != nil {
+		dec.Decision = "skip"
+		dec.Reason = fmt.Sprintf("helm status failed: %v", s.HelmErr)
+		return dec
+	}
+
+	if !s.HelmReleaseFound || s.LastDeployed.IsZero() {
+		dec.Decision = "reclaim"
+		dec.Reason = "no helm release; namespace matched system pattern"
+		return dec
+	}
+
+	age := now.Sub(s.LastDeployed)
+	if age < idleTTL {
+		dec.Decision = "skip"
+		dec.Reason = fmt.Sprintf("idle %s < ttl %s", age.Round(time.Second), idleTTL)
+		return dec
+	}
+	dec.Decision = "reclaim"
+	dec.Reason = fmt.Sprintf("idle %s >= ttl %s", age.Round(time.Second), idleTTL)
+	return dec
+}
+
 func compileSystemPatterns(src map[string]string, filter string) (map[string]*regexp.Regexp, error) {
 	out := map[string]*regexp.Regexp{}
 	for name, pat := range src {
@@ -250,26 +282,41 @@ func compileSystemPatterns(src map[string]string, filter string) (map[string]*re
 	return out, nil
 }
 
+// systemsPageSize is the page size used to walk GET /api/v2/systems. The
+// backend caps page size at 100 and rejects anything larger with a 400 (the
+// same cap that bit `container version set-image`); we page through every
+// result rather than clamp-and-drop so a deployment with >100 registered
+// systems still resolves all ns_patterns.
+const systemsPageSize = 100
+
 // fetchSystemNsPatterns calls GET /api/v2/systems and projects the response
 // down to {name -> ns_pattern}. Systems with an empty ns_pattern are dropped
-// (the backend can mark a system inactive without removing the row).
+// (the backend can mark a system inactive without removing the row). It walks
+// every page so no system past the first page is silently dropped.
 func fetchSystemNsPatterns() (map[string]string, error) {
 	cli, ctx := newAPIClient()
-	resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(200).Execute()
-	if err != nil {
-		return nil, fmt.Errorf("list systems: %w", err)
-	}
-	if resp.Data == nil {
-		return nil, fmt.Errorf("backend returned empty data for GET /api/v2/systems")
-	}
 	out := map[string]string{}
-	for _, s := range resp.Data.GetItems() {
-		name := strings.TrimSpace(s.GetName())
-		pat := strings.TrimSpace(s.GetNsPattern())
-		if name == "" || pat == "" {
-			continue
+	for page := int32(1); ; page++ {
+		resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(page).Size(systemsPageSize).Execute()
+		if err != nil {
+			return nil, fmt.Errorf("list systems (page %d): %w", page, err)
 		}
-		out[name] = pat
+		if resp.Data == nil {
+			return nil, fmt.Errorf("backend returned empty data for GET /api/v2/systems")
+		}
+		items := resp.Data.GetItems()
+		for _, s := range items {
+			name := strings.TrimSpace(s.GetName())
+			pat := strings.TrimSpace(s.GetNsPattern())
+			if name == "" || pat == "" {
+				continue
+			}
+			out[name] = pat
+		}
+		pagination := resp.Data.GetPagination()
+		if len(items) == 0 || pagination.GetTotalPages() <= page {
+			break
+		}
 	}
 	return out, nil
 }
@@ -283,16 +330,55 @@ func matchPattern(ns string, patterns map[string]*regexp.Regexp) (string, bool) 
 	return "", false
 }
 
-func listHelmReleases() ([]helmReleaseRecord, error) {
-	out, err := chartRunner.Run("helm", "list", "-A", "-o", "json")
+// listClusterNamespaces enumerates namespaces the way the backend
+// NamespaceReclaimer does — by listing k8s namespaces, not helm releases. The
+// previous helm-list-driven enumeration silently returned zero candidates
+// whenever benchmark namespaces had no helm release (e.g. otel-demo installed
+// via raw manifests) or stored their release where `helm list -A` from the
+// caller's kubeconfig could not surface it.
+func listClusterNamespaces() ([]string, error) {
+	out, err := chartRunner.Run("kubectl", "get", "ns",
+		"-o", `jsonpath={range .items[*]}{.metadata.name}{"\n"}{end}`)
 	if err != nil {
-		return nil, fmt.Errorf("helm list: %w: %s", err, string(out))
+		return nil, fmt.Errorf("kubectl get ns: %w: %s", err, string(out))
 	}
-	var rows []helmReleaseRecord
-	if err := json.Unmarshal(out, &rows); err != nil {
-		return nil, fmt.Errorf("decode helm list output: %w", err)
+	var names []string
+	for _, l := range strings.Split(string(out), "\n") {
+		if n := strings.TrimSpace(l); n != "" {
+			names = append(names, n)
+		}
 	}
-	return rows, nil
+	return names, nil
+}
+
+// helmReleaseLastDeployed returns the release LastDeployed time for the release
+// named after the namespace (the convention NamespaceReclaimer assumes). found
+// is false when no such release exists; that is not an error — the namespace
+// may have been installed via raw manifests.
+func helmReleaseLastDeployed(ns string) (time.Time, bool, error) {
+	out, err := chartRunner.Run("helm", "status", ns, "-n", ns, "-o", "json")
+	if err != nil {
+		if strings.Contains(string(out), "release: not found") {
+			return time.Time{}, false, nil
+		}
+		return time.Time{}, false, fmt.Errorf("helm status: %w: %s", err, string(out))
+	}
+	var status struct {
+		Info struct {
+			LastDeployed string `json:"last_deployed"`
+		} `json:"info"`
+	}
+	if jerr := json.Unmarshal(out, &status); jerr != nil {
+		return time.Time{}, false, fmt.Errorf("decode helm status: %w", jerr)
+	}
+	if strings.TrimSpace(status.Info.LastDeployed) == "" {
+		return time.Time{}, true, nil
+	}
+	t, perr := parseHelmTime(status.Info.LastDeployed)
+	if perr != nil {
+		return time.Time{}, true, fmt.Errorf("parse last_deployed %q: %w", status.Info.LastDeployed, perr)
+	}
+	return t, true, nil
 }
 
 // parseHelmTime tolerates the shapes helm emits across versions. byte-cluster
