@@ -1529,7 +1529,16 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260531-e5a6495
+              default_value: 20260602-9758cbfe
+              overridable: true
+            # webui Service is port 80 (-> targetPort 8080); jmeter must hit the
+            # Service port. The chart default jmeter.targetPort=8080 is wrong
+            # (hits the container port directly, connection refused). Override to 80.
+            - key: jmeter.targetPort
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "80"
               overridable: true
             - key: opentelemetry.monitoringNamespace
               type: 0
