@@ -437,7 +437,8 @@ const (
 )
 
 const (
-	TokenWaitTimeout = 10
+	TokenWaitTimeout    = 10
+	TokenWaitTimeoutKey = "rate_limiting.token_wait_timeout"
 
 	RestartPedestalTokenBucket   = "token_bucket:restart_service"
 	MaxTokensKeyRestartPedestal  = "rate_limiting.max_concurrent_restarts_pedestal"

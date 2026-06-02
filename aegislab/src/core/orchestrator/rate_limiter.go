@@ -252,7 +252,7 @@ func newTokenBucketRateLimiter(gateway *redis.Gateway, cfg RateLimiterConfig) *T
 		maxTokens = cfg.DefaultMaxTokens
 	}
 
-	waitTimeout := config.GetInt("rate_limiting.token_wait_timeout")
+	waitTimeout := config.GetInt(consts.TokenWaitTimeoutKey)
 	if waitTimeout <= 0 {
 		waitTimeout = cfg.DefaultTimeout
 	}

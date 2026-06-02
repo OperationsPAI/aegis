@@ -109,48 +109,49 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 			"new_value": newValue,
 		}).Info("Rate limiting configuration updated, applying changes...")
 
+		// The watched key, consts.MaxTokensKey*, and the config.GetInt read
+		// must be the identical string for the reload to apply — a divergence
+		// silently no-ops the operator-set value (the restart case shipped with
+		// "rate_limiting.max_concurrent_restarts" while the read used the
+		// _pedestal-suffixed const, so an etcd put never moved the limiter).
 		switch key {
-		case "rate_limiting.max_concurrent_builds":
-			// consts.MaxTokensKeyBuildContainer now points at the same
-			// "rate_limiting.max_concurrent_builds" key the watcher fires
-			// on; previously they disagreed and the operator-set value was
-			// silently ignored on reload.
+		case consts.MaxTokensKeyBuildContainer:
 			if h.buildLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyBuildContainer)
 				_, currentTimeout := h.buildLimiter.GetConfig()
 				h.buildLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
-		case "rate_limiting.max_concurrent_build_datapack":
+		case consts.MaxTokensKeyBuildDatapack:
 			if h.buildDatapackLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyBuildDatapack)
 				_, currentTimeout := h.buildDatapackLimiter.GetConfig()
 				h.buildDatapackLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
-		case "rate_limiting.max_concurrent_restarts":
+		case consts.MaxTokensKeyRestartPedestal:
 			if h.restartLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyRestartPedestal)
 				_, currentTimeout := h.restartLimiter.GetConfig()
 				h.restartLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
-		case "rate_limiting.max_concurrent_ns_warming":
+		case consts.MaxTokensKeyNamespaceWarming:
 			if h.warmingLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyNamespaceWarming)
 				_, currentTimeout := h.warmingLimiter.GetConfig()
 				h.warmingLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
-		case "rate_limiting.max_concurrent_algo_execution":
+		case consts.MaxTokensKeyAlgoExecution:
 			if h.algoLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyAlgoExecution)
 				_, currentTimeout := h.algoLimiter.GetConfig()
 				h.algoLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
-		case "rate_limiting.token_wait_timeout":
-			tokenWaitTimeout := config.GetInt("rate_limiting.token_wait_timeout")
+		case consts.TokenWaitTimeoutKey:
+			tokenWaitTimeout := config.GetInt(consts.TokenWaitTimeoutKey)
 			timeout := time.Duration(tokenWaitTimeout) * time.Second
 
 			if h.restartLimiter != nil {

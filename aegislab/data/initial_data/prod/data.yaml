@@ -947,15 +947,24 @@ dynamic_configs:
     is_secret: false
     min_value: 30
     max_value: 1800
-  - key: rate_limiting.max_concurrent_restarts
-    default_value: '5'
+  - key: rate_limiting.max_concurrent_restarts_pedestal
+    default_value: '2'
     value_type: 2
     scope: 1
     category: rate_limiting
-    description: Maximum number of concurrent service restarts
+    description: Maximum number of concurrent pedestal restarts (helm-install fan-out against the API server)
     is_secret: false
     min_value: 1
     max_value: 10
+  - key: rate_limiting.max_concurrent_ns_warming
+    default_value: '30'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of namespaces simultaneously cold-starting workloads (post-install readiness probe); decoupled from max_concurrent_restarts_pedestal
+    is_secret: false
+    min_value: 1
+    max_value: 200
   - key: rate_limiting.max_concurrent_algo_execution
     default_value: '5'
     value_type: 2
@@ -974,6 +983,105 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 300
+  - key: rate_limiting.stuck_trace_reconcile_interval_seconds
+    default_value: '60'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: How often the stuck-trace reconciler sweeps for traces parked with no downstream task
+    is_secret: false
+    min_value: 5
+    max_value: 3600
+  - key: rate_limiting.stuck_trace_reconcile_stuck_threshold_seconds
+    default_value: '600'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Age past which a trace at fault.injection.* is considered stuck and re-fired by the reconciler
+    is_secret: false
+    min_value: 60
+    max_value: 7200
+  - key: rate_limiting.stuck_trace_reconcile_restart_pedestal_threshold_seconds
+    default_value: '2400'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Stuck threshold applied specifically to traces at restart.pedestal.started (legitimately long for cold DSB bootstraps)
+    is_secret: false
+    min_value: 60
+    max_value: 14400
+  - key: orchestrator.pedestal.restart_timeout_seconds
+    default_value: '1500'
+    value_type: 2
+    scope: 1
+    category: orchestrator.pedestal
+    description: Pedestal workload-readiness timeout for a restart (per-system readiness_timeout_seconds overrides when set)
+    is_secret: false
+    min_value: 60
+    max_value: 7200
+  - key: orchestrator.pedestal.warmup_seconds
+    default_value: '60'
+    value_type: 2
+    scope: 1
+    category: orchestrator.pedestal
+    description: Post-ready warmup floor before the normal-data window (per-system injection.system.<sys>.warmup_seconds overrides when set)
+    is_secret: false
+    min_value: 0
+    max_value: 3600
+  - key: orchestrator.pedestal.traffic_gate_min_spans
+    default_value: '50'
+    value_type: 2
+    scope: 1
+    category: orchestrator.pedestal
+    description: Minimum spans in the trailing poll window before the traffic-presence gate treats a namespace as warmed
+    is_secret: false
+    min_value: 1
+    max_value: 100000
+  - key: orchestrator.pedestal.traffic_gate_poll_seconds
+    default_value: '15'
+    value_type: 2
+    scope: 1
+    category: orchestrator.pedestal
+    description: Poll interval for the traffic-presence gate ClickHouse probe
+    is_secret: false
+    min_value: 1
+    max_value: 600
+  - key: orchestrator.pedestal.traffic_gate_timeout_seconds
+    default_value: '600'
+    value_type: 2
+    scope: 1
+    category: orchestrator.pedestal
+    description: Hard upper bound on the traffic-presence gate before degrading to the fixed warmup timer
+    is_secret: false
+    min_value: 0
+    max_value: 7200
+  - key: helm.restart_pedestal.timeout_seconds
+    default_value: '1800'
+    value_type: 2
+    scope: 1
+    category: helm.restart_pedestal
+    description: Overall helm-install timeout for a pedestal chart restart
+    is_secret: false
+    min_value: 60
+    max_value: 7200
+  - key: helm.restart_pedestal.wait_timeout_seconds
+    default_value: '600'
+    value_type: 2
+    scope: 1
+    category: helm.restart_pedestal
+    description: Kubernetes readiness-wait timeout passed to the pedestal helm install
+    is_secret: false
+    min_value: 30
+    max_value: 7200
+  - key: restart_pedestal.workload_ready_timeout_seconds
+    default_value: '600'
+    value_type: 2
+    scope: 1
+    category: restart_pedestal
+    description: Pod-level Ready wait after the namespace-ready probe (defense-in-depth against flapping pods)
+    is_secret: false
+    min_value: 30
+    max_value: 7200
 
 service_accounts:
   - name: chaos-service

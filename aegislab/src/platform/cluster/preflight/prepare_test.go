@@ -14,7 +14,7 @@ func TestLocalE2EPrepareRunner_DryRunDoesNotMutate(t *testing.T) {
 			pvcs:            map[string]struct{ exists, bound bool }{},
 		},
 		etd: &fakeEtcd{values: map[string]string{
-			"/rcabench/config/consumer/rate_limiting.max_concurrent_restarts": "2",
+			"/rcabench/config/consumer/rate_limiting.max_concurrent_restarts_pedestal": "5",
 		}},
 	}
 
@@ -30,7 +30,7 @@ func TestLocalE2EPrepareRunner_DryRunDoesNotMutate(t *testing.T) {
 	assertPrepareOutcome(t, results, "k8s.namespace", PrepareCreate, false)
 	assertPrepareOutcome(t, results, "k8s.service-account", PrepareCreate, false)
 	assertPrepareOutcome(t, results, "k8s.experiment-pvc", PrepareCreate, false)
-	assertPrepareOutcome(t, results, "etcd.rcabench.config.consumer.rate_limiting.max_concurrent_restarts", PrepareUpdate, false)
+	assertPrepareOutcome(t, results, "etcd.rcabench.config.consumer.rate_limiting.max_concurrent_restarts_pedestal", PrepareUpdate, false)
 
 	if env.k8s.namespaces["exp"] {
 		t.Fatalf("dry-run should not create namespace")
@@ -41,10 +41,10 @@ func TestLocalE2EPrepareRunner_DryRunDoesNotMutate(t *testing.T) {
 	if env.k8s.pvcs["exp/rcabench-juicefs-experiment-storage"].exists {
 		t.Fatalf("dry-run should not create PVC")
 	}
-	if got := env.etd.values["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts"]; got != "2" {
+	if got := env.etd.values["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts_pedestal"]; got != "5" {
 		t.Fatalf("dry-run mutated etcd value to %q", got)
 	}
-	if env.etd.puts["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts"] != 0 {
+	if env.etd.puts["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts_pedestal"] != 0 {
 		t.Fatalf("dry-run should not write etcd")
 	}
 }
@@ -58,7 +58,7 @@ func TestLocalE2EPrepareRunner_ApplyIsIdempotent(t *testing.T) {
 			pvcs:            map[string]struct{ exists, bound bool }{},
 		},
 		etd: &fakeEtcd{values: map[string]string{
-			"/rcabench/config/consumer/rate_limiting.max_concurrent_restarts": "2",
+			"/rcabench/config/consumer/rate_limiting.max_concurrent_restarts_pedestal": "5",
 		}},
 	}
 
@@ -70,7 +70,7 @@ func TestLocalE2EPrepareRunner_ApplyIsIdempotent(t *testing.T) {
 	assertPrepareOutcome(t, first, "k8s.namespace", PrepareCreate, true)
 	assertPrepareOutcome(t, first, "k8s.service-account", PrepareCreate, true)
 	assertPrepareOutcome(t, first, "k8s.experiment-pvc", PrepareCreate, true)
-	assertPrepareOutcome(t, first, "etcd.rcabench.config.consumer.rate_limiting.max_concurrent_restarts", PrepareUpdate, true)
+	assertPrepareOutcome(t, first, "etcd.rcabench.config.consumer.rate_limiting.max_concurrent_restarts_pedestal", PrepareUpdate, true)
 
 	if !env.k8s.namespaces["exp"] {
 		t.Fatalf("apply should create namespace")
@@ -81,7 +81,7 @@ func TestLocalE2EPrepareRunner_ApplyIsIdempotent(t *testing.T) {
 	if !env.k8s.pvcs["exp/rcabench-juicefs-experiment-storage"].exists {
 		t.Fatalf("apply should create PVC")
 	}
-	if got := env.etd.values["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts"]; got != "5" {
+	if got := env.etd.values["/rcabench/config/consumer/rate_limiting.max_concurrent_restarts_pedestal"]; got != "2" {
 		t.Fatalf("apply should update etcd value, got %q", got)
 	}
 
