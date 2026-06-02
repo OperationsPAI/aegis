@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "webui"
+  service: "teastore-webui"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Convert string to lowercase"
         method: "isReady"
@@ -20,7 +20,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Convert string to uppercase"
         method: "isReady"
@@ -30,7 +30,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Mutate boolean true to false"
         method: "isReady"
@@ -41,7 +41,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Mutate string constant to an error-oriented value"
         method: "isReady"
@@ -52,7 +52,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Replace string result with empty string"
         method: "isReady"
@@ -62,7 +62,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Replace string result with null"
         method: "isReady"
@@ -72,7 +72,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Replace string with random content"
         method: "isReady"
@@ -82,7 +82,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.rest.ReadyRest"
         description: "Reverse string content"
         method: "isReady"
@@ -92,7 +92,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -102,7 +102,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -112,7 +112,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -123,7 +123,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -134,7 +134,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -145,7 +145,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -156,7 +156,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -167,7 +167,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -178,7 +178,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -189,7 +189,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -200,7 +200,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -211,7 +211,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -222,7 +222,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -233,7 +233,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -244,7 +244,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -255,7 +255,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -266,7 +266,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -277,7 +277,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -288,7 +288,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -299,7 +299,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -310,7 +310,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -321,7 +321,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -331,7 +331,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -341,7 +341,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -351,7 +351,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -361,7 +361,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to lowercase"
         method: "confirmOrder"
@@ -371,7 +371,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to lowercase"
         method: "extractOrderInformation"
@@ -381,7 +381,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -391,7 +391,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to lowercase"
         method: "updateOrder"
@@ -401,7 +401,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to uppercase"
         method: "confirmOrder"
@@ -411,7 +411,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to uppercase"
         method: "extractOrderInformation"
@@ -421,7 +421,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -431,7 +431,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Convert string to uppercase"
         method: "updateOrder"
@@ -441,7 +441,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate * to /"
         method: "confirmOrder"
@@ -451,7 +451,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate + to -"
         method: "confirmOrder"
@@ -461,7 +461,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate + to -"
         method: "updateOrder"
@@ -471,7 +471,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 0 to 1"
         method: "confirmOrder"
@@ -482,7 +482,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 0 to 1"
         method: "extractOrderInformation"
@@ -493,7 +493,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 1 to 0"
         method: "confirmOrder"
@@ -504,7 +504,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 2 to 0"
         method: "confirmOrder"
@@ -515,7 +515,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 3 to 0"
         method: "confirmOrder"
@@ -526,7 +526,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 4 to 0"
         method: "confirmOrder"
@@ -537,7 +537,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 5 to 0"
         method: "confirmOrder"
@@ -548,7 +548,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate integer constant 6 to 0"
         method: "confirmOrder"
@@ -559,7 +559,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "confirmOrder"
@@ -570,7 +570,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "confirmOrder"
@@ -581,7 +581,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "confirmOrder"
@@ -592,7 +592,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -603,7 +603,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -614,7 +614,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -625,7 +625,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -636,7 +636,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -647,7 +647,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -658,7 +658,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "extractOrderInformation"
@@ -669,7 +669,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -680,7 +680,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -691,7 +691,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -702,7 +702,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -713,7 +713,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -724,7 +724,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -735,7 +735,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -746,7 +746,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -757,7 +757,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -768,7 +768,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -779,7 +779,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "updateOrder"
@@ -790,7 +790,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with empty string"
         method: "confirmOrder"
@@ -800,7 +800,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with empty string"
         method: "extractOrderInformation"
@@ -810,7 +810,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -820,7 +820,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with empty string"
         method: "updateOrder"
@@ -830,7 +830,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with null"
         method: "confirmOrder"
@@ -840,7 +840,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with null"
         method: "extractOrderInformation"
@@ -850,7 +850,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -860,7 +860,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string result with null"
         method: "updateOrder"
@@ -870,7 +870,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string with random content"
         method: "confirmOrder"
@@ -880,7 +880,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string with random content"
         method: "extractOrderInformation"
@@ -890,7 +890,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -900,7 +900,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Replace string with random content"
         method: "updateOrder"
@@ -910,7 +910,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Reverse string content"
         method: "confirmOrder"
@@ -920,7 +920,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Reverse string content"
         method: "extractOrderInformation"
@@ -930,7 +930,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -940,7 +940,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
         description: "Reverse string content"
         method: "updateOrder"
@@ -950,7 +950,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -960,7 +960,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -970,7 +970,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -981,7 +981,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -992,7 +992,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate integer constant 3 to 0"
         method: "handleGETRequest"
@@ -1003,7 +1003,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1014,7 +1014,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1025,7 +1025,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1036,7 +1036,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1047,7 +1047,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1058,7 +1058,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1069,7 +1069,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1080,7 +1080,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1091,7 +1091,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1102,7 +1102,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1113,7 +1113,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1124,7 +1124,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1135,7 +1135,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1146,7 +1146,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -1156,7 +1156,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -1166,7 +1166,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -1176,7 +1176,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CartServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -1186,7 +1186,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to lowercase"
         method: "createNavigation"
@@ -1196,7 +1196,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -1206,7 +1206,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to lowercase"
         method: "handlePOSTRequest"
@@ -1216,7 +1216,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to uppercase"
         method: "createNavigation"
@@ -1226,7 +1226,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -1236,7 +1236,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Convert string to uppercase"
         method: "handlePOSTRequest"
@@ -1246,7 +1246,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate * to /"
         method: "handleGETRequest"
@@ -1256,7 +1256,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate + to -"
         method: "createNavigation"
@@ -1266,7 +1266,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate + to -"
         method: "handleGETRequest"
@@ -1276,7 +1276,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate + to -"
         method: "handlePOSTRequest"
@@ -1286,7 +1286,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate - to +"
         method: "createNavigation"
@@ -1296,7 +1296,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate - to +"
         method: "handleGETRequest"
@@ -1306,7 +1306,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate / to *"
         method: "createNavigation"
@@ -1316,7 +1316,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate / to *"
         method: "handleGETRequest"
@@ -1326,7 +1326,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -1337,7 +1337,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate integer constant 1 to 0"
         method: "createNavigation"
@@ -1348,7 +1348,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -1359,7 +1359,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate integer constant 5 to 0"
         method: "createNavigation"
@@ -1370,7 +1370,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "createNavigation"
@@ -1381,7 +1381,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "createNavigation"
@@ -1392,7 +1392,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "createNavigation"
@@ -1403,7 +1403,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1414,7 +1414,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1425,7 +1425,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1436,7 +1436,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1447,7 +1447,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1458,7 +1458,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1469,7 +1469,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1480,7 +1480,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1491,7 +1491,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1502,7 +1502,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1513,7 +1513,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1524,7 +1524,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1535,7 +1535,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1546,7 +1546,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1557,7 +1557,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1568,7 +1568,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1579,7 +1579,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1590,7 +1590,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1601,7 +1601,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1612,7 +1612,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1623,7 +1623,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1634,7 +1634,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -1645,7 +1645,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -1656,7 +1656,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -1667,7 +1667,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -1678,7 +1678,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -1689,7 +1689,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with empty string"
         method: "createNavigation"
@@ -1699,7 +1699,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -1709,7 +1709,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with empty string"
         method: "handlePOSTRequest"
@@ -1719,7 +1719,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with null"
         method: "createNavigation"
@@ -1729,7 +1729,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -1739,7 +1739,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string result with null"
         method: "handlePOSTRequest"
@@ -1749,7 +1749,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string with random content"
         method: "createNavigation"
@@ -1759,7 +1759,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -1769,7 +1769,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Replace string with random content"
         method: "handlePOSTRequest"
@@ -1779,7 +1779,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Reverse string content"
         method: "createNavigation"
@@ -1789,7 +1789,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -1799,7 +1799,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
         description: "Reverse string content"
         method: "handlePOSTRequest"
@@ -1809,7 +1809,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -1819,7 +1819,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -1829,7 +1829,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate + to -"
         method: "handleGETRequest"
@@ -1839,7 +1839,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 0 to 1"
         method: "extractOrderInformation"
@@ -1850,7 +1850,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 0 to 1"
         method: "handleGETRequest"
@@ -1861,7 +1861,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -1872,7 +1872,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 2 to 0"
         method: "handleGETRequest"
@@ -1883,7 +1883,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 200 to 0"
         method: "handleGETRequest"
@@ -1894,7 +1894,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate integer constant 3 to 0"
         method: "handleGETRequest"
@@ -1905,7 +1905,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1916,7 +1916,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1927,7 +1927,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1938,7 +1938,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1949,7 +1949,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1960,7 +1960,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1971,7 +1971,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1982,7 +1982,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -1993,7 +1993,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2004,7 +2004,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2015,7 +2015,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2026,7 +2026,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2036,7 +2036,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2046,7 +2046,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2056,7 +2056,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2066,7 +2066,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2076,7 +2076,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -2086,7 +2086,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2097,7 +2097,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2108,7 +2108,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2119,7 +2119,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2130,7 +2130,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2141,7 +2141,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2151,7 +2151,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2161,7 +2161,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2171,7 +2171,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2181,7 +2181,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2191,7 +2191,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -2201,7 +2201,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -2212,7 +2212,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -2223,7 +2223,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2234,7 +2234,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2245,7 +2245,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2256,7 +2256,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2267,7 +2267,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2278,7 +2278,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2289,7 +2289,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2300,7 +2300,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2311,7 +2311,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2322,7 +2322,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2333,7 +2333,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2344,7 +2344,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2355,7 +2355,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2365,7 +2365,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2375,7 +2375,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2385,7 +2385,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2395,7 +2395,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2405,7 +2405,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -2415,7 +2415,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -2426,7 +2426,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -2437,7 +2437,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2448,7 +2448,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2459,7 +2459,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2470,7 +2470,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2481,7 +2481,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2492,7 +2492,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2503,7 +2503,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2514,7 +2514,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2525,7 +2525,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2535,7 +2535,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2545,7 +2545,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2555,7 +2555,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.IndexServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2565,7 +2565,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2575,7 +2575,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Convert string to lowercase"
         method: "handlePOSTRequest"
@@ -2585,7 +2585,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -2595,7 +2595,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Convert string to uppercase"
         method: "handlePOSTRequest"
@@ -2605,7 +2605,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate boolean false to true"
         method: "handlePOSTRequest"
@@ -2616,7 +2616,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2627,7 +2627,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2638,7 +2638,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2649,7 +2649,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2660,7 +2660,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2671,7 +2671,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2682,7 +2682,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2693,7 +2693,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2704,7 +2704,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -2715,7 +2715,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2725,7 +2725,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string result with empty string"
         method: "handlePOSTRequest"
@@ -2735,7 +2735,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2745,7 +2745,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string result with null"
         method: "handlePOSTRequest"
@@ -2755,7 +2755,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2765,7 +2765,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Replace string with random content"
         method: "handlePOSTRequest"
@@ -2775,7 +2775,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2785,7 +2785,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
         description: "Reverse string content"
         method: "handlePOSTRequest"
@@ -2795,7 +2795,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2805,7 +2805,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -2815,7 +2815,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -2826,7 +2826,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -2837,7 +2837,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2848,7 +2848,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2859,7 +2859,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2870,7 +2870,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2881,7 +2881,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2892,7 +2892,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2903,7 +2903,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2914,7 +2914,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2925,7 +2925,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2936,7 +2936,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -2947,7 +2947,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -2957,7 +2957,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -2967,7 +2967,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -2977,7 +2977,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.LoginServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -2987,7 +2987,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -2997,7 +2997,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Convert string to lowercase"
         method: "handlePOSTRequest"
@@ -3007,7 +3007,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -3017,7 +3017,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Convert string to uppercase"
         method: "handlePOSTRequest"
@@ -3027,7 +3027,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handlePOSTRequest"
@@ -3038,7 +3038,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate integer constant 0 to 1"
         method: "handleGETRequest"
@@ -3049,7 +3049,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handlePOSTRequest"
@@ -3060,7 +3060,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3071,7 +3071,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3082,7 +3082,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3093,7 +3093,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3104,7 +3104,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3115,7 +3115,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3126,7 +3126,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3137,7 +3137,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3148,7 +3148,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handlePOSTRequest"
@@ -3159,7 +3159,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -3169,7 +3169,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string result with empty string"
         method: "handlePOSTRequest"
@@ -3179,7 +3179,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -3189,7 +3189,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string result with null"
         method: "handlePOSTRequest"
@@ -3199,7 +3199,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -3209,7 +3209,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Replace string with random content"
         method: "handlePOSTRequest"
@@ -3219,7 +3219,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -3229,7 +3229,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.OrderServlet"
         description: "Reverse string content"
         method: "handlePOSTRequest"
@@ -3239,7 +3239,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -3249,7 +3249,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -3259,7 +3259,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -3270,7 +3270,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -3281,7 +3281,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate integer constant 3 to 0"
         method: "handleGETRequest"
@@ -3292,7 +3292,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3303,7 +3303,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3314,7 +3314,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3325,7 +3325,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3336,7 +3336,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3347,7 +3347,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3358,7 +3358,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3369,7 +3369,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3380,7 +3380,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3391,7 +3391,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3402,7 +3402,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3413,7 +3413,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3424,7 +3424,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3435,7 +3435,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3446,7 +3446,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3457,7 +3457,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3468,7 +3468,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -3478,7 +3478,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -3488,7 +3488,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -3498,7 +3498,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProductServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -3508,7 +3508,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -3518,7 +3518,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -3528,7 +3528,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate integer constant -1 to 0"
         method: "handleGETRequest"
@@ -3539,7 +3539,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate integer constant 1 to 0"
         method: "handleGETRequest"
@@ -3550,7 +3550,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3561,7 +3561,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3572,7 +3572,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3583,7 +3583,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3594,7 +3594,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3605,7 +3605,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3616,7 +3616,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3627,7 +3627,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3638,7 +3638,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3649,7 +3649,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3660,7 +3660,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3671,7 +3671,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3682,7 +3682,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3693,7 +3693,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3704,7 +3704,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3715,7 +3715,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -3725,7 +3725,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -3735,7 +3735,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -3745,7 +3745,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -3755,7 +3755,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to lowercase"
         method: "handleGETRequest"
@@ -3765,7 +3765,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to lowercase"
         method: "isDatabaseFinished"
@@ -3775,7 +3775,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to lowercase"
         method: "isImageFinished"
@@ -3785,7 +3785,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to lowercase"
         method: "isRecommenderFinished"
@@ -3795,7 +3795,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to uppercase"
         method: "handleGETRequest"
@@ -3805,7 +3805,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to uppercase"
         method: "isDatabaseFinished"
@@ -3815,7 +3815,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to uppercase"
         method: "isImageFinished"
@@ -3825,7 +3825,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Convert string to uppercase"
         method: "isRecommenderFinished"
@@ -3835,7 +3835,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean false to true"
         method: "handleGETRequest"
@@ -3846,7 +3846,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean false to true"
         method: "isDatabaseFinished"
@@ -3857,7 +3857,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean false to true"
         method: "isImageFinished"
@@ -3868,7 +3868,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean false to true"
         method: "isRecommenderFinished"
@@ -3879,7 +3879,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean true to false"
         method: "handleGETRequest"
@@ -3890,7 +3890,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate boolean true to false"
         method: "isImageFinished"
@@ -3901,7 +3901,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3912,7 +3912,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3923,7 +3923,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3934,7 +3934,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3945,7 +3945,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3956,7 +3956,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3967,7 +3967,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3978,7 +3978,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -3989,7 +3989,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4000,7 +4000,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4011,7 +4011,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4022,7 +4022,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4033,7 +4033,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4044,7 +4044,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "handleGETRequest"
@@ -4055,7 +4055,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isDatabaseFinished"
@@ -4066,7 +4066,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isDatabaseFinished"
@@ -4077,7 +4077,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isImageFinished"
@@ -4088,7 +4088,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isImageFinished"
@@ -4099,7 +4099,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isRecommenderFinished"
@@ -4110,7 +4110,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "isRecommenderFinished"
@@ -4121,7 +4121,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with empty string"
         method: "handleGETRequest"
@@ -4131,7 +4131,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with empty string"
         method: "isDatabaseFinished"
@@ -4141,7 +4141,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with empty string"
         method: "isImageFinished"
@@ -4151,7 +4151,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with empty string"
         method: "isRecommenderFinished"
@@ -4161,7 +4161,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with null"
         method: "handleGETRequest"
@@ -4171,7 +4171,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with null"
         method: "isDatabaseFinished"
@@ -4181,7 +4181,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with null"
         method: "isImageFinished"
@@ -4191,7 +4191,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string result with null"
         method: "isRecommenderFinished"
@@ -4201,7 +4201,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string with random content"
         method: "handleGETRequest"
@@ -4211,7 +4211,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string with random content"
         method: "isDatabaseFinished"
@@ -4221,7 +4221,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string with random content"
         method: "isImageFinished"
@@ -4231,7 +4231,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Replace string with random content"
         method: "isRecommenderFinished"
@@ -4241,7 +4241,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Reverse string content"
         method: "handleGETRequest"
@@ -4251,7 +4251,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Reverse string content"
         method: "isDatabaseFinished"
@@ -4261,7 +4261,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Reverse string content"
         method: "isImageFinished"
@@ -4271,7 +4271,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.StatusServlet"
         description: "Reverse string content"
         method: "isRecommenderFinished"
@@ -4281,7 +4281,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Convert string to lowercase"
         method: "formatPriceInCents"
@@ -4291,7 +4291,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Convert string to lowercase"
         method: "formatToPrettyDate"
@@ -4301,7 +4301,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Convert string to uppercase"
         method: "formatPriceInCents"
@@ -4311,7 +4311,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Convert string to uppercase"
         method: "formatToPrettyDate"
@@ -4321,7 +4321,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Mutate + to -"
         method: "formatPriceInCents"
@@ -4331,7 +4331,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Mutate / to *"
         method: "formatPriceInCents"
@@ -4341,7 +4341,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Mutate string constant to an error-oriented value"
         method: "formatPriceInCents"
@@ -4352,7 +4352,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Mutate string constant to an error-oriented value"
         method: "formatToPrettyDate"
@@ -4363,7 +4363,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string result with empty string"
         method: "formatPriceInCents"
@@ -4373,7 +4373,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string result with empty string"
         method: "formatToPrettyDate"
@@ -4383,7 +4383,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string result with null"
         method: "formatPriceInCents"
@@ -4393,7 +4393,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string result with null"
         method: "formatToPrettyDate"
@@ -4403,7 +4403,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string with random content"
         method: "formatPriceInCents"
@@ -4413,7 +4413,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Replace string with random content"
         method: "formatToPrettyDate"
@@ -4423,7 +4423,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Reverse string content"
         method: "formatPriceInCents"
@@ -4433,7 +4433,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "webui"
+        app: "teastore-webui"
         class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
         description: "Reverse string content"
         method: "formatToPrettyDate"

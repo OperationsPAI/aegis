@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "auth"
+  service: "teastore-auth"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to lowercase"
         method: "addProductToCart"
@@ -20,7 +20,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to lowercase"
         method: "removeProductFromCart"
@@ -30,7 +30,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to lowercase"
         method: "updateQuantity"
@@ -40,7 +40,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to uppercase"
         method: "addProductToCart"
@@ -50,7 +50,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to uppercase"
         method: "removeProductFromCart"
@@ -60,7 +60,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Convert string to uppercase"
         method: "updateQuantity"
@@ -70,7 +70,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate + to -"
         method: "addProductToCart"
@@ -80,7 +80,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate integer constant 1 to 0"
         method: "addProductToCart"
@@ -91,7 +91,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate integer constant 404 to 0"
         method: "addProductToCart"
@@ -102,7 +102,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate integer constant 408 to 0"
         method: "addProductToCart"
@@ -113,7 +113,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "addProductToCart"
@@ -124,7 +124,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "addProductToCart"
@@ -135,7 +135,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "addProductToCart"
@@ -146,7 +146,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "removeProductFromCart"
@@ -157,7 +157,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "removeProductFromCart"
@@ -168,7 +168,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "updateQuantity"
@@ -179,7 +179,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "updateQuantity"
@@ -190,7 +190,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Mutate string constant to an error-oriented value"
         method: "updateQuantity"
@@ -201,7 +201,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with empty string"
         method: "addProductToCart"
@@ -211,7 +211,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with empty string"
         method: "removeProductFromCart"
@@ -221,7 +221,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with empty string"
         method: "updateQuantity"
@@ -231,7 +231,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with null"
         method: "addProductToCart"
@@ -241,7 +241,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with null"
         method: "removeProductFromCart"
@@ -251,7 +251,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string result with null"
         method: "updateQuantity"
@@ -261,7 +261,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string with random content"
         method: "addProductToCart"
@@ -271,7 +271,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string with random content"
         method: "removeProductFromCart"
@@ -281,7 +281,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Replace string with random content"
         method: "updateQuantity"
@@ -291,7 +291,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Reverse string content"
         method: "addProductToCart"
@@ -301,7 +301,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Reverse string content"
         method: "removeProductFromCart"
@@ -311,7 +311,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthCartRest"
         description: "Reverse string content"
         method: "updateQuantity"
@@ -321,7 +321,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to lowercase"
         method: "isLoggedIn"
@@ -331,7 +331,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to lowercase"
         method: "login"
@@ -341,7 +341,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to lowercase"
         method: "logout"
@@ -351,7 +351,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to lowercase"
         method: "placeOrder"
@@ -361,7 +361,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to uppercase"
         method: "isLoggedIn"
@@ -371,7 +371,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to uppercase"
         method: "login"
@@ -381,7 +381,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to uppercase"
         method: "logout"
@@ -391,7 +391,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Convert string to uppercase"
         method: "placeOrder"
@@ -401,7 +401,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate integer constant 404 to 0"
         method: "placeOrder"
@@ -412,7 +412,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate integer constant 408 to 0"
         method: "login"
@@ -423,7 +423,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate integer constant 408 to 0"
         method: "placeOrder"
@@ -434,7 +434,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "isLoggedIn"
@@ -445,7 +445,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "login"
@@ -456,7 +456,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "login"
@@ -467,7 +467,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "login"
@@ -478,7 +478,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "login"
@@ -489,7 +489,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "logout"
@@ -500,7 +500,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -511,7 +511,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -522,7 +522,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -533,7 +533,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -544,7 +544,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -555,7 +555,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -566,7 +566,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -577,7 +577,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -588,7 +588,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -599,7 +599,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Mutate string constant to an error-oriented value"
         method: "placeOrder"
@@ -610,7 +610,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with empty string"
         method: "isLoggedIn"
@@ -620,7 +620,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with empty string"
         method: "login"
@@ -630,7 +630,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with empty string"
         method: "logout"
@@ -640,7 +640,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with empty string"
         method: "placeOrder"
@@ -650,7 +650,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with null"
         method: "isLoggedIn"
@@ -660,7 +660,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with null"
         method: "login"
@@ -670,7 +670,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with null"
         method: "logout"
@@ -680,7 +680,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string result with null"
         method: "placeOrder"
@@ -690,7 +690,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string with random content"
         method: "isLoggedIn"
@@ -700,7 +700,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string with random content"
         method: "login"
@@ -710,7 +710,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string with random content"
         method: "logout"
@@ -720,7 +720,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Replace string with random content"
         method: "placeOrder"
@@ -730,7 +730,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Reverse string content"
         method: "isLoggedIn"
@@ -740,7 +740,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Reverse string content"
         method: "login"
@@ -750,7 +750,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Reverse string content"
         method: "logout"
@@ -760,7 +760,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
         description: "Reverse string content"
         method: "placeOrder"
@@ -770,7 +770,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Convert string to lowercase"
         method: "isReady"
@@ -780,7 +780,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Convert string to uppercase"
         method: "isReady"
@@ -790,7 +790,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Mutate boolean true to false"
         method: "isReady"
@@ -801,7 +801,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Mutate string constant to an error-oriented value"
         method: "isReady"
@@ -812,7 +812,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Replace string result with empty string"
         method: "isReady"
@@ -822,7 +822,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Replace string result with null"
         method: "isReady"
@@ -832,7 +832,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Replace string with random content"
         method: "isReady"
@@ -842,7 +842,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.rest.ReadyRest"
         description: "Reverse string content"
         method: "isReady"
@@ -852,7 +852,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Convert string to lowercase"
         method: "getKey"
@@ -862,7 +862,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Convert string to uppercase"
         method: "getKey"
@@ -872,7 +872,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Mutate string constant to an error-oriented value"
         method: "getKey"
@@ -883,7 +883,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Replace string result with empty string"
         method: "getKey"
@@ -893,7 +893,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Replace string result with null"
         method: "getKey"
@@ -903,7 +903,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Replace string with random content"
         method: "getKey"
@@ -913,7 +913,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
         description: "Reverse string content"
         method: "getKey"
@@ -923,7 +923,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Convert string to lowercase"
         method: "getSessionId"
@@ -933,7 +933,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Convert string to uppercase"
         method: "getSessionId"
@@ -943,7 +943,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Mutate + to -"
         method: "getSessionId"
@@ -953,7 +953,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Mutate string constant to an error-oriented value"
         method: "getSessionId"
@@ -964,7 +964,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Replace string result with empty string"
         method: "getSessionId"
@@ -974,7 +974,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Replace string result with null"
         method: "getSessionId"
@@ -984,7 +984,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Replace string with random content"
         method: "getSessionId"
@@ -994,7 +994,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
         description: "Reverse string content"
         method: "getSessionId"
@@ -1004,7 +1004,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Convert string to lowercase"
         method: "blobToString"
@@ -1014,7 +1014,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Convert string to lowercase"
         method: "getSha512"
@@ -1024,7 +1024,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Convert string to uppercase"
         method: "blobToString"
@@ -1034,7 +1034,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Convert string to uppercase"
         method: "getSha512"
@@ -1044,7 +1044,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate + to -"
         method: "getSha512"
@@ -1054,7 +1054,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate integer constant 0 to 1"
         method: "getSha512"
@@ -1065,7 +1065,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate integer constant 1 to 0"
         method: "getSha512"
@@ -1076,7 +1076,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate integer constant 16 to 0"
         method: "getSha512"
@@ -1087,7 +1087,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate string constant to an error-oriented value"
         method: "blobToString"
@@ -1098,7 +1098,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate string constant to an error-oriented value"
         method: "blobToString"
@@ -1109,7 +1109,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate string constant to an error-oriented value"
         method: "getSha512"
@@ -1120,7 +1120,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Mutate string constant to an error-oriented value"
         method: "getSha512"
@@ -1131,7 +1131,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string result with empty string"
         method: "blobToString"
@@ -1141,7 +1141,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string result with empty string"
         method: "getSha512"
@@ -1151,7 +1151,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string result with null"
         method: "blobToString"
@@ -1161,7 +1161,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string result with null"
         method: "getSha512"
@@ -1171,7 +1171,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string with random content"
         method: "blobToString"
@@ -1181,7 +1181,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Replace string with random content"
         method: "getSha512"
@@ -1191,7 +1191,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Reverse string content"
         method: "blobToString"
@@ -1201,7 +1201,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "auth"
+        app: "teastore-auth"
         class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
         description: "Reverse string content"
         method: "getSha512"

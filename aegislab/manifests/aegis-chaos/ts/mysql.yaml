@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "mysql"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "mysql"
+        container: "mysql"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "mysql"
+        container: "mysql"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "mysql"
+        container: "mysql"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "mysql"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "mysql"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "mysql"
+        container: "mysql"
+        namespace: "ts"

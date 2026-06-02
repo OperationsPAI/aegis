@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "webui"
+  service: "teastore-webui"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -19,7 +19,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -28,7 +28,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -37,7 +37,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -46,7 +46,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -55,7 +55,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -64,7 +64,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -73,7 +73,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -82,7 +82,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -91,7 +91,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -100,7 +100,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_request_replace_method"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -109,7 +109,7 @@ spec:
         span_name: "PUT"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -118,7 +118,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -127,7 +127,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -136,7 +136,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -145,7 +145,7 @@ spec:
         span_name: "GET"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -154,7 +154,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -163,7 +163,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -172,7 +172,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -181,7 +181,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -190,7 +190,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -199,7 +199,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_request_replace_path"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -208,7 +208,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -217,7 +217,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -226,7 +226,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -235,7 +235,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -244,7 +244,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -253,7 +253,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -262,7 +262,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -271,7 +271,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -280,7 +280,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -289,7 +289,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -298,7 +298,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_response_abort"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -307,7 +307,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -316,7 +316,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -325,7 +325,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -334,7 +334,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -343,7 +343,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -352,7 +352,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -361,7 +361,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -370,7 +370,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -379,7 +379,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -388,7 +388,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -397,7 +397,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_response_delay"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -406,7 +406,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -415,7 +415,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -424,7 +424,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -433,7 +433,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -442,7 +442,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -451,7 +451,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -460,7 +460,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -469,7 +469,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -478,7 +478,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -487,7 +487,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -496,7 +496,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_response_patch_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -505,7 +505,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -514,7 +514,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -523,7 +523,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -532,7 +532,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -541,7 +541,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -550,7 +550,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -559,7 +559,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -568,7 +568,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -577,7 +577,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -586,7 +586,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -595,7 +595,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_response_replace_body"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
@@ -604,7 +604,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
@@ -613,7 +613,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
@@ -622,7 +622,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
@@ -631,7 +631,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
@@ -640,7 +640,7 @@ spec:
         span_name: "GET"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
@@ -649,7 +649,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
@@ -658,7 +658,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
@@ -667,7 +667,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
@@ -676,7 +676,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
@@ -685,7 +685,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
@@ -694,7 +694,7 @@ spec:
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_response_replace_code"
       target:
-        app: "webui"
+        app: "teastore-webui"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"

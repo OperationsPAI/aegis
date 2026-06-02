@@ -3,7 +3,7 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "webui"
+  service: "teastore-webui"
   system: "teastore"
 spec:
   replace_scope: "service"
@@ -11,48 +11,48 @@ spec:
     - capability: "network_bandwidth"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_corrupt"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_delay"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_duplicate"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_loss"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_partition"
       target:
         namespace: "teastore"
-        source_app: "webui"
+        source_app: "teastore-webui"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"

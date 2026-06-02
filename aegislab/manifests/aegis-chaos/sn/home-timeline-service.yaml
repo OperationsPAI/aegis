@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "home-timeline-service"
+  system: "sn"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "home-timeline-service"
+        container: "home-timeline-service"
+        namespace: "sn"
+    - capability: "cpu_stress"
+      target:
+        app: "home-timeline-service"
+        container: "home-timeline-service"
+        namespace: "sn"
+    - capability: "memory_stress"
+      target:
+        app: "home-timeline-service"
+        container: "home-timeline-service"
+        namespace: "sn"
+    - capability: "pod_failure"
+      target:
+        app: "home-timeline-service"
+        namespace: "sn"
+    - capability: "pod_kill"
+      target:
+        app: "home-timeline-service"
+        namespace: "sn"
+    - capability: "time_skew"
+      target:
+        app: "home-timeline-service"
+        container: "home-timeline-service"
+        namespace: "sn"

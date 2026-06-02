@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "cartservice"
+  system: "ob"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "cartservice"
+        container: "cartservice"
+        namespace: "ob"
+    - capability: "cpu_stress"
+      target:
+        app: "cartservice"
+        container: "cartservice"
+        namespace: "ob"
+    - capability: "memory_stress"
+      target:
+        app: "cartservice"
+        container: "cartservice"
+        namespace: "ob"
+    - capability: "pod_failure"
+      target:
+        app: "cartservice"
+        namespace: "ob"
+    - capability: "pod_kill"
+      target:
+        app: "cartservice"
+        namespace: "ob"
+    - capability: "time_skew"
+      target:
+        app: "cartservice"
+        container: "cartservice"
+        namespace: "ob"
