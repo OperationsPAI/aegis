@@ -153,6 +153,8 @@ func (s *Service) propagateValueChange(ctx context.Context, cfg *model.DynamicCo
 		return fmt.Errorf("config saved to database but failed to publish to etcd: %w", err)
 	}
 
+	s.dualWriteConfigCenter(ctx, cfg.Key, newValue)
+
 	if cfg.Scope == consts.ConfigScopeConsumer {
 		logrus.Infof("Waiting for consumer config %s response...", opDesc)
 		resp, err := s.waitForConfigUpdateResponse(ctx, 10*time.Second)
@@ -166,6 +168,26 @@ func (s *Service) propagateValueChange(ctx context.Context, cfg *model.DynamicCo
 	}
 
 	return nil
+}
+
+// dualWriteConfigCenter mirrors a dynamic_config value into the configcenter
+// (/aegis) tree with JSON-scalar encoding, so the two trees stay in sync during
+// the storage-unification transition. The /rcabench write above is authoritative
+// for now; a mirror failure is logged, not propagated, so a transient /aegis
+// hiccup never fails an otherwise-successful config update.
+func (s *Service) dualWriteConfigCenter(ctx context.Context, dottedKey, plainValue string) {
+	ccKey, ok := configCenterKey(dottedKey)
+	if !ok {
+		return
+	}
+	ccValue, err := configCenterValue(plainValue)
+	if err != nil {
+		logrus.WithError(err).Warnf("dual-write: encode configcenter value for %s failed", dottedKey)
+		return
+	}
+	if err := s.publishConfigToEtcdWithRetry(ctx, ccKey, ccValue, 3); err != nil {
+		logrus.WithError(err).Warnf("dual-write: mirror %s to configcenter tree failed", ccKey)
+	}
 }
 
 func (s *Service) publishConfigToEtcdWithRetry(ctx context.Context, key, value string, maxRetries int) error {

@@ -229,7 +229,51 @@ func publishSeededConfigsToEtcd(ctx context.Context, etcdGw *etcd.Gateway, confi
 			continue
 		}
 		logrus.Infof("seed: published %s to etcd", etcdKey)
+
+		publishSeededConfigToConfigCenter(ctx, etcdGw, cfg)
 	}
+}
+
+// publishSeededConfigToConfigCenter mirrors a seeded default into the
+// configcenter (/aegis) tree with JSON-scalar encoding, keeping the two trees
+// in sync from first boot. Idempotent (absent-only) and best-effort: a mirror
+// failure never breaks the /rcabench seed path above.
+func publishSeededConfigToConfigCenter(ctx context.Context, etcdGw *etcd.Gateway, cfg *model.DynamicConfig) {
+	dot := strings.IndexByte(cfg.Key, '.')
+	if dot <= 0 || dot == len(cfg.Key)-1 {
+		return
+	}
+	env := config.GetString("env")
+	if env == "" {
+		env = "dev"
+	}
+	ccKey := fmt.Sprintf("/aegis/%s/%s/%s", env, cfg.Key[:dot], cfg.Key[dot+1:])
+
+	getCtx, getCancel := context.WithTimeout(ctx, 5*time.Second)
+	_, err := etcdGw.Get(getCtx, ccKey)
+	getCancel()
+	if err == nil {
+		return
+	}
+	if !strings.Contains(err.Error(), "key not found") {
+		logrus.WithError(err).Warnf("seed: configcenter lookup failed for %s, skipping mirror", ccKey)
+		return
+	}
+
+	encoded, err := json.Marshal(cfg.DefaultValue)
+	if err != nil {
+		logrus.WithError(err).Warnf("seed: encode configcenter value for %s failed", cfg.Key)
+		return
+	}
+
+	putCtx, putCancel := context.WithTimeout(ctx, 5*time.Second)
+	putErr := etcdGw.Put(putCtx, ccKey, string(encoded), 0)
+	putCancel()
+	if putErr != nil {
+		logrus.WithError(putErr).Warnf("seed: failed to mirror %s to configcenter tree", ccKey)
+		return
+	}
+	logrus.Infof("seed: mirrored %s to configcenter tree", ccKey)
 }
 
 // initializeSystemPrerequisites seeds the `system_prerequisites` table from

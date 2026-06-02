@@ -225,6 +225,36 @@ func TestBuildAuditLogListRespIncludesPaginationAndItems(t *testing.T) {
 	}
 }
 
+// TestConfigCenterKeyAndValue guards step 3 of the config-storage unification:
+// the /aegis mirror key + value must be derived consistently from the same
+// dotted dynamic_config key so the two trees stay in sync. The split is at the
+// first dot (namespace.key) and the value is JSON-scalar encoded.
+func TestConfigCenterKeyAndValue(t *testing.T) {
+	key, ok := configCenterKey("rate_limiting.max_concurrent_restarts_pedestal")
+	if !ok {
+		t.Fatal("expected ok for a namespaced key")
+	}
+	env := config.GetString("env")
+	if env == "" {
+		env = "dev"
+	}
+	if want := "/aegis/" + env + "/rate_limiting/max_concurrent_restarts_pedestal"; key != want {
+		t.Fatalf("expected key %q, got %q", want, key)
+	}
+
+	val, err := configCenterValue("2")
+	if err != nil {
+		t.Fatalf("configCenterValue: %v", err)
+	}
+	if val != `"2"` {
+		t.Fatalf("expected JSON-scalar %q, got %q", `"2"`, val)
+	}
+
+	if _, ok := configCenterKey("nodot"); ok {
+		t.Fatal("expected !ok for a key with no namespace.key split")
+	}
+}
+
 func TestEtcdPrefixForScopeReturnsExpectedPrefix(t *testing.T) {
 	cases := map[consts.ConfigScope]string{
 		consts.ConfigScopeProducer: consts.ConfigEtcdProducerPrefix,
