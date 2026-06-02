@@ -684,6 +684,17 @@ containers:
       # logback → OTLP logs) + Instrumentation CR patched with
       # OTEL_EXPORTER_OTLP_PROTOCOL=grpc (fixes http/protobuf→gRPC port
       # Connection reset that silently dropped all agent exports).
+      #
+      # Switched from the cross-ns shared collector to the chart's per-ns
+      # `otelCollector` sidecar (matches DSB hs/sn). The shared collector
+      # risks span-drop at 10 namespaces (#366/#367). Dropping the
+      # otel.collectorEndpoint/otelCollector.enabled overrides lets the
+      # chart defaults apply: enabled=true + endpoint
+      # http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4317.
+      # The inject-java annotation stays (agent still injected); the chart's
+      # OTEL_EXPORTER_OTLP_ENDPOINT env wins over the Instrumentation CR via
+      # OTel-Operator appendIfNotSet, so the agent exports at the per-ns
+      # sidecar. Only the sidecar image is pinned to the volces mirror.
       - name: 1.1.6
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
@@ -723,17 +734,14 @@ containers:
               value_type: 0
               default_value: monitoring/otel-instr-sockshop
               overridable: true
-            - key: otel.collectorEndpoint
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet). Mirrors hs/sn 0.1.6.
+            - key: otelCollector.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
-              overridable: true
-            - key: otelCollector.enabled
-              type: 0
-              category: 1
-              value_type: 1
-              default_value: "false"
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
             - key: aegis.points.enabled
               type: 0
