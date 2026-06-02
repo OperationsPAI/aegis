@@ -3,20 +3,20 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "image"
+  service: "teastore-image"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "dns_error"
       target:
-        app: "image"
+        app: "teastore-image"
         domain_patterns:
           - "teastore-registry"
         namespace: "teastore"
     - capability: "dns_random"
       target:
-        app: "image"
+        app: "teastore-image"
         domain_patterns:
           - "teastore-registry"
         namespace: "teastore"

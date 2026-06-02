@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "registry"
+  service: "teastore-registry"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "http_request_replace_method"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -19,7 +19,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_request_replace_method"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -28,7 +28,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_request_replace_path"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -37,7 +37,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_request_replace_path"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -46,7 +46,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_response_abort"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -55,7 +55,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_response_abort"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -64,7 +64,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_response_delay"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -73,7 +73,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_response_delay"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -82,7 +82,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_response_patch_body"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -91,7 +91,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_response_patch_body"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -100,7 +100,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_response_replace_body"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -109,7 +109,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_response_replace_body"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"
@@ -118,7 +118,7 @@ spec:
         span_name: "PUT /rest/services/{name}/{location}"
     - capability: "http_response_replace_code"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "GET"
         namespace: "teastore"
         path: "/rest/services/*"
@@ -127,7 +127,7 @@ spec:
         span_name: "GET /rest/services/{name}"
     - capability: "http_response_replace_code"
       target:
-        app: "registry"
+        app: "teastore-registry"
         method: "PUT"
         namespace: "teastore"
         path: "/rest/services/*/*"

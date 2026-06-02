@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "persistence"
+  service: "teastore-persistence"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -19,7 +19,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -28,7 +28,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -37,7 +37,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -46,7 +46,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -55,7 +55,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -64,7 +64,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_request_replace_method"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -73,7 +73,7 @@ spec:
         span_name: "PUT"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -82,7 +82,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -91,7 +91,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -100,7 +100,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -109,7 +109,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -118,7 +118,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -127,7 +127,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_request_replace_path"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -136,7 +136,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -145,7 +145,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -154,7 +154,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -163,7 +163,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -172,7 +172,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -181,7 +181,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -190,7 +190,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_response_abort"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -199,7 +199,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -208,7 +208,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -217,7 +217,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -226,7 +226,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -235,7 +235,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -244,7 +244,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -253,7 +253,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_response_delay"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -262,7 +262,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -271,7 +271,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -280,7 +280,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -289,7 +289,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -298,7 +298,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -307,7 +307,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -316,7 +316,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_response_patch_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -325,7 +325,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -334,7 +334,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -343,7 +343,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -352,7 +352,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -361,7 +361,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -370,7 +370,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -379,7 +379,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_response_replace_body"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"
@@ -388,7 +388,7 @@ spec:
         span_name: "PUT"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories/*"
@@ -397,7 +397,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/categories"
@@ -406,7 +406,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/categories"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/*"
@@ -415,7 +415,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/category/*"
@@ -424,7 +424,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/products/count/*"
@@ -433,7 +433,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.persistence/rest/users/name/*"
@@ -442,7 +442,7 @@ spec:
         span_name: "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
     - capability: "http_response_replace_code"
       target:
-        app: "persistence"
+        app: "teastore-persistence"
         method: "PUT"
         namespace: "teastore"
         path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence"

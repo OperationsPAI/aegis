@@ -3,7 +3,7 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "recommender"
+  service: "teastore-recommender"
   system: "teastore"
 spec:
   replace_scope: "service"
@@ -11,48 +11,48 @@ spec:
     - capability: "network_bandwidth"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_corrupt"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_delay"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_duplicate"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_loss"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"
     - capability: "network_partition"
       target:
         namespace: "teastore"
-        source_app: "recommender"
+        source_app: "teastore-recommender"
         span_names:
           - "GET"
           - "PUT"
-        target_service: "registry"
+        target_service: "teastore-registry"

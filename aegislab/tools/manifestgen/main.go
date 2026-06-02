@@ -217,14 +217,23 @@ var httpInboundSystems = map[string]bool{
 }
 
 // appLabel maps a chaos-experiment service-data key to the pod app-label
-// value used in chaos targets. For teastore the trace-derived data keys
-// carry the deployment prefix (teastore-webui) but the fork chart names the
-// pod app label, the deployment, and container[0] all with the short name
-// (webui); chaos addresses pods (app) and containers (container) by that
-// short name, so every target field and metadata.service use the stripped
-// form. Only the output filename keeps the full key (avoids churning the
-// existing per-service manifest filenames).
+// VALUE used in chaos selectors. The data key already equals the pod app
+// label for every system (teastore's pods carry app=teastore-webui under
+// app_label_key=app, matching the trace-derived data key), so this is the
+// identity. Do NOT strip the teastore- prefix here: the selector key is
+// `app`, whose value is the full teastore-webui; the short form (webui)
+// only exists under app.kubernetes.io/name, which is otel-demo's key.
 func appLabel(sysKey, service string) string {
+	return service
+}
+
+// containerName maps a service-data key to the pod's container[0] name.
+// teastore is the one stack where app-label != container name: pods carry
+// app=teastore-webui but the container is named webui, so container-scoped
+// capabilities (container_kill / cpu_stress / memory_stress / time_skew)
+// must strip the teastore- prefix. Every other system follows the
+// app==container convention.
+func containerName(sysKey, service string) string {
 	if sysKey == "teastore" {
 		return strings.TrimPrefix(service, "teastore-")
 	}
@@ -686,17 +695,13 @@ func hasHTTPEligibleEndpoint(d *systemData) bool {
 // are protocol-agnostic and emitted for every service.
 func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []point {
 	ns := d.namespace
-	// WHY container=app: chaos-experiment data carries no container name,
-	// but the 8 benchmark charts all follow the k8s convention
-	// pod.label.app == container[0].name. Defaulting container to the app
-	// label lets us emit container_kill / cpu_stress / memory_stress /
-	// time_skew whose seed target_schema requires `container`. If a
-	// benchmark ever deviates, the rendered chaos-mesh CR will no-op
-	// against a non-existent container — loud runtime failure beats silent
-	// fudging at manifest time.
+	// chaos-experiment data carries no container name; most charts follow
+	// pod.label.app == container[0].name, but teastore deviates (app
+	// teastore-webui, container webui) so the container name is derived
+	// separately via containerName.
 	app := appLabel(d.sysKey, service)
 	appOnly := map[string]any{"namespace": ns, "app": app}
-	withContainer := map[string]any{"namespace": ns, "app": app, "container": app}
+	withContainer := map[string]any{"namespace": ns, "app": app, "container": containerName(d.sysKey, service)}
 	pts := []point{
 		{Capability: "container_kill", Target: cloneTarget(withContainer)},
 		{Capability: "cpu_stress", Target: cloneTarget(withContainer)},

@@ -3,14 +3,14 @@ kind: PointManifest
 metadata:
   chart_version: "seed-genesis"
   instance: "seed"
-  service: "recommender"
+  service: "teastore-recommender"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Convert string to lowercase"
         method: "RecommenderSelector"
@@ -20,7 +20,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Convert string to lowercase"
         method: "recommendProducts"
@@ -30,7 +30,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Convert string to uppercase"
         method: "RecommenderSelector"
@@ -40,7 +40,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Convert string to uppercase"
         method: "recommendProducts"
@@ -50,7 +50,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate + to -"
         method: "RecommenderSelector"
@@ -60,7 +60,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate + to -"
         method: "recommendProducts"
@@ -70,7 +70,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "RecommenderSelector"
@@ -81,7 +81,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "RecommenderSelector"
@@ -92,7 +92,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "RecommenderSelector"
@@ -103,7 +103,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "RecommenderSelector"
@@ -114,7 +114,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "RecommenderSelector"
@@ -125,7 +125,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "recommendProducts"
@@ -136,7 +136,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "recommendProducts"
@@ -147,7 +147,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "recommendProducts"
@@ -158,7 +158,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Mutate string constant to an error-oriented value"
         method: "recommendProducts"
@@ -169,7 +169,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string result with empty string"
         method: "RecommenderSelector"
@@ -179,7 +179,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string result with empty string"
         method: "recommendProducts"
@@ -189,7 +189,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string result with null"
         method: "RecommenderSelector"
@@ -199,7 +199,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string result with null"
         method: "recommendProducts"
@@ -209,7 +209,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string with random content"
         method: "RecommenderSelector"
@@ -219,7 +219,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Replace string with random content"
         method: "recommendProducts"
@@ -229,7 +229,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Reverse string content"
         method: "RecommenderSelector"
@@ -239,7 +239,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.RecommenderSelector"
         description: "Reverse string content"
         method: "recommendProducts"
@@ -249,7 +249,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Convert string to lowercase"
         method: "execute"
@@ -259,7 +259,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Convert string to uppercase"
         method: "execute"
@@ -269,7 +269,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate * to /"
         method: "calculateScoreForItem"
@@ -279,7 +279,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate + to -"
         method: "buildDifferencesMatrices"
@@ -289,7 +289,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate + to -"
         method: "execute"
@@ -299,7 +299,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate - to +"
         method: "buildDifferencesMatrices"
@@ -309,7 +309,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate / to *"
         method: "buildDifferencesMatrices"
@@ -319,7 +319,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate / to *"
         method: "calculateScoreForItem"
@@ -329,7 +329,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate integer constant 0 to 1"
         method: "buildDifferencesMatrices"
@@ -340,7 +340,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate integer constant 0 to 1"
         method: "calculateScoreForItem"
@@ -351,7 +351,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate integer constant 1 to 0"
         method: "buildDifferencesMatrices"
@@ -362,7 +362,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate string constant to an error-oriented value"
         method: "execute"
@@ -373,7 +373,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Mutate string constant to an error-oriented value"
         method: "execute"
@@ -384,7 +384,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Replace string result with empty string"
         method: "execute"
@@ -394,7 +394,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Replace string result with null"
         method: "execute"
@@ -404,7 +404,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Replace string with random content"
         method: "execute"
@@ -414,7 +414,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender"
         description: "Reverse string content"
         method: "execute"
@@ -424,7 +424,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Convert string to lowercase"
         method: "execute"
@@ -434,7 +434,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Convert string to uppercase"
         method: "execute"
@@ -444,7 +444,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Mutate + to -"
         method: "addAllCountsOfProduct"
@@ -454,7 +454,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Mutate integer constant 1 to 0"
         method: "addAllCountsOfProduct"
@@ -465,7 +465,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Mutate string constant to an error-oriented value"
         method: "execute"
@@ -476,7 +476,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Replace string result with empty string"
         method: "execute"
@@ -486,7 +486,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Replace string result with null"
         method: "execute"
@@ -496,7 +496,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Replace string with random content"
         method: "execute"
@@ -506,7 +506,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender"
         description: "Reverse string content"
         method: "execute"
@@ -516,7 +516,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender"
         description: "Mutate + to -"
         method: "executePreprocessing"
@@ -526,7 +526,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Convert string to lowercase"
         method: "recommend"
@@ -536,7 +536,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Convert string to uppercase"
         method: "recommend"
@@ -546,7 +546,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "recommend"
@@ -557,7 +557,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Replace string result with empty string"
         method: "recommend"
@@ -567,7 +567,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Replace string result with null"
         method: "recommend"
@@ -577,7 +577,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Replace string with random content"
         method: "recommend"
@@ -587,7 +587,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendEndpoint"
         description: "Reverse string content"
         method: "recommend"
@@ -597,7 +597,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Convert string to lowercase"
         method: "recommend"
@@ -607,7 +607,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Convert string to uppercase"
         method: "recommend"
@@ -617,7 +617,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "recommend"
@@ -628,7 +628,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "recommend"
@@ -639,7 +639,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Replace string result with empty string"
         method: "recommend"
@@ -649,7 +649,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Replace string result with null"
         method: "recommend"
@@ -659,7 +659,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Replace string with random content"
         method: "recommend"
@@ -669,7 +669,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint"
         description: "Reverse string content"
         method: "recommend"
@@ -679,7 +679,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to lowercase"
         method: "getTimeStamp"
@@ -689,7 +689,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to lowercase"
         method: "isReady"
@@ -699,7 +699,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to lowercase"
         method: "train"
@@ -709,7 +709,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to uppercase"
         method: "getTimeStamp"
@@ -719,7 +719,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to uppercase"
         method: "isReady"
@@ -729,7 +729,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Convert string to uppercase"
         method: "train"
@@ -739,7 +739,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate + to -"
         method: "train"
@@ -749,7 +749,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate - to +"
         method: "train"
@@ -759,7 +759,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate boolean false to true"
         method: "isReady"
@@ -770,7 +770,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate boolean true to false"
         method: "isReady"
@@ -781,7 +781,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate integer constant -1 to 0"
         method: "train"
@@ -792,7 +792,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate integer constant 1 to 0"
         method: "train"
@@ -803,7 +803,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "getTimeStamp"
@@ -814,7 +814,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "getTimeStamp"
@@ -825,7 +825,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "isReady"
@@ -836,7 +836,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "train"
@@ -847,7 +847,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "train"
@@ -858,7 +858,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "train"
@@ -869,7 +869,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Mutate string constant to an error-oriented value"
         method: "train"
@@ -880,7 +880,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with empty string"
         method: "getTimeStamp"
@@ -890,7 +890,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with empty string"
         method: "isReady"
@@ -900,7 +900,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with empty string"
         method: "train"
@@ -910,7 +910,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with null"
         method: "getTimeStamp"
@@ -920,7 +920,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with null"
         method: "isReady"
@@ -930,7 +930,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string result with null"
         method: "train"
@@ -940,7 +940,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string with random content"
         method: "getTimeStamp"
@@ -950,7 +950,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string with random content"
         method: "isReady"
@@ -960,7 +960,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Replace string with random content"
         method: "train"
@@ -970,7 +970,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Reverse string content"
         method: "getTimeStamp"
@@ -980,7 +980,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Reverse string content"
         method: "isReady"
@@ -990,7 +990,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.rest.TrainEndpoint"
         description: "Reverse string content"
         method: "train"
@@ -1000,7 +1000,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Convert string to lowercase"
         method: "doGet"
@@ -1010,7 +1010,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Convert string to uppercase"
         method: "doGet"
@@ -1020,7 +1020,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Mutate + to -"
         method: "doGet"
@@ -1030,7 +1030,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "doGet"
@@ -1041,7 +1041,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "doGet"
@@ -1052,7 +1052,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "doGet"
@@ -1063,7 +1063,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Mutate string constant to an error-oriented value"
         method: "doGet"
@@ -1074,7 +1074,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Replace string result with empty string"
         method: "doGet"
@@ -1084,7 +1084,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Replace string result with null"
         method: "doGet"
@@ -1094,7 +1094,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Replace string with random content"
         method: "doGet"
@@ -1104,7 +1104,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.IndexServlet"
         description: "Reverse string content"
         method: "doGet"
@@ -1114,7 +1114,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Convert string to lowercase"
         method: "contextInitialized"
@@ -1124,7 +1124,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Convert string to uppercase"
         method: "contextInitialized"
@@ -1134,7 +1134,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Mutate + to -"
         method: "contextInitialized"
@@ -1144,7 +1144,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Mutate integer constant 0 to 1"
         method: "contextInitialized"
@@ -1155,7 +1155,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Mutate string constant to an error-oriented value"
         method: "contextInitialized"
@@ -1166,7 +1166,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Mutate string constant to an error-oriented value"
         method: "contextInitialized"
@@ -1177,7 +1177,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Mutate string constant to an error-oriented value"
         method: "contextInitialized"
@@ -1188,7 +1188,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Replace string result with empty string"
         method: "contextInitialized"
@@ -1198,7 +1198,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Replace string result with null"
         method: "contextInitialized"
@@ -1208,7 +1208,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Replace string with random content"
         method: "contextInitialized"
@@ -1218,7 +1218,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RecommenderStartup"
         description: "Reverse string content"
         method: "contextInitialized"
@@ -1228,7 +1228,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RetrainDaemon"
         description: "Mutate boolean true to false"
         method: "RetrainDaemon"
@@ -1239,7 +1239,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.RetrainDaemon"
         description: "Mutate boolean true to false"
         method: "run"
@@ -1250,7 +1250,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to lowercase"
         method: "filterLists"
@@ -1260,7 +1260,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to lowercase"
         method: "retrieveDataAndRetrain"
@@ -1270,7 +1270,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to lowercase"
         method: "waitForPersistence"
@@ -1280,7 +1280,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to uppercase"
         method: "filterLists"
@@ -1290,7 +1290,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to uppercase"
         method: "retrieveDataAndRetrain"
@@ -1300,7 +1300,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Convert string to uppercase"
         method: "waitForPersistence"
@@ -1310,7 +1310,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate + to -"
         method: "filterLists"
@@ -1320,7 +1320,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate + to -"
         method: "retrieveDataAndRetrain"
@@ -1330,7 +1330,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate boolean false to true"
         method: "filterForMaxtimeStamp"
@@ -1341,7 +1341,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate boolean false to true"
         method: "retrieveDataAndRetrain"
@@ -1352,7 +1352,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate boolean true to false"
         method: "filterForMaxtimeStamp"
@@ -1363,7 +1363,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate boolean true to false"
         method: "retrieveDataAndRetrain"
@@ -1374,7 +1374,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate boolean true to false"
         method: "waitForPersistence"
@@ -1385,7 +1385,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate integer constant -1 to 0"
         method: "retrieveDataAndRetrain"
@@ -1396,7 +1396,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate integer constant 1 to 0"
         method: "retrieveDataAndRetrain"
@@ -1407,7 +1407,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1418,7 +1418,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1429,7 +1429,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1440,7 +1440,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1451,7 +1451,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1462,7 +1462,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "filterLists"
@@ -1473,7 +1473,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "retrieveDataAndRetrain"
@@ -1484,7 +1484,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "retrieveDataAndRetrain"
@@ -1495,7 +1495,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "retrieveDataAndRetrain"
@@ -1506,7 +1506,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "retrieveDataAndRetrain"
@@ -1517,7 +1517,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "retrieveDataAndRetrain"
@@ -1528,7 +1528,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "waitForPersistence"
@@ -1539,7 +1539,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Mutate string constant to an error-oriented value"
         method: "waitForPersistence"
@@ -1550,7 +1550,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with empty string"
         method: "filterLists"
@@ -1560,7 +1560,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with empty string"
         method: "retrieveDataAndRetrain"
@@ -1570,7 +1570,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with empty string"
         method: "waitForPersistence"
@@ -1580,7 +1580,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with null"
         method: "filterLists"
@@ -1590,7 +1590,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with null"
         method: "retrieveDataAndRetrain"
@@ -1600,7 +1600,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string result with null"
         method: "waitForPersistence"
@@ -1610,7 +1610,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string with random content"
         method: "filterLists"
@@ -1620,7 +1620,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string with random content"
         method: "retrieveDataAndRetrain"
@@ -1630,7 +1630,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Replace string with random content"
         method: "waitForPersistence"
@@ -1640,7 +1640,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Reverse string content"
         method: "filterLists"
@@ -1650,7 +1650,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Reverse string content"
         method: "retrieveDataAndRetrain"
@@ -1660,7 +1660,7 @@ spec:
         namespace: "teastore"
     - capability: "jvm_runtime_mutator"
       target:
-        app: "recommender"
+        app: "teastore-recommender"
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         description: "Reverse string content"
         method: "waitForPersistence"
