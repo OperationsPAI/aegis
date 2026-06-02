@@ -60,7 +60,7 @@ func InitializeConsumer(
 	wireChaosSystemValidation()
 
 	// Auto-GC leaked rate-limiter tokens on startup (OperationsPAI/aegis#21).
-	rlSvc := ratelimiter.NewService(publisher, db)
+	rlSvc := ratelimiter.NewService(ratelimiter.ServiceParams{Redis: publisher, DB: db})
 	if released, buckets, err := rlSvc.GC(ctx); err != nil {
 		logrus.WithError(err).Warn("rate-limiter startup GC failed")
 	} else if released > 0 {

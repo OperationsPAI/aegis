@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"strings"
 
+	runtimeclient "aegis/clients/runtime"
 	"aegis/platform/consts"
 	redisinfra "aegis/platform/redis"
 	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
+	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -23,21 +25,88 @@ const tokenBucketKeyPrefix = "token_bucket:"
 // Service exposes rate-limiter admin operations. It is deliberately thin —
 // all the state lives in Redis/MySQL and we just wrap scans + set ops.
 type Service struct {
-	redis *redisinfra.Gateway
-	db    *gorm.DB
+	redis   *redisinfra.Gateway
+	db      *gorm.DB
+	runtime *runtimeclient.Client
 }
 
-func NewService(redis *redisinfra.Gateway, db *gorm.DB) *Service {
-	return &Service{redis: redis, db: db}
+// ServiceParams carries the rate-limiter admin dependencies. The runtime
+// client is optional: it is wired in modes that run the runtime-worker query
+// channel (both / consumer / runtime-worker) but absent in the lean aegis-api
+// graph, where status falls back to the const ceiling.
+type ServiceParams struct {
+	fx.In
+
+	Redis   *redisinfra.Gateway
+	DB      *gorm.DB
+	Runtime *runtimeclient.Client `optional:"true"`
 }
 
-func knownBuckets() map[string]int {
-	return map[string]int{
-		consts.RestartPedestalTokenBucket:   consts.MaxConcurrentRestartPedestal,
-		consts.NamespaceWarmingTokenBucket:  consts.MaxConcurrentNamespaceWarming,
-		consts.BuildContainerTokenBucket:    consts.MaxConcurrentBuildContainer,
-		consts.AlgoExecutionTokenBucket:     consts.MaxConcurrentAlgoExecution,
+func NewService(p ServiceParams) *Service {
+	return &Service{redis: p.Redis, db: p.DB, runtime: p.Runtime}
+}
+
+// knownBuckets returns the canonical SET of token-bucket keys. Capacity is
+// no longer sourced here — the const ceiling is a compile-time guess, not
+// what the live limiter is actually enforcing after an operator override.
+// Callers overlay live capacity from the runtime-worker; see liveCapacities.
+func knownBuckets() map[string]struct{} {
+	return map[string]struct{}{
+		consts.RestartPedestalTokenBucket:  {},
+		consts.NamespaceWarmingTokenBucket: {},
+		consts.BuildContainerTokenBucket:   {},
+		consts.AlgoExecutionTokenBucket:    {},
+		consts.BuildDatapackTokenBucket:    {},
 	}
+}
+
+// constCapacity is the compile-time default ceiling for a bucket, used only
+// as a fallback when the runtime-worker can't be reached. The live limiter's
+// Snapshot().MaxTokens is authoritative; this keeps status rendering a number
+// rather than 0 when the gRPC query channel is down or unconfigured.
+func constCapacity(bucketKey string) int {
+	switch bucketKey {
+	case consts.RestartPedestalTokenBucket:
+		return consts.MaxConcurrentRestartPedestal
+	case consts.NamespaceWarmingTokenBucket:
+		return consts.MaxConcurrentNamespaceWarming
+	case consts.BuildContainerTokenBucket:
+		return consts.MaxConcurrentBuildContainer
+	case consts.AlgoExecutionTokenBucket:
+		return consts.MaxConcurrentAlgoExecution
+	case consts.BuildDatapackTokenBucket:
+		return consts.MaxConcurrentBuildDatapack
+	default:
+		return 0
+	}
+}
+
+// liveCapacities pulls each limiter's live MaxTokens from the runtime-worker
+// over gRPC. Returns nil when the query channel is unconfigured or errors
+// (callers then fall back to constCapacity).
+func liveCapacities(ctx context.Context, rt *runtimeclient.Client) map[string]int {
+	if rt == nil || !rt.Enabled() {
+		return nil
+	}
+	caps, err := rt.GetLimiterStatus(ctx)
+	if err != nil {
+		logrus.WithError(err).Warn("rate-limiter status: live capacity query failed; falling back to const ceiling")
+		return nil
+	}
+	out := make(map[string]int, len(caps))
+	for _, c := range caps {
+		out[c.BucketKey] = c.MaxTokens
+	}
+	return out
+}
+
+// resolveCapacity picks the live MaxTokens for a bucket when the runtime-worker
+// reported it, otherwise the compile-time const ceiling.
+func resolveCapacity(bucketKey string, live map[string]int) int {
+	if cap, ok := live[bucketKey]; ok {
+		return cap
+	}
+	return constCapacity(bucketKey)
 }
 
 // isTerminalState mirrors the codebase's TaskCompleted (3), TaskError (-1),
@@ -46,22 +115,25 @@ func isTerminalState(state consts.TaskState) bool {
 	return state == consts.TaskCompleted || state == consts.TaskError || state == consts.TaskCancelled
 }
 
-// List returns each token_bucket:* bucket with its holders.
+// List returns each token_bucket:* bucket with its holders. Capacity is the
+// live MaxTokens reported by the runtime-worker that owns the limiter; the
+// const ceiling is a fallback only when that query is unavailable.
 func (s *Service) List(ctx context.Context) (*RateLimiterListResp, error) {
-	bucketCaps := knownBuckets()
+	buckets := knownBuckets()
 
 	extra, err := s.redis.ScanKeys(ctx, tokenBucketKeyPrefix+"*")
 	if err != nil {
 		return nil, fmt.Errorf("scan token buckets: %w", err)
 	}
 	for _, key := range extra {
-		if _, ok := bucketCaps[key]; !ok {
-			bucketCaps[key] = 0
-		}
+		buckets[key] = struct{}{}
 	}
 
-	items := make([]RateLimiterItem, 0, len(bucketCaps))
-	for key, capacity := range bucketCaps {
+	live := liveCapacities(ctx, s.runtime)
+
+	items := make([]RateLimiterItem, 0, len(buckets))
+	for key := range buckets {
+		capacity := resolveCapacity(key, live)
 		holders, err := s.redis.SetMembers(ctx, key)
 		if err != nil {
 			return nil, fmt.Errorf("smembers %s: %w", key, err)
@@ -120,7 +192,7 @@ func (s *Service) GC(ctx context.Context) (int, int, error) {
 }
 
 // gcWith is the testable core.
-func gcWith(ctx context.Context, r *redisinfra.Gateway, db *gorm.DB, buckets map[string]int) (int, int, error) {
+func gcWith(ctx context.Context, r *redisinfra.Gateway, db *gorm.DB, buckets map[string]struct{}) (int, int, error) {
 	var released, touched int
 	for key := range buckets {
 		holders, err := r.SetMembers(ctx, key)

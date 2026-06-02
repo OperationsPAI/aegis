@@ -168,6 +168,35 @@ func (c *Client) GetQueuedTasks(ctx context.Context) (*dto.QueuedTasksResp, erro
 	return decodeStruct[dto.QueuedTasksResp](resp.GetData())
 }
 
+// LimiterCapacity is the live capacity (max tokens) of one token-bucket
+// limiter as reported by the runtime-worker that owns the limiter.
+type LimiterCapacity struct {
+	BucketKey string
+	MaxTokens int
+}
+
+// GetLimiterStatus queries the runtime-worker for the live MaxTokens of
+// every in-process rate limiter. BucketKey matches the Redis token_bucket:*
+// key so callers can join against their own bucket sets.
+func (c *Client) GetLimiterStatus(ctx context.Context) ([]LimiterCapacity, error) {
+	if !c.Enabled() {
+		return nil, fmt.Errorf("runtime grpc client is not configured")
+	}
+	resp, err := c.query.GetLimiterStatus(ctx, &runtimev1.LimiterStatusRequest{})
+	if err != nil {
+		return nil, mapRPCError(err)
+	}
+	items := resp.GetItems()
+	out := make([]LimiterCapacity, 0, len(items))
+	for _, item := range items {
+		out = append(out, LimiterCapacity{
+			BucketKey: item.GetBucketKey(),
+			MaxTokens: int(item.GetMaxTokens()),
+		})
+	}
+	return out, nil
+}
+
 // --- intake direction: runtime-worker -> api-gateway ---
 
 func (c *Client) CreateExecution(ctx context.Context, req *execution.RuntimeCreateExecutionReq) (int, error) {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"aegis/boot"
+	runtimeclient "aegis/clients/runtime"
 	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"
 	rbac "aegis/crud/iam/rbac"
 	chaos "aegis/platform/chaos"
@@ -41,6 +42,11 @@ func Options(confPath, port string) fx.Option {
 		// fx-group registrars + the AggregatePermissions invoke only.
 		rbac.Module,
 		grpcruntimeintake.Module,
+		// Query channel into runtime-worker. aegis-api is otherwise intake-only
+		// (worker writes back), but the rate-limiter admin status reads the
+		// worker's LIVE limiter MaxTokens over this client; without it status
+		// falls back to the stale const ceiling.
+		runtimeclient.Module,
 		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
 	)
 }
