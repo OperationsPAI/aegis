@@ -11,6 +11,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	etcd "aegis/platform/etcd"
+	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -129,8 +130,11 @@ func (l *ConfigUpdateListener) Stop() {
 	logrus.Info("Config update listener stopped")
 }
 
-// loadScopeFromEtcd loads all configs for a given scope from etcd into viper.
-// Falls back to MySQL defaults only if config doesn't exist in etcd.
+// loadScopeFromEtcd loads all configs for a given scope into viper. The
+// configcenter (/aegis) tree is the primary read; the legacy scope-prefixed
+// (/rcabench) tree is the safety net; the MySQL default is the floor. Whichever
+// tree is absent for a key is initialized so both stay populated (the /rcabench
+// safety net is preserved during the storage-unification transition).
 func (l *ConfigUpdateListener) loadScopeFromEtcd(scope consts.ConfigScope, prefix, scopeName string) error {
 	configMetadata, err := newConfigStore(l.db).listConfigsByScope(scope)
 	if err != nil {
@@ -141,31 +145,11 @@ func (l *ConfigUpdateListener) loadScopeFromEtcd(scope consts.ConfigScope, prefi
 	initializedCount := 0
 
 	for _, meta := range configMetadata {
-		etcdKey := fmt.Sprintf("%s%s", prefix, meta.Key)
-
-		// Try to get current value from etcd first
-		etcdValue, err := l.gateway.Get(l.ctx, etcdKey)
-		if err != nil {
-			logrus.Errorf("Failed to get config %s from etcd: %v", meta.Key, err)
-			continue
-		}
-
-		var valueToLoad string
-		if etcdValue == "" {
-			// Config doesn't exist in etcd, initialize it with MySQL default value
-			if err := l.gateway.Put(l.ctx, etcdKey, meta.DefaultValue, 0); err != nil {
-				logrus.Errorf("Failed to initialize config %s in etcd: %v", meta.Key, err)
-				continue
-			}
-
-			valueToLoad = meta.DefaultValue
+		valueToLoad, initialized := l.resolveAndBackfill(prefix, meta)
+		if initialized {
 			initializedCount++
-			logrus.Infof("Initialized config %s in etcd with default value from MySQL", meta.Key)
-		} else {
-			valueToLoad = etcdValue
 		}
 
-		// Load config to Viper (local memory cache)
 		if err := config.SetViperValue(meta.Key, valueToLoad, meta.ValueType); err != nil {
 			logrus.Errorf("Failed to load config %s to Viper: %v", meta.Key, err)
 			continue
@@ -173,10 +157,66 @@ func (l *ConfigUpdateListener) loadScopeFromEtcd(scope consts.ConfigScope, prefi
 		loadedCount++
 	}
 
-	logrus.Infof("Loaded %d/%d %s configs from etcd to Viper (initialized %d new configs)",
+	logrus.Infof("Loaded %d/%d %s configs to Viper (initialized %d new etcd keys)",
 		loadedCount, len(configMetadata), scopeName, initializedCount)
 
 	return nil
+}
+
+// resolveAndBackfill reads a config's plain value with precedence
+// configcenter(/aegis) > legacy(/rcabench) > MySQL default, then backfills any
+// absent tree so both /aegis and /rcabench end up populated. Returns the value
+// to load and whether any tree was initialized from the MySQL default.
+func (l *ConfigUpdateListener) resolveAndBackfill(prefix string, meta model.DynamicConfig) (string, bool) {
+	legacyKey := prefix + meta.Key
+	ccKey, ccOK := l.configCenterKeyFor(meta.Key)
+
+	ccVal := ""
+	if ccOK {
+		if raw, err := l.gateway.Get(l.ctx, ccKey); err == nil {
+			ccVal = decodeConfigCenterValue([]byte(raw))
+		}
+	}
+	legacyVal := ""
+	if raw, err := l.gateway.Get(l.ctx, legacyKey); err == nil {
+		legacyVal = raw
+	}
+
+	value := meta.DefaultValue
+	initialized := false
+	switch {
+	case ccVal != "":
+		value = ccVal
+	case legacyVal != "":
+		value = legacyVal
+	default:
+		initialized = true
+	}
+
+	if legacyVal == "" {
+		if err := l.gateway.Put(l.ctx, legacyKey, value, 0); err != nil {
+			logrus.Errorf("Failed to backfill legacy config %s: %v", legacyKey, err)
+		}
+	}
+	if ccOK && ccVal == "" {
+		if encoded, err := json.Marshal(value); err != nil {
+			logrus.Errorf("Failed to encode configcenter value for %s: %v", meta.Key, err)
+		} else if err := l.gateway.Put(l.ctx, ccKey, string(encoded), 0); err != nil {
+			logrus.Errorf("Failed to backfill configcenter config %s: %v", ccKey, err)
+		}
+	}
+
+	return value, initialized
+}
+
+// configCenterKeyFor maps a dotted dynamic_config key to its /aegis/<env>/<ns>/<key>
+// form, splitting at the first dot. ok is false for keys without a namespace split.
+func (l *ConfigUpdateListener) configCenterKeyFor(dottedKey string) (string, bool) {
+	dot := strings.IndexByte(dottedKey, '.')
+	if dot <= 0 || dot == len(dottedKey)-1 {
+		return "", false
+	}
+	return configCenterPrefix() + dottedKey[:dot] + "/" + dottedKey[dot+1:], true
 }
 
 // watchPrefix watches a single etcd prefix for configuration changes.

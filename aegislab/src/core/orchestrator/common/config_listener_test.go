@@ -2,6 +2,39 @@ package common
 
 import "testing"
 
+// TestConfigCenterKeyForRoundTrips guards step 4 cutover: the listener's
+// primary /aegis read key must use the same first-dot namespace split that the
+// writers (aegisctl etcd put, system PATCH, seed mirror) use, and must round-trip
+// back through parseConfigCenterKV to the original dotted dynamic_config key.
+// A split mismatch means the loader reads the wrong /aegis key and silently
+// falls back to the legacy tree, defeating the cutover.
+func TestConfigCenterKeyForRoundTrips(t *testing.T) {
+	l := &ConfigUpdateListener{}
+	prefix := configCenterPrefix()
+
+	for _, dotted := range []string{
+		"rate_limiting.max_concurrent_restarts_pedestal",
+		"orchestrator.pedestal.restart_timeout_seconds",
+		"database.clickhouse.host",
+	} {
+		ccKey, ok := l.configCenterKeyFor(dotted)
+		if !ok {
+			t.Fatalf("%s: expected ok", dotted)
+		}
+		gotKey, _, gotOK := parseConfigCenterKV(prefix, ccKey, []byte(`"x"`))
+		if !gotOK {
+			t.Fatalf("%s: round-trip parse failed for %q", dotted, ccKey)
+		}
+		if gotKey != dotted {
+			t.Errorf("%s: round-tripped to %q", dotted, gotKey)
+		}
+	}
+
+	if _, ok := l.configCenterKeyFor("nodot"); ok {
+		t.Error("expected !ok for key without namespace split")
+	}
+}
+
 // TestParseConfigCenterKV is the regression guard for the disjoint-tree break:
 // `aegisctl etcd put rate_limiting.max_concurrent_restarts_pedestal 10` writes
 // /aegis/<env>/rate_limiting/max_concurrent_restarts_pedestal with the
