@@ -165,14 +165,70 @@ func (e *ChaosMeshExecutor) Apply(
 	if err != nil {
 		return fmt.Errorf("chaos-mesh %s: render CR: %w", capability, err)
 	}
+
+	// reap-before-apply. The CR name is a content-hash of (action,
+	// idempotency_key), so a name collision here is always a stale CR from a
+	// prior round that wasn't GC'd — never this row's own in-flight CR
+	// (CreateInjection short-circuits a duplicate idempotency_key before
+	// reaching Apply, so Apply runs exactly once per injection row). Adopting
+	// the stale CR via AlreadyExists used to wedge the round: if that CR sat
+	// non-terminal (Selected=False, selector matched no pods) the reconciler
+	// polled it as Pending forever and the completion webhook never fired.
+	// Delete it and recreate fresh so this round observes its own CR.
+	if err := e.reapStaleCR(ctx, h); err != nil {
+		return fmt.Errorf("chaos-mesh %s: reap stale CR: %w", capability, err)
+	}
+
 	_, err = e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Create(ctx, cr, metav1.CreateOptions{})
 	switch {
 	case err == nil:
 		return nil
 	case apierrors.IsAlreadyExists(err):
+		// Lost a race against a concurrent Apply for the same name (a peer
+		// recreated it between our reap and create). The peer's CR is freshly
+		// created for the same params, so adopting it is correct here.
 		return nil
 	default:
 		return fmt.Errorf("chaos-mesh %s: create CR: %w", capability, err)
+	}
+}
+
+// reapStaleCR deletes any pre-existing CR at the handle's name and blocks
+// until the apiserver reports it gone, so the subsequent Create lands on a
+// clean name. A 404 (nothing to reap) is the common case and returns nil.
+func (e *ChaosMeshExecutor) reapStaleCR(ctx context.Context, h ChaosMeshHandle) error {
+	err := e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Delete(ctx, h.Name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return e.waitCRGone(ctx, h)
+}
+
+// waitCRGone polls until the named CR no longer exists. Chaos-Mesh CRs carry
+// a finalizer, so Delete only stamps deletionTimestamp; recreating the same
+// name before the finalizer clears would hit AlreadyExists and re-adopt the
+// dying CR. Bounded so a wedged finalizer can't hang Apply indefinitely.
+func (e *ChaosMeshExecutor) waitCRGone(ctx context.Context, h ChaosMeshHandle) error {
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		_, err := e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Get(ctx, h.Name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("chaos-mesh: stale CR %s/%s still present after delete", h.Namespace, h.Name)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
 	}
 }
 

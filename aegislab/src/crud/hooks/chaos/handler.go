@@ -3,6 +3,7 @@ package chaoshooks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,6 +29,11 @@ import (
 // The production implementation lives in NewHandler.
 type TaskSubmitter func(ctx context.Context, task *dto.UnifiedTask) error
 
+// LockReleaser releases the monitor:ns:<namespace> lock a fault-injection
+// trace holds. The seam keeps the redis dependency out of the test rig. nil
+// is a no-op (tests, or the via-aegisctl path that never acquired the lock).
+type LockReleaser func(ctx context.Context, namespace, traceID string) error
+
 // terminal status values from §10.2.
 const (
 	statusSucceeded = "succeeded"
@@ -39,8 +46,9 @@ const (
 )
 
 type Handler struct {
-	db     *gorm.DB
-	submit TaskSubmitter
+	db          *gorm.DB
+	submit      TaskSubmitter
+	releaseLock LockReleaser
 }
 
 func NewHandler(db *gorm.DB, redisGateway *redis.Gateway) *Handler {
@@ -49,12 +57,56 @@ func NewHandler(db *gorm.DB, redisGateway *redis.Gateway) *Handler {
 		submit: func(ctx context.Context, task *dto.UnifiedTask) error {
 			return common.SubmitTaskWithDB(ctx, db, redisGateway, task)
 		},
+		releaseLock: redisLockReleaser(redisGateway),
 	}
 }
 
 // NewHandlerWithSubmitter is the test seam.
 func NewHandlerWithSubmitter(db *gorm.DB, submit TaskSubmitter) *Handler {
 	return &Handler{db: db, submit: submit}
+}
+
+// redisLockReleaser clears the trace_id on monitor:ns:<namespace> when the
+// trace still owns it, matching state.LockStore.Release. The orchestrator
+// hands lock ownership to this webhook receiver after dispatch (see
+// fault_injection.go); on a non-firing terminal (failed/cancelled) nothing
+// else releases it, so without this the key leaks until its TTL.
+func redisLockReleaser(g *redis.Gateway) LockReleaser {
+	if g == nil {
+		return nil
+	}
+	return func(ctx context.Context, namespace, traceID string) error {
+		if namespace == "" || traceID == "" {
+			return nil
+		}
+		key := fmt.Sprintf(consts.NamespaceKeyPattern, namespace)
+		owner, err := g.HashGet(ctx, key, "trace_id")
+		if err != nil && !errors.Is(err, goredis.Nil) {
+			return err
+		}
+		if owner != "" && owner != traceID {
+			return nil
+		}
+		return g.HashSet(ctx, key, map[string]any{
+			"end_time": time.Now().UTC().Unix(),
+			"trace_id": "",
+		})
+	}
+}
+
+// releaseNamespaceLock is the non-firing-terminal cleanup: free the ns lock
+// the inject trace held. Best-effort — a release failure must not fail the
+// webhook (the lock TTL is the backstop), so errors are logged not returned.
+func (h *Handler) releaseNamespaceLock(ctx context.Context, meta *CallerMetadata) {
+	if h.releaseLock == nil || meta == nil || meta.Namespace == "" || meta.TraceID == "" {
+		return
+	}
+	if err := h.releaseLock(ctx, meta.Namespace, meta.TraceID); err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"namespace": meta.Namespace,
+			"trace_id":  meta.TraceID,
+		}).Warn("chaos hook: release namespace lock on terminal-failed inject")
+	}
 }
 
 // Singleton handles `POST /api/v1/hooks/chaos`. Mirrors today's
@@ -82,8 +134,10 @@ func (h *Handler) Singleton(c *gin.Context) {
 	if body.Status != statusSucceeded {
 		// failed / cancelled: no BuildDatapack downstream, matching today's
 		// HandleCRDFailed in k8s_handler.go. We still record the gate so
-		// duplicate webhooks remain no-ops.
+		// duplicate webhooks remain no-ops, and release the namespace lock
+		// ownership the dispatcher handed us so the ns isn't leaked.
 		_ = h.recordGate(c.Request.Context(), body.CallerMetadata.TaskID, kindSingleton, body.Status)
+		h.releaseNamespaceLock(c.Request.Context(), &body.CallerMetadata)
 		dto.SuccessResponse(c, gin.H{"accepted": true, "submitted": false})
 		return
 	}
@@ -120,9 +174,11 @@ func (h *Handler) Batch(c *gin.Context) {
 	}
 
 	// cancelled / failed: nothing fires downstream — the campaign step
-	// decides whether to retry. Record the gate so retries are no-ops.
+	// decides whether to retry. Record the gate so retries are no-ops and
+	// release the namespace lock so a terminal-failed batch doesn't leak it.
 	if body.AggregatedStatus == statusCancelled || body.AggregatedStatus == statusFailed {
 		_ = h.recordGate(c.Request.Context(), body.BatchCallerMetadata.TaskID, kindBatch, body.AggregatedStatus)
+		h.releaseNamespaceLock(c.Request.Context(), &body.BatchCallerMetadata)
 		dto.SuccessResponse(c, gin.H{"accepted": true, "submitted": false})
 		return
 	}

@@ -15,6 +15,23 @@ import (
 // — config plumbing for it is step 5b/5c work, not 5a.
 const reconcilerBatchSize = 200
 
+// stuckPendingGrace is added to an injection's expected completion time
+// (start + inject duration) before a still-non-terminal CR is force-failed.
+// A new round can reuse a prior round's content-hashed CR name; if that
+// stale CR was applied with a selector that matched no pods it never flips
+// AllInjected/AllRecovered and interpretChaosMeshStatus parks it at Pending
+// forever (no CR-404, so the orphaned path never fires). Without this gate
+// the row stays `running`, the completion webhook never fires, and the trace
+// wedges at fault.injection.started. The grace is generous so a normal
+// in-flight injection — whose CR legitimately sits Pending until its pods are
+// selected and AllInjected lands — is never force-failed.
+const stuckPendingGrace = 10 * time.Minute
+
+// stuckPendingFlatTimeout is the fallback when the row carries no usable
+// inject duration: force-fail a non-terminal CR this long after the
+// injection started.
+const stuckPendingFlatTimeout = 15 * time.Minute
+
 // Reconciler closes ADR-0006's stickiness loop. The CreateInjection path
 // flips the row to `running` after Apply but cannot observe the
 // chaos-mesh CR moving to AllRecovered; without this polling loop the
@@ -25,6 +42,7 @@ type Reconciler struct {
 	webhook  *WebhookSender
 	interval time.Duration
 	logger   *logrus.Logger
+	now      func() time.Time
 }
 
 func NewReconciler(db *gorm.DB, executor Executor, webhook *WebhookSender, interval time.Duration, logger *logrus.Logger) *Reconciler {
@@ -34,7 +52,7 @@ func NewReconciler(db *gorm.DB, executor Executor, webhook *WebhookSender, inter
 	if logger == nil {
 		logger = logrus.StandardLogger()
 	}
-	return &Reconciler{db: db, executor: executor, webhook: webhook, interval: interval, logger: logger}
+	return &Reconciler{db: db, executor: executor, webhook: webhook, interval: interval, logger: logger, now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (r *Reconciler) Run(ctx context.Context) {
@@ -70,8 +88,12 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 		return
 	}
 	if state == ExecStatePending || state == ExecStateRunning {
+		if state == ExecStatePending && r.isStuckPending(inj) {
+			r.forceFailStuck(ctx, inj)
+			return
+		}
 		if inj.Status == StatusPending && state == ExecStateRunning {
-			now := time.Now().UTC()
+			now := r.now()
 			r.db.WithContext(ctx).Model(&Injection{}).Where("id = ? AND status = ?", inj.ID, StatusPending).
 				Updates(map[string]any{"status": StatusRunning, "started_at": &now})
 		}
@@ -162,6 +184,86 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
 	}
 
+	if fresh.BatchID != nil && *fresh.BatchID != "" {
+		r.reconcileBatch(ctx, *fresh.BatchID)
+	}
+}
+
+// isStuckPending reports whether a non-terminal CR that Status still reads
+// as ExecStatePending has sat there past its expected completion. The
+// deadline is derived entirely from the row: the time the injection should
+// have started running (started_at, falling back to ts) plus the inject
+// duration carried in params plus a grace window. A row with no usable
+// duration uses a conservative flat timeout instead. Returning false for a
+// freshly-applied CR is what keeps a normal in-flight injection from being
+// force-failed.
+func (r *Reconciler) isStuckPending(inj *Injection) bool {
+	start := inj.Ts
+	if inj.StartedAt != nil {
+		start = *inj.StartedAt
+	}
+	if start.IsZero() {
+		return false
+	}
+	if d := injectDuration(inj.Params); d > 0 {
+		return r.now().After(start.Add(d + stuckPendingGrace))
+	}
+	return r.now().After(start.Add(stuckPendingFlatTimeout))
+}
+
+// injectDuration reads the `duration_s` knob the params payload carries and
+// returns it as a Duration, mirroring durationFromParams' type handling.
+// Zero means "no usable duration".
+func injectDuration(params JSONMap) time.Duration {
+	v, ok := params["duration_s"]
+	if !ok {
+		return 0
+	}
+	switch n := v.(type) {
+	case float64:
+		return time.Duration(n) * time.Second
+	case int:
+		return time.Duration(n) * time.Second
+	case int64:
+		return time.Duration(n) * time.Second
+	}
+	return 0
+}
+
+// forceFailStuck terminalizes a wedged Pending injection: status=failed with
+// reason cr_never_injected, finished_at=now, and the failed completion
+// webhook fired so aegis-api advances the trace to fault.injection.failed
+// (and releases the namespace lock). Uses the same stickiness-gated UPDATE
+// + reload + Fire path a normal terminal transition does.
+func (r *Reconciler) forceFailStuck(ctx context.Context, inj *Injection) {
+	now := r.now()
+	diag := JSONMap{"reason": "cr_never_injected"}
+	tx := r.db.WithContext(ctx).Model(&Injection{}).
+		Where("id = ? AND status IN ?", inj.ID, []string{StatusPending, StatusRunning}).
+		Updates(map[string]any{
+			"status":      StatusFailed,
+			"finished_at": &now,
+			"diagnostics": diag,
+		})
+	if tx.Error != nil {
+		r.logger.WithError(tx.Error).WithField("id", inj.ID).Warn("chaos reconciler: stuck force-fail update")
+		return
+	}
+	if tx.RowsAffected == 0 {
+		return
+	}
+	r.logger.WithField("id", inj.ID).Warn("chaos reconciler: force-failed CR stuck Pending past deadline")
+	if r.webhook == nil {
+		return
+	}
+	var fresh Injection
+	if err := r.db.WithContext(ctx).Where("id = ?", inj.ID).Take(&fresh).Error; err != nil {
+		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: reload row")
+		return
+	}
+	if err := r.webhook.Fire(ctx, &fresh); err != nil && !errors.Is(err, errWebhookDisabled) {
+		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
+	}
 	if fresh.BatchID != nil && *fresh.BatchID != "" {
 		r.reconcileBatch(ctx, *fresh.BatchID)
 	}

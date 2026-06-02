@@ -158,6 +158,42 @@ func TestSingletonFailedDoesNotFire(t *testing.T) {
 	}
 }
 
+func TestSingletonFailedReleasesNamespaceLock(t *testing.T) {
+	db := testutil.NewSQLiteGormDB(t)
+	if err := db.AutoMigrate(&HookSubmission{}, &model.FaultInjection{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	var releasedNs, releasedTrace string
+	var calls int
+	h := NewHandlerWithSubmitter(db, (&recorder{}).submit())
+	h.releaseLock = func(_ context.Context, namespace, traceID string) error {
+		calls++
+		releasedNs, releasedTrace = namespace, traceID
+		return nil
+	}
+	r := gin.New()
+	r.POST("/api/v1/hooks/chaos", h.Singleton)
+
+	meta := sampleMeta()
+	meta.Namespace = "otel-demo0"
+	body := SingletonWebhook{
+		InjectionID:    "inj-fail-lock",
+		IdempotencyKey: "k-fail-lock",
+		Status:         statusFailed,
+		CallerMetadata: meta,
+	}
+	w := postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d body=%s", w.Code, w.Body.String())
+	}
+	if calls != 1 {
+		t.Fatalf("expected exactly one lock release, got %d", calls)
+	}
+	if releasedNs != "otel-demo0" || releasedTrace != meta.TraceID {
+		t.Fatalf("released wrong lock: ns=%q trace=%q", releasedNs, releasedTrace)
+	}
+}
+
 func TestSingletonCancelledNoFire(t *testing.T) {
 	_, rec, r := setupRig(t)
 	body := SingletonWebhook{
