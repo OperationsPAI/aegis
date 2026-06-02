@@ -1504,11 +1504,17 @@ containers:
       # lgu-tea index moved to 0.1.5 on republish (0.1.4 dropped), so RP
       # install of 0.1.4 now 404s. aegis.points.enabled=false until
       # opspai/aegisctl + chaosServer wired (catalog via manual import-dir).
-      - name: 0.1.7
+      # Bumped 0.1.7 → 0.1.8 for teastore chart 0.1.8 (fork PR #16): adds a
+      # per-namespace otel-collector + tpl-rendered endpoint, like DSB sn/media.
+      # The chart default opentelemetry.otlpEndpoint is now
+      # http://otel-collector.{{ .Release.Namespace }}.svc:4317, so the cross-ns
+      # override is dropped. instrumentationName stays otel-instr-teastore (its
+      # static endpoint was removed, so the chart's per-ns env is the only one).
+      - name: 0.1.8
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
-          version: 0.1.7
+          version: 0.1.8
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
@@ -1524,12 +1530,6 @@ containers:
               category: 1
               value_type: 0
               default_value: 20260531-e5a6495
-              overridable: true
-            - key: opentelemetry.otlpEndpoint
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring.svc.cluster.local:4317
               overridable: true
             - key: opentelemetry.monitoringNamespace
               type: 0
