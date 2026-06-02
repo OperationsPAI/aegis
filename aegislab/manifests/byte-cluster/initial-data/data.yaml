@@ -684,6 +684,17 @@ containers:
       # logback → OTLP logs) + Instrumentation CR patched with
       # OTEL_EXPORTER_OTLP_PROTOCOL=grpc (fixes http/protobuf→gRPC port
       # Connection reset that silently dropped all agent exports).
+      #
+      # Switched from the cross-ns shared collector to the chart's per-ns
+      # `otelCollector` sidecar (matches DSB hs/sn). The shared collector
+      # risks span-drop at 10 namespaces (#366/#367). Dropping the
+      # otel.collectorEndpoint/otelCollector.enabled overrides lets the
+      # chart defaults apply: enabled=true + endpoint
+      # http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4317.
+      # The inject-java annotation stays (agent still injected); the chart's
+      # OTEL_EXPORTER_OTLP_ENDPOINT env wins over the Instrumentation CR via
+      # OTel-Operator appendIfNotSet, so the agent exports at the per-ns
+      # sidecar. Only the sidecar image is pinned to the volces mirror.
       - name: 1.1.6
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
@@ -723,17 +734,14 @@ containers:
               value_type: 0
               default_value: monitoring/otel-instr-sockshop
               overridable: true
-            - key: otel.collectorEndpoint
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet). Mirrors hs/sn 0.1.6.
+            - key: otelCollector.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
-              overridable: true
-            - key: otelCollector.enabled
-              type: 0
-              category: 1
-              value_type: 1
-              default_value: "false"
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
             - key: aegis.points.enabled
               type: 0
@@ -1496,11 +1504,17 @@ containers:
       # lgu-tea index moved to 0.1.5 on republish (0.1.4 dropped), so RP
       # install of 0.1.4 now 404s. aegis.points.enabled=false until
       # opspai/aegisctl + chaosServer wired (catalog via manual import-dir).
-      - name: 0.1.7
+      # Bumped 0.1.7 → 0.1.8 for teastore chart 0.1.8 (fork PR #16): adds a
+      # per-namespace otel-collector + tpl-rendered endpoint, like DSB sn/media.
+      # The chart default opentelemetry.otlpEndpoint is now
+      # http://otel-collector.{{ .Release.Namespace }}.svc:4317, so the cross-ns
+      # override is dropped. instrumentationName stays otel-instr-teastore (its
+      # static endpoint was removed, so the chart's per-ns env is the only one).
+      - name: 0.1.8
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
-          version: 0.1.7
+          version: 0.1.8
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
@@ -1516,12 +1530,6 @@ containers:
               category: 1
               value_type: 0
               default_value: 20260531-e5a6495
-              overridable: true
-            - key: opentelemetry.otlpEndpoint
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring.svc.cluster.local:4317
               overridable: true
             - key: opentelemetry.monitoringNamespace
               type: 0

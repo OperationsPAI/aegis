@@ -1606,8 +1606,12 @@ extraObjects:
       name: otel-instr-sockshop
       namespace: monitoring
     spec:
-      exporter:
-        endpoint: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4317
+      # No exporter.endpoint and no per-language OTEL_EXPORTER_OTLP_ENDPOINT: the
+      # per-namespace collector address can't be a static value here. Each system's
+      # chart sets OTEL_EXPORTER_OTLP_ENDPOINT to its own
+      # otel-collector.<ns>.svc:4317 and the operator's appendIfNotSet preserves it.
+      # Omitting it makes a chart that forgets the endpoint fail loud (operator
+      # default localhost:4317) instead of silently routing to a shared collector.
       resource:
         addK8sUIDAttributes: true
       propagators:
@@ -1630,24 +1634,8 @@ extraObjects:
       java:
         image: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-operator-autoinstrumentation-java:2.23.0
         env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4317
           - name: OTEL_EXPORTER_OTLP_PROTOCOL
             value: grpc
-      python:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4318
-          - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-            value: 'true'
-      dotnet:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4318
-      go:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring:4318
 
   - apiVersion: opentelemetry.io/v1alpha1
     kind: Instrumentation
@@ -1655,8 +1643,12 @@ extraObjects:
       name: otel-instr-teastore
       namespace: monitoring
     spec:
-      exporter:
-        endpoint: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4317
+      # No exporter.endpoint and no per-language OTEL_EXPORTER_OTLP_ENDPOINT: the
+      # per-namespace collector address can't be a static value here. Each system's
+      # chart sets OTEL_EXPORTER_OTLP_ENDPOINT to its own
+      # otel-collector.<ns>.svc:4317 and the operator's appendIfNotSet preserves it.
+      # Omitting it makes a chart that forgets the endpoint fail loud (operator
+      # default localhost:4317) instead of silently routing to a shared collector.
       resource:
         addK8sUIDAttributes: true
       propagators:
@@ -1679,21 +1671,5 @@ extraObjects:
       java:
         image: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-operator-autoinstrumentation-java:2.23.0
         env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4317
           - name: OTEL_EXPORTER_OTLP_PROTOCOL
             value: grpc
-      python:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4318
-          - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-            value: 'true'
-      dotnet:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4318
-      go:
-        env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring:4318
