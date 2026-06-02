@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "shippingservice"
+  system: "ob"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "shippingservice"
+        container: "shippingservice"
+        namespace: "ob"
+    - capability: "cpu_stress"
+      target:
+        app: "shippingservice"
+        container: "shippingservice"
+        namespace: "ob"
+    - capability: "memory_stress"
+      target:
+        app: "shippingservice"
+        container: "shippingservice"
+        namespace: "ob"
+    - capability: "pod_failure"
+      target:
+        app: "shippingservice"
+        namespace: "ob"
+    - capability: "pod_kill"
+      target:
+        app: "shippingservice"
+        namespace: "ob"
+    - capability: "time_skew"
+      target:
+        app: "shippingservice"
+        container: "shippingservice"
+        namespace: "ob"

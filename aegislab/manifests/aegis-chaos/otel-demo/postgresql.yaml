@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "postgresql"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "postgresql"
+        container: "postgresql"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "postgresql"
+        container: "postgresql"
+        namespace: "otel-demo"
+    - capability: "memory_stress"
+      target:
+        app: "postgresql"
+        container: "postgresql"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "postgresql"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "postgresql"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "postgresql"
+        container: "postgresql"
+        namespace: "otel-demo"

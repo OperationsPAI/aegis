@@ -155,3 +155,24 @@ func TestTargetSchemasMatch(t *testing.T) {
 	})
 	t.Logf("validated %d points across all manifests", pointCount)
 }
+
+func TestFuzzyResolveLabel(t *testing.T) {
+	labels := clusterAppLabels["sockshop"]
+	cases := []struct {
+		addr     string
+		wantReal string
+		wantOK   bool
+	}{
+		{"carts", "carts", true},                  // exact
+		{"catalogue", "catalog", true},            // suffix/substring fuzzy
+		{"user", "users", true},                   // substring fuzzy
+		{"compose-post-service", "", false},       // no sockshop workload
+	}
+	for _, c := range cases {
+		got, ok := fuzzyResolveLabel("sockshop", c.addr, labels)
+		if ok != c.wantOK || got != c.wantReal {
+			t.Errorf("fuzzyResolveLabel(sockshop, %q) = (%q, %v), want (%q, %v)",
+				c.addr, got, ok, c.wantReal, c.wantOK)
+		}
+	}
+}

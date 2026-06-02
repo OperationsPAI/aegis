@@ -27,6 +27,38 @@ spec:
         port: 8079
         server_address: "front-end"
         span_name: "GET /"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 80
+        span_name: "GET /catalogue*"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+        port: 80
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 80
+        span_name: "GET /catalogue/images*"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+        port: 80
+        span_name: "GET"
     - capability: "http_request_delay"
       target:
         app: "catalog"
@@ -36,6 +68,38 @@ spec:
         port: 8079
         server_address: "front-end"
         span_name: "GET /"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 80
+        span_name: "GET /catalogue*"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+        port: 80
+        span_name: "GET"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 80
+        span_name: "GET /catalogue/images*"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+        port: 80
+        span_name: "GET"
     - capability: "jvm_method_latency"
       target:
         app: "catalog"

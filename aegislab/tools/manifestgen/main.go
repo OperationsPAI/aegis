@@ -152,6 +152,70 @@ var systemDisplay = map[string]string{
 // orderedSystems is the canonical iteration order for deterministic output.
 var orderedSystems = []string{"hs", "media", "ob", "oteldemo", "sn", "sockshop", "teastore", "ts"}
 
+// clusterAppLabels holds the real pod app-label VALUES (the value under the
+// system's selector key — `app` for everything but otel-demo's
+// `app.kubernetes.io/name`) observed in a representative namespace per system
+// at manifest-generation time. It is the resolution target for callee-only
+// ServerAddresses: a service that appears only as a call target (never a
+// ServiceName) gets pod/cpu/mem points only if its ServerAddress fuzzy-resolves
+// to one of these real label values, so PodFailure actually selects a workload.
+//
+// Snapshot source (byte-cluster, 2026-06):
+//
+//	kubectl -n <ns> get pods -o jsonpath='{.items[*].metadata.labels.<key>}'
+//
+// Systems with no live namespace at snapshot time (hs, oteldemo, ts) carry no
+// entry: their callee ServerAddresses are registered as-is (the chaos-data
+// names are already k8s-native for these stacks) and logged as cluster-unverified.
+var clusterAppLabels = map[string][]string{
+	"sn": {
+		"compose-post-service", "home-timeline-redis", "home-timeline-service",
+		"load-generator", "media-frontend", "media-memcached", "media-mongodb",
+		"media-service", "nginx-thrift", "post-storage-memcached",
+		"post-storage-mongodb", "post-storage-service", "social-graph-mongodb",
+		"social-graph-redis", "social-graph-service", "text-service",
+		"unique-id-service", "url-shorten-memcached", "url-shorten-mongodb",
+		"url-shorten-service", "user-memcached", "user-mention-service",
+		"user-mongodb", "user-service", "user-timeline-mongodb",
+		"user-timeline-redis", "user-timeline-service",
+	},
+	"media": {
+		"cast-info-memcached", "cast-info-mongodb", "cast-info-service",
+		"compose-review-memcached", "compose-review-service", "movie-id-memcached",
+		"movie-id-mongodb", "movie-id-service", "movie-info-memcached",
+		"movie-info-mongodb", "movie-info-service", "movie-review-mongodb",
+		"movie-review-redis", "movie-review-service", "nginx-web-server",
+		"page-service", "plot-memcached", "plot-mongodb", "plot-service",
+		"rating-redis", "rating-service", "review-storage-memcached",
+		"review-storage-mongodb", "review-storage-service", "text-service",
+		"unique-id-service", "user-memcached", "user-mongodb",
+		"user-review-mongodb", "user-review-redis", "user-review-service",
+		"user-service",
+	},
+	"ob": {
+		"adservice", "cartservice", "checkoutservice", "currencyservice",
+		"emailservice", "frontend", "paymentservice", "productcatalogservice",
+		"recommendationservice", "redis-cart", "shippingservice",
+	},
+	"sockshop": {
+		"carts", "catalog", "front-end", "orders", "payment", "shipping", "users",
+	},
+	"teastore": {
+		"teastore-auth", "teastore-db", "teastore-image", "teastore-persistence",
+		"teastore-recommender", "teastore-registry", "teastore-webui",
+	},
+}
+
+// httpInboundSystems marks stacks whose service-to-service calls are real
+// HTTP/1.x, so a callee should also get an inbound http_request_delay/abort
+// point (the HTTPChaos that actually bites is inbound on the callee). DSB
+// stacks (hs/sn/media) front HTTP at nginx but the backends speak Thrift/gRPC,
+// where an inbound HTTPChaos point dispatches and silently no-ops — excluded.
+var httpInboundSystems = map[string]bool{
+	"sockshop": true,
+	"teastore": true,
+}
+
 // appLabel maps a chaos-experiment service-data key to the pod app-label
 // value used in chaos targets. For teastore the trace-derived data keys
 // carry the deployment prefix (teastore-webui) but the fork chart names the
@@ -336,6 +400,7 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 			continue
 		}
 		warnUnmarkedGRPCShape(sysKey, data)
+		registerCalleeServices(sysKey, data)
 
 		sysDir := filepath.Join(outRoot, systemDisplay[sysKey])
 		if err := os.MkdirAll(sysDir, 0o755); err != nil {
@@ -438,6 +503,166 @@ func warnUnmarkedGRPCShape(sysKey string, d *systemData) {
 			fmt.Fprintf(os.Stderr, "warn: %s/%s route %q has gRPC shape but is not marked Grpc — confirm protocol (treating as HTTP)\n", sysKey, svc, e.Route)
 		}
 	}
+}
+
+// registerCalleeServices brings callee-only services — those that appear only
+// as a call target (e.distinct ServerAddress) and never as a ServiceName key —
+// into d.services so buildBasePoints emits pod/cpu/mem/time points for them.
+// Without this they get network points only, and a PodFailure inject against
+// them is a catalog miss (404). Each callee ServerAddress is fuzzy-resolved to
+// a real pod app-label value (clusterAppLabels); if it resolves to a name that
+// differs from the alias, every endpoint addressed to the alias is rewritten to
+// the resolved name so its points (network/dns/http-inbound) target the real
+// label too. ServerAddresses with no real-workload match are dropped and logged.
+//
+// For HTTP-native stacks (httpInboundSystems) the callee additionally inherits
+// an inbound endpoint per non-gRPC call edge, so it gains http_request_delay/abort
+// (the HTTPChaos that actually bites is inbound on the callee).
+func registerCalleeServices(sysKey string, d *systemData) {
+	realLabels, haveCluster := clusterAppLabels[sysKey]
+	resolved := map[string]string{} // alias -> real label (or alias if no cluster data)
+	var registered, remapped, dropped []string
+
+	for _, svc := range sortedKeys(d.services) {
+		for _, e := range d.endpoints[svc] {
+			addr := e.ServerAddress
+			if addr == "" || addr == svc {
+				continue
+			}
+			if _, ok := d.services[addr]; ok {
+				continue // already a first-class service
+			}
+			if _, done := resolved[addr]; done {
+				continue
+			}
+			if !haveCluster {
+				resolved[addr] = addr
+				registered = append(registered, addr+" (cluster-unverified)")
+				continue
+			}
+			real, ok := fuzzyResolveLabel(sysKey, addr, realLabels)
+			if !ok {
+				resolved[addr] = ""
+				dropped = append(dropped, addr)
+				continue
+			}
+			resolved[addr] = real
+			if real == addr {
+				registered = append(registered, addr)
+			} else {
+				registered = append(registered, real)
+				remapped = append(remapped, fmt.Sprintf("%s->%s", addr, real))
+			}
+		}
+	}
+
+	// Apply resolution: register real names, rewrite endpoint ServerAddresses to
+	// the resolved name, and inherit http-inbound endpoints onto HTTP callees.
+	httpInbound := httpInboundSystems[sysKey]
+	for _, svc := range sortedKeys(d.services) {
+		for _, e := range d.endpoints[svc] {
+			real, ok := resolved[e.ServerAddress]
+			if !ok || real == "" {
+				continue
+			}
+			d.services[real] = struct{}{}
+			if httpInbound && !e.grpc {
+				d.endpoints[real] = append(d.endpoints[real], httpEndpoint{
+					Method:   e.Method,
+					Route:    e.Route,
+					Port:     e.Port,
+					SpanName: e.SpanName,
+				})
+			}
+		}
+	}
+	if httpInbound {
+		dedupHTTP(d)
+	}
+
+	if len(registered) > 0 {
+		fmt.Fprintf(os.Stderr, "info: %s registered %d callee-only services: %s\n",
+			sysKey, len(registered), strings.Join(dedupStrings(registered), ", "))
+	}
+	if len(remapped) > 0 {
+		fmt.Fprintf(os.Stderr, "info: %s fuzzy-remapped ServerAddresses: %s\n",
+			sysKey, strings.Join(dedupStrings(remapped), ", "))
+	}
+	if len(dropped) > 0 {
+		fmt.Fprintf(os.Stderr, "warn: %s dropped %d ServerAddresses with no real-workload match: %s\n",
+			sysKey, len(dropped), strings.Join(dedupStrings(dropped), ", "))
+	}
+}
+
+// fuzzyResolveLabel matches a ServerAddress alias to a real pod app-label value.
+// Resolution order: exact → suffix-stripped (-service/-svc/-deployment) on both
+// sides → system-prefix-stripped → case-insensitive → substring → shortest
+// containing label. Returns the real label and true on a hit.
+func fuzzyResolveLabel(sysKey, addr string, realLabels []string) (string, bool) {
+	labelSet := map[string]struct{}{}
+	for _, l := range realLabels {
+		labelSet[l] = struct{}{}
+	}
+	if _, ok := labelSet[addr]; ok {
+		return addr, true
+	}
+
+	canon := func(s string) string {
+		s = strings.ToLower(s)
+		for _, suf := range []string{"-service", "-svc", "-deployment"} {
+			s = strings.TrimSuffix(s, suf)
+		}
+		s = strings.TrimPrefix(s, sysKey+"-")
+		return s
+	}
+	target := canon(addr)
+	// Prefer the shortest real label per canonical form for determinism.
+	canonToReal := map[string]string{}
+	for _, l := range sortByLen(realLabels) {
+		if _, seen := canonToReal[canon(l)]; !seen {
+			canonToReal[canon(l)] = l
+		}
+	}
+	if real, ok := canonToReal[target]; ok {
+		return real, true
+	}
+
+	// Substring: shortest real label whose canonical form contains, or is
+	// contained by, the target's canonical form.
+	for _, l := range sortByLen(realLabels) {
+		cl := canon(l)
+		if strings.Contains(cl, target) || strings.Contains(target, cl) {
+			return l, true
+		}
+	}
+	return "", false
+}
+
+// sortByLen returns the labels sorted by (length, lexicographic) so substring
+// resolution deterministically prefers the closest (shortest) match.
+func sortByLen(in []string) []string {
+	out := append([]string(nil), in...)
+	sort.SliceStable(out, func(i, j int) bool {
+		if len(out[i]) != len(out[j]) {
+			return len(out[i]) < len(out[j])
+		}
+		return out[i] < out[j]
+	})
+	return out
+}
+
+func dedupStrings(in []string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // hasHTTPEligibleEndpoint reports whether any loaded endpoint is a real
