@@ -47,6 +47,8 @@ type defaultCenter struct {
 	gw  *etcd.Gateway
 	env string
 
+	dbDefault DefaultProvider // optional; nil in DB-less deployments
+
 	mu       sync.RWMutex
 	bindings map[string]*binding // by fullKey
 	subs     *subscriberMux      // namespace -> []chan Entry
@@ -54,16 +56,20 @@ type defaultCenter struct {
 }
 
 // New constructs the Center. The fx provider in module.go wraps this.
-func New(gw *etcd.Gateway) (*defaultCenter, error) {
+// dbDefault is optional: when non-nil it inserts the
+// dynamic_configs.default_value resolver layer between toml and the static
+// default, making /aegis self-sufficient for seeded keys.
+func New(gw *etcd.Gateway, dbDefault DefaultProvider) (*defaultCenter, error) {
 	env := config.GetString("env")
 	if env == "" {
 		env = "dev"
 	}
 	c := &defaultCenter{
-		gw:       gw,
-		env:      env,
-		bindings: make(map[string]*binding),
-		subs:     newSubscriberMux(),
+		gw:        gw,
+		env:       env,
+		dbDefault: dbDefault,
+		bindings:  make(map[string]*binding),
+		subs:      newSubscriberMux(),
 	}
 	c.watcher = newWatcher(gw, c.fullPrefix(), c.dispatch)
 	return c, nil
@@ -102,13 +108,19 @@ func splitKey(env, full string) (namespace, key string, ok bool) {
 	return rest[:idx], rest[idx+1:], true
 }
 
-// resolveLayered runs the merge: etcd > env > toml > default.
+// resolveLayered runs the merge: etcd > env > toml > db_default > default.
 // Returns raw JSON bytes plus which layer produced them.
 func (c *defaultCenter) resolveLayered(ctx context.Context, namespace, key string, def any) ([]byte, Layer, error) {
 	// etcd
 	if raw, err := c.gw.Get(ctx, c.fullKey(namespace, key)); err == nil && raw != "" {
 		return []byte(raw), LayerEtcd, nil
 	}
+	return c.resolveBelowEtcd(ctx, namespace, key, def)
+}
+
+// resolveBelowEtcd runs env > toml > db_default > default. Split out from
+// resolveLayered so the lower layers are unit-testable without an etcd server.
+func (c *defaultCenter) resolveBelowEtcd(ctx context.Context, namespace, key string, def any) ([]byte, Layer, error) {
 	viperKey := namespace + "." + key
 	envName := strings.ToUpper(strings.NewReplacer(".", "_").Replace(viperKey))
 	if v, ok := os.LookupEnv(envName); ok && v != "" {
@@ -125,6 +137,15 @@ func (c *defaultCenter) resolveLayered(ctx context.Context, namespace, key strin
 			return nil, "", fmt.Errorf("%w: %v", ErrEncode, err)
 		}
 		return b, LayerTOML, nil
+	}
+	if c.dbDefault != nil {
+		if v, ok := c.dbDefault(ctx, namespace, key); ok {
+			b, err := json.Marshal(v)
+			if err != nil {
+				return nil, "", fmt.Errorf("%w: %v", ErrEncode, err)
+			}
+			return b, LayerDBDefault, nil
+		}
 	}
 	if def != nil {
 		b, err := json.Marshal(def)

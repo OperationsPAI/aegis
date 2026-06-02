@@ -18,11 +18,19 @@ import (
 type Layer string
 
 const (
-	LayerEtcd    Layer = "etcd"
-	LayerEnv     Layer = "env"
-	LayerTOML    Layer = "toml"
-	LayerDefault Layer = "default"
+	LayerEtcd      Layer = "etcd"
+	LayerEnv       Layer = "env"
+	LayerTOML      Layer = "toml"
+	LayerDBDefault Layer = "db_default"
+	LayerDefault   Layer = "default"
 )
+
+// DefaultProvider resolves the seeded default_value for a dotted config key
+// (namespace+"."+key) from the dynamic_configs table. ok is false when no row
+// exists. It is the resolver layer that makes /aegis self-sufficient: an
+// operator who never wrote an etcd override still resolves the DB-seeded
+// default rather than only the compile-time static default.
+type DefaultProvider func(ctx context.Context, namespace, key string) (value string, ok bool)
 
 // Action enumerates audit-log actions written by the admin handler.
 type Action string
@@ -87,11 +95,11 @@ func WithReason(reason string) SetOpt {
 
 // Errors surfaced by the center. Callers may use errors.Is/As.
 var (
-	ErrNotFound       = errors.New("configcenter: key not found")
-	ErrForbiddenKey   = errors.New("configcenter: key path rejected (secret-like)")
-	ErrInvalidValue   = errors.New("configcenter: value failed validation")
-	ErrEncode         = errors.New("configcenter: value encode failed")
-	ErrDecode         = errors.New("configcenter: value decode failed")
+	ErrNotFound     = errors.New("configcenter: key not found")
+	ErrForbiddenKey = errors.New("configcenter: key path rejected (secret-like)")
+	ErrInvalidValue = errors.New("configcenter: value failed validation")
+	ErrEncode       = errors.New("configcenter: value encode failed")
+	ErrDecode       = errors.New("configcenter: value decode failed")
 )
 
 // PubSub is a tiny pub/sub the watcher dispatches changes onto.
