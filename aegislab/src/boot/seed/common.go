@@ -1,9 +1,9 @@
 package initialization
 
 import (
+	"aegis/core/orchestrator/common"
 	"aegis/platform/config"
 	"aegis/platform/consts"
-	"aegis/core/orchestrator/common"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -19,6 +19,8 @@ func activateConfigScope(scope consts.ConfigScope, listener *common.ConfigUpdate
 			return fmt.Errorf("failed to activate consumer config listener: %w", err)
 		}
 	}
+
+	listener.EnsureConfigCenterBridge()
 
 	logrus.Infof("Config handlers registered for scope %s, %d total handler(s)",
 		consts.GetConfigScopeName(scope), len(common.ListRegisteredConfigKeys(nil)))

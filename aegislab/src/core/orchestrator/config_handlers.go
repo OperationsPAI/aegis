@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"aegis/core/orchestrator/common"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	k8s "aegis/platform/k8s"
-	"aegis/core/orchestrator/common"
 
 	"github.com/sirupsen/logrus"
 )
@@ -43,6 +43,38 @@ func RegisterConsumerHandlers(
 	logrus.Infof("Registered consumer config handlers: consumer=%v global=%v",
 		common.ListRegisteredConfigKeys(&consumerScope),
 		common.ListRegisteredConfigKeys(&globalScope))
+}
+
+// ReconcileRateLimitersFromConfig re-applies the current config values to each
+// limiter. Limiters are fx-constructed before the config listener loads
+// etcd/DB overrides into viper, so a fresh boot would otherwise honour only
+// the in-binary const default — an operator override set before the worker
+// started would be ignored until a live UpdateConfig that never comes. Call
+// this once after the config scopes are activated.
+func ReconcileRateLimitersFromConfig(
+	restartLimiter *TokenBucketRateLimiter,
+	warmingLimiter *TokenBucketRateLimiter,
+	buildLimiter *TokenBucketRateLimiter,
+	buildDatapackLimiter *TokenBucketRateLimiter,
+	algoLimiter *TokenBucketRateLimiter,
+) {
+	apply := func(limiter *TokenBucketRateLimiter, maxTokensKey string) {
+		if limiter == nil {
+			return
+		}
+		maxTokens := config.GetInt(maxTokensKey)
+		_, currentTimeout := limiter.GetConfig()
+		if waitSecs := config.GetInt(consts.TokenWaitTimeoutKey); waitSecs > 0 {
+			currentTimeout = time.Duration(waitSecs) * time.Second
+		}
+		limiter.UpdateConfig(maxTokens, currentTimeout)
+	}
+
+	apply(restartLimiter, consts.MaxTokensKeyRestartPedestal)
+	apply(warmingLimiter, consts.MaxTokensKeyNamespaceWarming)
+	apply(buildLimiter, consts.MaxTokensKeyBuildContainer)
+	apply(buildDatapackLimiter, consts.MaxTokensKeyBuildDatapack)
+	apply(algoLimiter, consts.MaxTokensKeyAlgoExecution)
 }
 
 // UpdateK8sController updates K8s controller informers based on namespace changes.

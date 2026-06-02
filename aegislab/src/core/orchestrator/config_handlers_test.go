@@ -93,3 +93,25 @@ func TestNamespaceWarmingLimiterReloads(t *testing.T) {
 		t.Fatalf("warming limiter max tokens = %d after reload, want 75", got)
 	}
 }
+
+// TestReconcileRateLimitersFromConfig is the regression guard for the
+// const-only boot break: limiters are fx-constructed before the config
+// listener loads etcd/DB overrides into viper, so a fresh worker would honour
+// only the in-binary const until a live UpdateConfig that never comes. After
+// the scopes are activated (viper populated), reconcile must push the
+// already-set override into each limiter without any watch event.
+func TestReconcileRateLimitersFromConfig(t *testing.T) {
+	restart := newTestLimiter(consts.RestartPedestalServiceName, consts.MaxConcurrentRestartPedestal)
+
+	// Limiter still holds the boot const; an override is present in config
+	// (as if loaded from etcd/DB at scope activation) but never delivered via
+	// a watch event.
+	setIntConfig(t, consts.MaxTokensKeyRestartPedestal, 10)
+
+	ReconcileRateLimitersFromConfig(restart, nil, nil, nil, nil)
+
+	got, _ := restart.GetConfig()
+	if got != 10 {
+		t.Fatalf("restart limiter max tokens = %d after reconcile, want 10 (still const-bound)", got)
+	}
+}

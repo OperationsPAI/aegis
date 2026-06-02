@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"aegis/core/orchestrator"
+	"aegis/core/orchestrator/common"
+	ratelimiter "aegis/crud/admin/ratelimiter"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	etcd "aegis/platform/etcd"
 	k8s "aegis/platform/k8s"
-	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	ratelimiter "aegis/crud/admin/ratelimiter"
-	"aegis/core/orchestrator/common"
-	"aegis/core/orchestrator"
+	redis "aegis/platform/redis"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -55,6 +55,7 @@ func InitializeConsumer(
 	if err := activateConfigScope(consumerData.scope, listener); err != nil {
 		return err
 	}
+	consumer.ReconcileRateLimitersFromConfig(restartLimiter, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
 
 	wireChaosSystemValidation()
 
