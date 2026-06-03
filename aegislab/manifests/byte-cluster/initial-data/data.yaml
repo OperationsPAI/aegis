@@ -537,19 +537,19 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: frontend.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: loadgen.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: otel.instrumentation
               type: 0
@@ -591,19 +591,19 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: frontend.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: loadgen.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: otel.instrumentation
               type: 0
@@ -648,19 +648,19 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: frontend.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: loadgen.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-3ecac5f
+              default_value: 20260531-otellogs-4a8dcb9
               overridable: true
             - key: otel.instrumentation
               type: 0
@@ -908,7 +908,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260531-9d7d2a1
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -947,7 +947,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260531-9d7d2a1
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1015,7 +1015,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260531-9d7d2a1
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1073,7 +1073,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260531-9d7d2a1
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1097,7 +1097,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 20260529-04e3cb6
+              default_value: 20260530-e7ad889
               overridable: true
             - key: aegis.points.enabled
               type: 0
@@ -1196,7 +1196,7 @@ containers:
               type: 0
               category: 3
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260530-e7ad889
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1227,7 +1227,7 @@ containers:
               type: 0
               category: 3
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260530-e7ad889
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1280,7 +1280,7 @@ containers:
               type: 0
               category: 3
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260530-e7ad889
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1338,7 +1338,7 @@ containers:
               type: 0
               category: 3
               value_type: 0
-              default_value: 20260427-9397c2e
+              default_value: 20260530-e7ad889
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -1362,7 +1362,7 @@ containers:
               type: 0
               category: 3
               value_type: 0
-              default_value: 20260529-04e3cb6
+              default_value: 20260530-e7ad889
               overridable: true
             - key: aegis.points.enabled
               type: 0
@@ -1456,7 +1456,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260423-2b3fd43
+              default_value: 20260602-9758cbfe
               overridable: true
             - key: opentelemetry.otlpEndpoint
               type: 0
