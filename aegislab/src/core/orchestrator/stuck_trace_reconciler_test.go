@@ -729,6 +729,99 @@ func TestReconciler_RestartPedestalRecoveryToleratesNilReleasers(t *testing.T) {
 	require.Equal(t, consts.TaskCancelled, task.State)
 }
 
+// makeWedgedNoNamespaceFixture models the issue #531 wedge: the
+// RestartPedestal reschedule loop could never acquire a namespace, so the
+// trace is parked at last_event=no.namespace.available with state=TracePending
+// (NOT TraceRunning — the reschedule sets the task TaskRescheduled, which never
+// advances the trace past Pending). This is the shape the pre-#531 reconciler
+// query was structurally blind to.
+func makeWedgedNoNamespaceFixture(t *testing.T, db *gorm.DB, namespace string, staleness time.Duration) (traceID, taskID string) {
+	t.Helper()
+	now := time.Now()
+	stuckAt := now.Add(-staleness)
+
+	traceID = uuid.NewString()
+	require.NoError(t, db.Create(&model.Trace{
+		ID:        traceID,
+		Type:      consts.TraceTypeFullPipeline,
+		LastEvent: consts.EventNoNamespaceAvailable,
+		StartTime: stuckAt.Add(-1 * time.Minute),
+		State:     consts.TracePending,
+		Status:    consts.CommonEnabled,
+		LeafNum:   1,
+		UpdatedAt: stuckAt,
+	}).Error)
+
+	taskID = uuid.NewString()
+	payload := map[string]any{
+		consts.RestartRequiredNamespace: namespace,
+		consts.RestartInjectPayload: map[string]any{
+			consts.InjectNamespace: namespace,
+		},
+	}
+	pj, err := json.Marshal(payload)
+	require.NoError(t, err)
+	require.NoError(t, db.Create(&model.Task{
+		ID:        taskID,
+		Type:      consts.TaskTypeRestartPedestal,
+		TraceID:   traceID,
+		Payload:   string(pj),
+		State:     consts.TaskRescheduled,
+		Status:    consts.CommonEnabled,
+		Level:     0,
+		Sequence:  0,
+		UpdatedAt: stuckAt,
+	}).Error)
+	return traceID, taskID
+}
+
+// TestReconciler_ReapsTraceWedgedAtNoNamespaceAvailable is the issue #531
+// headline: a TracePending trace stuck at no.namespace.available past the RP
+// threshold must be reaped — trace failed, task cancelled, namespace lock
+// released — so the topology's dedup slot frees and the puzzle becomes
+// re-injectable. Before the fix the query filtered on state=TraceRunning only,
+// so this trace was never even a candidate.
+func TestReconciler_ReapsTraceWedgedAtNoNamespaceAvailable(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	traceID, taskID := makeWedgedNoNamespaceFixture(t, db, "sn3", 45*time.Minute)
+
+	lock := &fakeNamespaceLockReleaser{}
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+	r.namespaceLockReleaser = lock
+
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, candidates, "wedged no.namespace.available trace must be a candidate")
+	require.Equal(t, 1, processed)
+
+	var trace model.Trace
+	require.NoError(t, db.Where("id = ?", traceID).First(&trace).Error)
+	require.Equal(t, consts.TraceFailed, trace.State)
+	require.NotNil(t, trace.EndTime)
+
+	var task model.Task
+	require.NoError(t, db.Where("id = ?", taskID).First(&task).Error)
+	require.Equal(t, consts.TaskCancelled, task.State)
+
+	require.Len(t, lock.calls, 1, "namespace lock must be released so the topology becomes re-injectable")
+	require.Equal(t, "sn3", lock.calls[0].namespace)
+}
+
+// TestReconciler_NoNamespaceAvailableNotReapedBeforeThreshold guards the lower
+// bound: most no.namespace.available traces are fresh and legitimately
+// acquiring a namespace. One at 20 min (< 40 min RP threshold) must survive.
+func TestReconciler_NoNamespaceAvailableNotReapedBeforeThreshold(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	makeWedgedNoNamespaceFixture(t, db, "sn3", 20*time.Minute)
+
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 0, candidates,
+		"no.namespace.available at 20m (< 40m RP threshold) must not be a candidate")
+	require.Equal(t, 0, processed)
+}
+
 // TestReconciler_FaultInjectionRecoveryUnaffectedByRestartBranch is a
 // belt-and-braces regression guard: adding the restart-pedestal branch
 // must not change behavior for traces stuck at fault.injection.*. The

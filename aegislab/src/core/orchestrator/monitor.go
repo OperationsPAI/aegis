@@ -77,6 +77,13 @@ type NamespaceMonitor interface {
 // to call on every successful AcquireLock.
 type NamespaceActivator interface {
 	EnsureNamespaceActive(namespace string) error
+	// NamespaceIsActive reports whether the live k8s namespace exists and is
+	// in phase Active (not Terminating). The allocator uses it to self-heal a
+	// stale CommonDeleted Redis status when the namespace is in fact Active
+	// (issue #531): reclaim + re-provision (or --auto/--allow-bootstrap churn)
+	// sets status=-1 on delete but never flips it back, permanently rejecting
+	// acquires against an Active namespace.
+	NamespaceIsActive(ctx context.Context, namespace string) (bool, error)
 }
 
 // monitor manages namespace locks and status using Redis
@@ -203,7 +210,31 @@ func (m *monitor) AcquireLock(namespace string, endTime time.Time, traceID strin
 		return fmt.Errorf("namespace %s is disabled and not accepting new locks", namespace)
 	}
 	if status == consts.CommonDeleted {
-		return fmt.Errorf("namespace %s has been deleted", namespace)
+		// Self-heal a stale CommonDeleted status when the live namespace is
+		// Active (issue #531). Without this, a namespace that was reclaimed
+		// and re-provisioned — or churned via --auto/--allow-bootstrap —
+		// stays at status=-1 forever and every RestartPedestal acquire is
+		// rejected, wedging traces at no.namespace.available. Only reconcile
+		// when k8s definitively reports Active; on a probe error or a
+		// Terminating/absent namespace we keep rejecting.
+		if activator := m.currentActivator(); activator != nil {
+			active, activeErr := activator.NamespaceIsActive(m.currentContext(), namespace)
+			if activeErr != nil {
+				logrus.WithError(activeErr).WithField("namespace", namespace).
+					Warn("could not verify k8s namespace phase for stale-deleted status; rejecting acquire")
+				return fmt.Errorf("namespace %s has been deleted", namespace)
+			}
+			if !active {
+				return fmt.Errorf("namespace %s has been deleted", namespace)
+			}
+			if healErr := m.setNamespaceStatus(namespace, consts.CommonEnabled); healErr != nil {
+				return fmt.Errorf("namespace %s deleted in Redis but Active in k8s; failed to self-heal status: %w", namespace, healErr)
+			}
+			logrus.WithField("namespace", namespace).
+				Warn("self-healed stale CommonDeleted namespace status: live k8s namespace is Active")
+		} else {
+			return fmt.Errorf("namespace %s has been deleted", namespace)
+		}
 	}
 
 	// All lock checking and acquisition happens in a single atomic transaction

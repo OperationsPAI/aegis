@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/model"
+
 	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
@@ -415,7 +417,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			}
 
 			if !acquired {
-				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, "rate limited, retrying later"); err != nil {
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, "rate limited, retrying later"); err != nil {
 					return err
 				}
 				return nil
@@ -497,7 +499,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 				// no-op for any token that was already released.
 				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
 				reason := fmt.Sprintf("failed to acquire lock for required namespace %s: %v, retrying", payload.requiredNamespace, lockErr)
-				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, reason); err != nil {
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, reason); err != nil {
 					return err
 				}
 				return nil
@@ -512,7 +514,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 				// Failed to acquire namespace lock, immediately release rate
 				// limit token so a stuck reschedule loop doesn't pin slots.
 				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
-				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, "failed to acquire lock for namespace, retrying"); err != nil {
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, "failed to acquire lock for namespace, retrying"); err != nil {
 					return err
 				}
 
@@ -740,8 +742,27 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 	})
 }
 
-// rescheduleRestartPedestalTask reschedules a pedestal restart task with exponential backoff and jitter
-func rescheduleRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, task *dto.UnifiedTask, reason string) error {
+// restartPedestalMaxReschedule resolves the abandon cap for RestartPedestal
+// reschedules from dynamic config, falling back to the consts default. Read on
+// every reschedule so an etcd push applies without a rebuild.
+func restartPedestalMaxReschedule() int {
+	v := config.GetInt(consts.RestartPedestalMaxRescheduleKey)
+	if v <= 0 {
+		return consts.DefaultRestartPedestalMaxReschedule
+	}
+	return v
+}
+
+// rescheduleRestartPedestalTask reschedules a pedestal restart task with
+// exponential backoff and jitter. Once task.ReStartNum has reached the abandon
+// cap (issue #531) it stops rescheduling and instead fails the trace and
+// releases the namespace lock the submit-time allocator pinned under this
+// traceID — otherwise a permanently-unsatisfiable required namespace
+// reschedules forever, holding its dedup topology slot and saturating workers.
+func rescheduleRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, monitor NamespaceMonitor, task *dto.UnifiedTask, reason string) error {
+	if task.ReStartNum >= restartPedestalMaxReschedule() {
+		return abandonRestartPedestalTask(ctx, db, redisGateway, monitor, task, reason)
+	}
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
 		span := trace.SpanFromContext(ctx)
 
@@ -778,6 +799,72 @@ func rescheduleRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGatewa
 
 		return nil
 	})
+}
+
+// abandonRestartPedestalTask finalizes a RestartPedestal task that has
+// exhausted its reschedule budget (issue #531). It marks the task errored and
+// the trace failed, emits a restart.pedestal.failed event, and releases the
+// namespace lock the submit-time allocator pinned under this traceID so the
+// topology becomes re-injectable instead of holding a dedup slot forever.
+func abandonRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, monitor NamespaceMonitor, task *dto.UnifiedTask, reason string) error {
+	logEntry := logrus.WithFields(logrus.Fields{
+		"task_id":     task.TaskID,
+		"trace_id":    task.TraceID,
+		"retry_count": task.ReStartNum,
+	})
+	message := fmt.Sprintf("restart pedestal abandoned after %d reschedules: %s", task.ReStartNum, reason)
+	logEntry.Warn(message)
+
+	updateTaskState(ctx,
+		newTaskStateUpdate(
+			task.TraceID,
+			task.TaskID,
+			consts.TaskTypeRestartPedestal,
+			consts.TaskError,
+			message,
+		).withEvent(consts.EventRestartPedestalFailed, message).withDB(db).withRedis(redisGateway),
+	)
+
+	if err := db.WithContext(ctx).Model(&model.Trace{}).
+		Where("id = ? AND state = ?", task.TraceID, consts.TraceRunning).
+		Updates(map[string]any{
+			"state":      consts.TraceFailed,
+			"last_event": consts.EventRestartPedestalFailed,
+			"end_time":   time.Now(),
+		}).Error; err != nil {
+		logEntry.WithError(err).Warn("failed to mark trace failed on restart-pedestal abandon (continuing)")
+	}
+
+	namespace := namespaceFromRestartPayloadMap(task.Payload)
+	if namespace != "" && monitor != nil {
+		if err := monitor.ReleaseLock(ctx, namespace, task.TraceID); err != nil {
+			logEntry.WithError(err).WithField("namespace", namespace).
+				Warn("failed to release namespace lock on restart-pedestal abandon (continuing)")
+		}
+	}
+	return nil
+}
+
+// namespaceFromRestartPayloadMap extracts the namespace a RestartPedestal task
+// is operating against from its in-memory payload map. Mirrors
+// namespaceFromRestartPayload (which parses the persisted JSON string).
+func namespaceFromRestartPayloadMap(payload map[string]any) string {
+	if payload == nil {
+		return ""
+	}
+	if v, ok := payload[consts.RestartRequiredNamespace].(string); ok {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+	if inner, ok := payload[consts.RestartInjectPayload].(map[string]any); ok {
+		if v, ok := inner[consts.InjectNamespace].(string); ok {
+			if s := strings.TrimSpace(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }
 
 // parseRestartPayload parses the payload for a restart pedestal task
