@@ -201,6 +201,46 @@ func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) (map[str
 	return out, nil
 }
 
+// seedParamSchemas indexes every seeded capability by name so the submit-time
+// validator can reach its param_schema without a DB round-trip. The schemas
+// are the same Seeds* values the worker/chaos-service compile, so the rules
+// can't drift between submit and dispatch.
+var seedParamSchemas = func() map[string]*Capability {
+	seeds := AllSeededCapabilities()
+	out := make(map[string]*Capability, len(seeds))
+	for i := range seeds {
+		out[seeds[i].Name] = &seeds[i]
+	}
+	return out
+}()
+
+// ValidateGuidedConfig runs the same two checks the FaultInjection worker
+// stage applies — required-param presence (GuidedToChaosParams) and the
+// per-capability JSON Schema (forParams + validateInstance, identical to the
+// chaos-service's CreateInjection path) — so a malformed guided config is
+// rejected at submit before any trace/task is persisted. Schema failures wrap
+// ErrSchemaValidation; required-param gaps surface as the GuidedToChaosParams
+// error. Returns nil for a config the worker would accept.
+func ValidateGuidedConfig(cfg guidedcli.GuidedConfig) error {
+	capability, ok := ChaosTypeToCapability[strings.TrimSpace(cfg.ChaosType)]
+	if !ok {
+		return fmt.Errorf("unknown chaos_type %q (no capability mapping)", cfg.ChaosType)
+	}
+	params, err := GuidedToChaosParams(capability, cfg)
+	if err != nil {
+		return err
+	}
+	capRow, ok := seedParamSchemas[capability]
+	if !ok {
+		return nil
+	}
+	paramSchema, err := newSchemaCompiler().forParams(capRow)
+	if err != nil {
+		return err
+	}
+	return validateInstance(paramSchema, params, "params")
+}
+
 // GuidedChaosPointID derives the Point ID for a finalized guided config using
 // the same canonicalisation rule the chaos service applies at manifest import.
 // instance and chartVersion address per-instance seed catalog rows without a

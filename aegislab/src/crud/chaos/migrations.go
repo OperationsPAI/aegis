@@ -61,11 +61,11 @@ func addPointSysUpdatedAtIndex(db *gorm.DB) error {
 	).Error
 }
 
-// SeedCapabilities inserts the step-1 Capability set. Conservative shape:
-// pod_kill targets a pod-selector via {namespace, app}; params carry a
-// duration_s knob; the observable contract asserts that the targeted pod
-// restarted within the injection window.
-func SeedCapabilities(db *gorm.DB) error {
+// AllSeededCapabilities returns the full Capability set the platform seeds
+// into chaos_capabilities. Exposed so submit-time validation can compile the
+// same per-capability param schemas the worker/chaos-service enforces at
+// dispatch, without a DB round-trip and without a second copy of the schemas.
+func AllSeededCapabilities() []Capability {
 	seed := []Capability{
 		{
 			Name:               "pod_kill",
@@ -83,6 +83,15 @@ func SeedCapabilities(db *gorm.DB) error {
 	seed = append(seed, SeedsDNS...)
 	seed = append(seed, SeedsHTTP...)
 	seed = append(seed, SeedsJVM...)
+	return seed
+}
+
+// SeedCapabilities inserts the step-1 Capability set. Conservative shape:
+// pod_kill targets a pod-selector via {namespace, app}; params carry a
+// duration_s knob; the observable contract asserts that the targeted pod
+// restarted within the injection window.
+func SeedCapabilities(db *gorm.DB) error {
+	seed := AllSeededCapabilities()
 	return db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "name"}},
 		DoUpdates: clause.AssignmentColumns([]string{
