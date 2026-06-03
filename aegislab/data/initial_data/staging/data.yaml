@@ -874,7 +874,7 @@ dynamic_configs:
     min_value: 1
     max_value: 20
   - key: rate_limiting.max_concurrent_build_datapack
-    default_value: '8'
+    default_value: '20'
     value_type: 2
     scope: 1
     category: rate_limiting
@@ -901,14 +901,14 @@ dynamic_configs:
     min_value: 30
     max_value: 1800
   - key: rate_limiting.max_concurrent_restarts_pedestal
-    default_value: '2'
+    default_value: '40'
     value_type: 2
     scope: 1
     category: rate_limiting
     description: Maximum number of concurrent pedestal restarts (helm-install fan-out against the API server)
     is_secret: false
     min_value: 1
-    max_value: 10
+    max_value: 50
   - key: rate_limiting.max_concurrent_ns_warming
     default_value: '30'
     value_type: 2
