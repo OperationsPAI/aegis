@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/testutil"
 
+	"github.com/oklog/ulid/v2"
 	"gorm.io/gorm"
 )
 
@@ -325,5 +327,42 @@ func TestCreateInjection_UsesGlobalCapWhenNoOverride(t *testing.T) {
 	})
 	if !errors.Is(err, ErrSystemAtCapacity) {
 		t.Fatalf("at global limit: want ErrSystemAtCapacity, got %v", err)
+	}
+}
+
+// TestCreateInjection_DefaultFloorWhenNoOverrideOrConfig asserts that with no
+// per-system override and no global config loaded (config.GetInt → 0),
+// checkSystemCapacity falls back to consts.DefaultMaxConcurrentInjections
+// rather than treating the system as unlimited. This is the guard for a
+// process where the dynamic_config row never reached Viper.
+func TestCreateInjection_DefaultFloorWhenNoOverrideOrConfig(t *testing.T) {
+	if err := config.SetViperValue(consts.MaxConcurrentInjectionsKey, "0", consts.ConfigValueTypeInt); err != nil {
+		t.Fatalf("clear global cap: %v", err)
+	}
+
+	mgr, _, db := newTestManager(t)
+	sysName, pointID := seedSystemAndPoint(t, db)
+	if err := db.Model(&System{}).Where("name = ?", sysName).
+		Update("max_concurrent_injections", 0).Error; err != nil {
+		t.Fatalf("clear override: %v", err)
+	}
+
+	now := time.Now().UTC()
+	for i := 0; i < consts.DefaultMaxConcurrentInjections; i++ {
+		row := Injection{
+			ID: ulid.Make().String(), PointID: pointID, Params: JSONMap{},
+			IdempotencyKey: fmt.Sprintf("floor-%d", i), ExecutorName: "fake",
+			ExecutorHandle: fmt.Sprintf("handle-floor-%d", i), Status: StatusRunning, Ts: now,
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatalf("seed inflight %d: %v", i, err)
+		}
+	}
+
+	_, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "at-default-floor",
+	})
+	if !errors.Is(err, ErrSystemAtCapacity) {
+		t.Fatalf("at default floor: want ErrSystemAtCapacity, got %v", err)
 	}
 }

@@ -65,6 +65,11 @@ func activateGlobalConfigScope(lc fx.Lifecycle, db *gorm.DB, etcdGw *etcd.Gatewa
 			if err := listener.EnsureScope(consts.ConfigScopeGlobal); err != nil {
 				logrus.WithError(err).Warn("aegis-chaos: failed to activate global config scope; guided resolver will see no systems")
 			}
+			// EnsureScope only watches the legacy /rcabench tree; `aegisctl etcd
+			// put` writes the /aegis configcenter tree, so without the bridge a
+			// runtime tune of rate_limiting.max_concurrent_injections never
+			// reaches checkSystemCapacity's config.GetInt read.
+			listener.EnsureConfigCenterBridge()
 			return nil
 		},
 	})

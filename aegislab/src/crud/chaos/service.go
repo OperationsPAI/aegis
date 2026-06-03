@@ -361,15 +361,16 @@ func (s *Manager) ListCapabilities(ctx context.Context) ([]Capability, error) {
 // new one when the system is at its concurrency limit. The effective cap is
 // the per-system chaos_systems.max_concurrent_injections override when set
 // (> 0), otherwise the global rate_limiting.max_concurrent_injections
-// dynamic_config (read via config.GetInt so an `aegisctl etcd put` applies
-// live). A non-positive effective cap is treated as unlimited.
+// dynamic_config (read via config.GetInt). When neither is set the cap falls
+// back to consts.DefaultMaxConcurrentInjections so a missing config is never
+// silently unlimited.
 func (s *Manager) checkSystemCapacity(ctx context.Context, sys *System) error {
 	limit := sys.MaxConcurrentInjections
 	if limit <= 0 {
 		limit = config.GetInt(consts.MaxConcurrentInjectionsKey)
 	}
 	if limit <= 0 {
-		return nil
+		limit = consts.DefaultMaxConcurrentInjections
 	}
 	var inFlight int64
 	err := s.DB.WithContext(ctx).Model(&Injection{}).

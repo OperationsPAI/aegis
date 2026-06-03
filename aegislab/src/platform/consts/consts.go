@@ -500,10 +500,12 @@ const (
 	AlgoExecutionServiceName   = "algo_execution"
 
 	// Per-system inject concurrency cap. checkSystemCapacity reads this via
-	// config.GetInt so a runtime `aegisctl etcd put` applies without a backend
-	// rebuild (the etcd→Viper bridge keeps the live value current; the seeded
-	// dynamic_configs row is only the default floor). The per-system
-	// chaos_systems.max_concurrent_injections column overrides it when set > 0.
+	// config.GetInt; the seeded dynamic_configs row must carry Global scope so
+	// aegis-chaos boot's EnsureScope(Global) loads it into Viper, and the boot
+	// hook also starts EnsureConfigCenterBridge so a runtime `aegisctl etcd put`
+	// applies live. The per-system chaos_systems.max_concurrent_injections
+	// column overrides it when set > 0; DefaultMaxConcurrentInjections is the
+	// final floor when neither override nor config is present.
 	MaxConcurrentInjectionsKey     = "rate_limiting.max_concurrent_injections"
 	DefaultMaxConcurrentInjections = 20
 
