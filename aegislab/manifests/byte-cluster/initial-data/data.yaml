@@ -22,6 +22,14 @@ containers:
       - name: 1.0.2
         image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260530-951b87ec-pedestal-aliases
         command: bash /entrypoint.sh
+      # Bumped 1.0.2 -> 1.0.3: persist platform_convert's converted/ (v3
+      # standardized parquets) back to the datapack blob in s3 mode. Regression
+      # from 0b0ea6b4 moved converted/ from output_path -> input_path (an
+      # atexit-deleted staged tempdir), so it never reached blob. 1.0.3 uploads
+      # converted/ to <INPUT_PATH>/converted/ after conversion.
+      - name: 1.0.3
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260601-bf7b21a2-converted-blob
+        command: bash /entrypoint.sh
   - type: 0
     name: random
     is_public: true
