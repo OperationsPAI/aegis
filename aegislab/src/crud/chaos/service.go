@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"aegis/platform/config"
+	"aegis/platform/consts"
+
 	"github.com/oklog/ulid/v2"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -355,11 +358,19 @@ func (s *Manager) ListCapabilities(ctx context.Context) ([]Capability, error) {
 
 // checkSystemCapacity counts non-terminal injections scoped to the given
 // system (joined via chaos_points.system_name) and refuses to accept a
-// new one when the system is at its MaxConcurrentInjections limit. A
-// zero limit is treated as unlimited.
+// new one when the system is at its concurrency limit. The effective cap is
+// the per-system chaos_systems.max_concurrent_injections override when set
+// (> 0), otherwise the global rate_limiting.max_concurrent_injections
+// dynamic_config (read via config.GetInt). When neither is set the cap falls
+// back to consts.DefaultMaxConcurrentInjections so a missing config is never
+// silently unlimited.
 func (s *Manager) checkSystemCapacity(ctx context.Context, sys *System) error {
-	if sys.MaxConcurrentInjections <= 0 {
-		return nil
+	limit := sys.MaxConcurrentInjections
+	if limit <= 0 {
+		limit = config.GetInt(consts.MaxConcurrentInjectionsKey)
+	}
+	if limit <= 0 {
+		limit = consts.DefaultMaxConcurrentInjections
 	}
 	var inFlight int64
 	err := s.DB.WithContext(ctx).Model(&Injection{}).
@@ -370,7 +381,7 @@ func (s *Manager) checkSystemCapacity(ctx context.Context, sys *System) error {
 	if err != nil {
 		return err
 	}
-	if inFlight >= int64(sys.MaxConcurrentInjections) {
+	if inFlight >= int64(limit) {
 		return ErrSystemAtCapacity
 	}
 	return nil
