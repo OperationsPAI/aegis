@@ -499,6 +499,14 @@ const (
 	MaxConcurrentAlgoExecution = 5
 	AlgoExecutionServiceName   = "algo_execution"
 
+	// Per-system inject concurrency cap. checkSystemCapacity reads this via
+	// config.GetInt so a runtime `aegisctl etcd put` applies without a backend
+	// rebuild (the etcd→Viper bridge keeps the live value current; the seeded
+	// dynamic_configs row is only the default floor). The per-system
+	// chaos_systems.max_concurrent_injections column overrides it when set > 0.
+	MaxConcurrentInjectionsKey     = "rate_limiting.max_concurrent_injections"
+	DefaultMaxConcurrentInjections = 20
+
 	// Namespace warming rate limiting. Decoupled from RestartPedestal so the
 	// "max concurrent helm-installs hammering the API server" bound stays
 	// small (typically 5) while "max namespaces simultaneously cold-starting

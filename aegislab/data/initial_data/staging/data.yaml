@@ -927,6 +927,15 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 50
+  - key: rate_limiting.max_concurrent_injections
+    default_value: '20'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent in-flight fault injections per system; overridden per-system by chaos_systems.max_concurrent_injections when set
+    is_secret: false
+    min_value: 1
+    max_value: 100
   - key: rate_limiting.token_wait_timeout
     default_value: '10'
     value_type: 2

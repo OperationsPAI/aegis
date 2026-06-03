@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"aegis/platform/config"
+	"aegis/platform/consts"
 	"aegis/platform/testutil"
 
 	"gorm.io/gorm"
@@ -286,5 +288,42 @@ func TestCreateInjection_RespectsMaxConcurrent(t *testing.T) {
 	})
 	if !errors.Is(err, ErrSystemAtCapacity) {
 		t.Fatalf("at limit: want ErrSystemAtCapacity, got %v", err)
+	}
+}
+
+// TestCreateInjection_UsesGlobalCapWhenNoOverride asserts that when the
+// per-system override is 0, checkSystemCapacity falls back to the global
+// rate_limiting.max_concurrent_injections dynamic_config (read via
+// config.GetInt). Mirrors the override test's boundary check at the global
+// value.
+func TestCreateInjection_UsesGlobalCapWhenNoOverride(t *testing.T) {
+	if err := config.SetViperValue(consts.MaxConcurrentInjectionsKey, "1", consts.ConfigValueTypeInt); err != nil {
+		t.Fatalf("set global cap: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = config.SetViperValue(consts.MaxConcurrentInjectionsKey, "0", consts.ConfigValueTypeInt)
+	})
+
+	mgr, _, db := newTestManager(t)
+	sysName, pointID := seedSystemAndPoint(t, db)
+	if err := db.Model(&System{}).Where("name = ?", sysName).
+		Update("max_concurrent_injections", 0).Error; err != nil {
+		t.Fatalf("clear override: %v", err)
+	}
+
+	row := Injection{
+		ID: "01HQX0000000000000000000B0", PointID: pointID, Params: JSONMap{},
+		IdempotencyKey: "preexisting-global", ExecutorName: "fake",
+		ExecutorHandle: "handle-global", Status: StatusRunning, Ts: time.Now().UTC(),
+	}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatalf("seed inflight: %v", err)
+	}
+
+	_, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "at-global-limit",
+	})
+	if !errors.Is(err, ErrSystemAtCapacity) {
+		t.Fatalf("at global limit: want ErrSystemAtCapacity, got %v", err)
 	}
 }
