@@ -2,9 +2,11 @@ package consumer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +20,14 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
+
+// ErrNamespaceLockContended signals transient namespace-lock backpressure: a
+// sibling trace owns the lock right now (or won a concurrent acquire) in the
+// release/reacquire window between RestartPedestal and FaultInjection. The
+// FaultInjection worker classifies this via errors.Is and reschedules with
+// backoff rather than terminal-failing the trace. Distinct from a structurally
+// invalid namespace (disabled / deleted / not-in-config), which stays terminal.
+var ErrNamespaceLockContended = errors.New("namespace lock contended")
 
 type LockMessage struct {
 	TraceID string    `json:"trace_id"`
@@ -333,8 +343,15 @@ func (m *monitor) CheckNamespaceToInject(namespace string, executeTime time.Time
 	// Try to acquire the lock - all availability checking is done inside acquireNamespaceLock
 	err := m.AcquireLock(namespace, proposedEndTime, traceID, consts.TaskTypeFaultInjection)
 	if err != nil {
+		// goredis.TxFailedErr (lost a concurrent acquire) and the lock-store's
+		// "locked by <other-trace> until" rejection are both transient
+		// backpressure from a sibling trace; tag them with the retryable
+		// sentinel so the worker reschedules instead of terminal-failing.
 		if err == goredis.TxFailedErr {
-			return fmt.Errorf("cannot inject fault: namespace %s was concurrently acquired by another client", namespace)
+			return fmt.Errorf("%w: namespace %s was concurrently acquired by another client", ErrNamespaceLockContended, namespace)
+		}
+		if strings.Contains(err.Error(), "is locked by") {
+			return fmt.Errorf("%w: %v", ErrNamespaceLockContended, err)
 		}
 		return fmt.Errorf("cannot inject fault: %v", err)
 	}

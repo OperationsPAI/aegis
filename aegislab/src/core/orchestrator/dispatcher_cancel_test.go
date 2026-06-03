@@ -2,6 +2,8 @@ package consumer
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"sync"
 	"testing"
 
@@ -92,6 +94,31 @@ func TestDefaultChaosServiceClientUsesSAResolver(t *testing.T) {
 	}
 	if sdkCli.bearer != "env-fallback-cancel" {
 		t.Errorf("bearer = %q; want env fallback", sdkCli.bearer)
+	}
+}
+
+// TestChaosServiceErrClassifiesAtCapacity pins the issue-#533 crux: a 429 from
+// the chaos service must be classified (via the HTTP status code, not error
+// string matching) as the retryable errChaosServiceAtCapacity sentinel so the
+// FaultInjection worker reschedules instead of terminal-failing the trace.
+// Non-429 statuses (e.g. 404 catalog miss) must stay terminal — they must NOT
+// match the sentinel.
+func TestChaosServiceErrClassifiesAtCapacity(t *testing.T) {
+	base := errors.New("429 Too Many Requests")
+
+	at := chaosServiceErr(base, &http.Response{StatusCode: http.StatusTooManyRequests})
+	if !errors.Is(at, errChaosServiceAtCapacity) {
+		t.Fatalf("429 not classified as at-capacity: %v", at)
+	}
+
+	notFound := chaosServiceErr(errors.New("404 Not Found"), &http.Response{StatusCode: http.StatusNotFound})
+	if errors.Is(notFound, errChaosServiceAtCapacity) {
+		t.Fatalf("404 wrongly classified as at-capacity: %v", notFound)
+	}
+
+	nilResp := chaosServiceErr(base, nil)
+	if errors.Is(nilResp, errChaosServiceAtCapacity) {
+		t.Fatalf("nil response wrongly classified as at-capacity: %v", nilResp)
 	}
 }
 
