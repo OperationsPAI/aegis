@@ -45,6 +45,7 @@ SYSTEM=""
 ROUNDS=999
 SLEEP=900
 ENGINE="claude"
+MODEL=""
 STATE_BASE="${HOME}/.aegisctl/injection-author"
 EXTRA_INSTRUCTION=""
 AEGISCTL_BIN="/tmp/aegisctl"
@@ -64,6 +65,7 @@ while [[ $# -gt 0 ]]; do
     --rounds)            ROUNDS="$2";   shift 2 ;;
     --sleep)             SLEEP="$2";    shift 2 ;;
     --engine)            ENGINE="$2";   shift 2 ;;
+    --model)             MODEL="$2";    shift 2 ;;
     --state-dir)         STATE_BASE="$2"; shift 2 ;;
     --extra-instruction) EXTRA_INSTRUCTION="$2"; shift 2 ;;
     --aegisctl-bin)      AEGISCTL_BIN="$2"; shift 2 ;;
@@ -93,8 +95,10 @@ case "$ENGINE" in
   # --dangerously-skip-permissions: the loop is fully autonomous, there's
   # nobody at the keyboard to approve tool calls. Without this the spawned
   # session blocks on every Write / Bash that touches a path outside cwd.
-  claude) ENGINE_CMD=("claude" "-p" "--dangerously-skip-permissions") ;;
-  codex)  ENGINE_CMD=("codex" "exec" "--dangerously-bypass-approvals-and-sandbox") ;;
+  claude) ENGINE_CMD=("claude" "-p" "--dangerously-skip-permissions")
+          [[ -n "$MODEL" ]] && ENGINE_CMD+=("--model" "$MODEL") ;;
+  codex)  ENGINE_CMD=("codex" "exec" "--dangerously-bypass-approvals-and-sandbox")
+          [[ -n "$MODEL" ]] && ENGINE_CMD+=("--model" "$MODEL") ;;
   *) echo "error: --engine must be claude or codex" >&2; exit 2 ;;
 esac
 
