@@ -536,6 +536,18 @@ const (
 	// duration while still recovering genuinely-dead workers.
 	StuckTraceReconcileRestartPedestalThresholdKey = "rate_limiting.stuck_trace_reconcile_restart_pedestal_threshold_seconds"
 	DefaultStuckTraceReconcileRestartPedestalSecs  = 2400
+
+	// RestartPedestalMaxRescheduleKey caps how many times a RestartPedestal
+	// task may reschedule on a transient acquire failure (rate-limited / no
+	// namespace available) before it is abandoned: the trace is failed and the
+	// namespace lock released so the topology becomes re-injectable instead of
+	// holding a dedup slot forever (issue #531). Read on every reschedule so a
+	// runtime etcd push applies without a rebuild. Default 30: at the backoff
+	// cap of 5 min per attempt that is a ~2.5 h budget for a genuinely
+	// transient pool, well past which the namespace is permanently
+	// unsatisfiable.
+	RestartPedestalMaxRescheduleKey     = "rate_limiting.restart_pedestal_max_reschedule"
+	DefaultRestartPedestalMaxReschedule = 30
 )
 
 type EventType string

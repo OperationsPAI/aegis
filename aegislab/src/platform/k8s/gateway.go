@@ -305,6 +305,27 @@ func (g *Gateway) NamespaceHasWorkload(ctx context.Context, namespace string) (b
 	return len(pods.Items) > 0, nil
 }
 
+// NamespaceIsActive reports whether the namespace exists and is in phase
+// Active (not Terminating). Returns (false, nil) when the namespace is absent
+// or Terminating — the allocator self-heal path treats both as "do not
+// reclaim the stale Redis status". A nil error with false means a definitive
+// "not allocatable"; a non-nil error means the cluster could not be reached
+// and the caller should not self-heal on an unknown.
+func (g *Gateway) NamespaceIsActive(ctx context.Context, name string) (bool, error) {
+	client, err := getK8sClient()
+	if err != nil {
+		return false, k8sClientNotAvailableErr(err)
+	}
+	ns, err := client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get namespace %q: %w", name, err)
+	}
+	return ns.Status.Phase == corev1.NamespaceActive, nil
+}
+
 func (g *Gateway) CheckHealth(ctx context.Context) error {
 	if _, err := getK8sRestConfig(); err != nil {
 		return fmt.Errorf("kubernetes config not available: %w", err)

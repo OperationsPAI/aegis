@@ -75,3 +75,38 @@ func TestAdjustInjectTimeAfterWarmup(t *testing.T) {
 		}
 	})
 }
+
+func TestNamespaceFromRestartPayloadMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload map[string]any
+		want    string
+	}{
+		{name: "nil", payload: nil, want: ""},
+		{name: "empty", payload: map[string]any{}, want: ""},
+		{
+			name:    "required namespace wins",
+			payload: map[string]any{consts.RestartRequiredNamespace: "sn3"},
+			want:    "sn3",
+		},
+		{
+			name: "inner inject namespace fallback",
+			payload: map[string]any{
+				consts.RestartInjectPayload: map[string]any{consts.InjectNamespace: "sockshop7"},
+			},
+			want: "sockshop7",
+		},
+		{
+			name: "whitespace trimmed",
+			payload: map[string]any{consts.RestartRequiredNamespace: "  ts0  "},
+			want:    "ts0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := namespaceFromRestartPayloadMap(tt.payload); got != tt.want {
+				t.Fatalf("namespaceFromRestartPayloadMap = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

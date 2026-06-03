@@ -22397,12 +22397,14 @@ const docTemplate = `{
                 "etcd",
                 "env",
                 "toml",
+                "db_default",
                 "default"
             ],
             "x-enum-varnames": [
                 "LayerEtcd",
                 "LayerEnv",
                 "LayerTOML",
+                "LayerDBDefault",
                 "LayerDefault"
             ]
         },

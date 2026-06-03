@@ -1670,12 +1670,14 @@ definitions:
     - etcd
     - env
     - toml
+    - db_default
     - default
     type: string
     x-enum-varnames:
     - LayerEtcd
     - LayerEnv
     - LayerTOML
+    - LayerDBDefault
     - LayerDefault
   configcenter.SetReq:
     properties:

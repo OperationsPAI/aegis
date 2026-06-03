@@ -254,20 +254,32 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 	// surface. The recoverTrace idempotency check stays as a defensive
 	// race-condition guard but should never fire in practice once this
 	// filter is in place.
+	// Traces wedged at no.namespace.available are NOT TraceRunning — the
+	// RestartPedestal task reschedules with state=TaskRescheduled, so the
+	// trace stays TracePending. These are structurally invisible to the
+	// TraceRunning-only arms above; without this third arm a permanently-
+	// unsatisfiable required namespace reschedules forever, holding its dedup
+	// slot and saturating workers (issue #531). Reaped on the same long RP
+	// threshold so a legitimately-slow acquire isn't killed early.
 	var traces []model.Trace
 	err := r.db.WithContext(ctx).
 		Model(&model.Trace{}).
-		Where("state = ? AND status != ? AND ("+
-			"(last_event IN ? AND updated_at < ?) OR "+
-			"(last_event = ? AND updated_at < ?))",
-			consts.TraceRunning,
+		Where("status != ? AND ("+
+			"(state = ? AND last_event IN ? AND updated_at < ?) OR "+
+			"(state = ? AND last_event = ? AND updated_at < ?) OR "+
+			"(state IN ? AND last_event = ? AND updated_at < ?))",
 			consts.CommonDeleted,
+			consts.TraceRunning,
 			[]consts.EventType{
 				consts.EventFaultInjectionStarted,
 				consts.EventFaultInjectionCompleted,
 			},
 			cutoff,
+			consts.TraceRunning,
 			consts.EventRestartPedestalStarted,
+			rpCutoff,
+			[]consts.TraceState{consts.TracePending, consts.TraceRunning},
+			consts.EventNoNamespaceAvailable,
 			rpCutoff,
 		).
 		Where("NOT EXISTS (?)",
@@ -315,10 +327,13 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 
 	// Traces stuck at restart.pedestal.started never reached the
 	// fault-injection step — there is nothing to forward to BuildDatapack.
-	// Recovery is a clean cancel: mark the trace failed, release the
-	// namespace lock + rate-limit tokens the dead worker is still holding,
-	// let the user re-run the regression.
-	if trace.LastEvent == consts.EventRestartPedestalStarted {
+	// Same for traces wedged at no.namespace.available (the reschedule loop
+	// could not acquire a namespace; issue #531). Recovery for both is a
+	// clean cancel: mark the trace failed, release the namespace lock +
+	// rate-limit tokens the dead/stuck worker is still holding, let the user
+	// re-run the regression.
+	if trace.LastEvent == consts.EventRestartPedestalStarted ||
+		trace.LastEvent == consts.EventNoNamespaceAvailable {
 		return r.recoverStuckRestartPedestal(ctx, trace, logEntry)
 	}
 
@@ -610,7 +625,7 @@ func (r *StuckTraceReconciler) recoverStuckRestartPedestal(ctx context.Context, 
 			return fmt.Errorf("cancel restart-pedestal task: %w", err)
 		}
 		if err := tx.Model(&model.Trace{}).
-			Where("id = ? AND state = ?", trace.ID, consts.TraceRunning).
+			Where("id = ? AND state IN ?", trace.ID, []consts.TraceState{consts.TracePending, consts.TraceRunning}).
 			Updates(map[string]any{
 				"state":      consts.TraceFailed,
 				"last_event": consts.EventTraceCancelled,

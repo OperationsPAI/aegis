@@ -16,6 +16,9 @@ type fakeActivator struct {
 	mu       sync.Mutex
 	calls    []string
 	returnEr error
+	// active drives NamespaceIsActive's return for the self-heal path (#531).
+	active    bool
+	activeErr error
 }
 
 func (f *fakeActivator) EnsureNamespaceActive(namespace string) error {
@@ -23,6 +26,12 @@ func (f *fakeActivator) EnsureNamespaceActive(namespace string) error {
 	defer f.mu.Unlock()
 	f.calls = append(f.calls, namespace)
 	return f.returnEr
+}
+
+func (f *fakeActivator) NamespaceIsActive(_ context.Context, _ string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.active, f.activeErr
 }
 
 func (f *fakeActivator) callsCopy() []string {

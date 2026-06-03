@@ -9,6 +9,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -138,6 +139,30 @@ func (c *Controller) EnsureNamespaceActive(namespace string) error {
 		return nil
 	}
 	return c.AddNamespaceInformers([]string{namespace})
+}
+
+// NamespaceIsActive reports whether the namespace exists in-cluster and is in
+// phase Active (not Terminating). Used by the namespace allocator to self-heal
+// a stale CommonDeleted Redis status when the live namespace is in fact Active
+// (issue #531). Returns (false, nil) when the namespace is absent or
+// Terminating; a non-nil error means the cluster could not be queried and the
+// caller must not self-heal on the unknown.
+func (c *Controller) NamespaceIsActive(ctx context.Context, namespace string) (bool, error) {
+	if c == nil || namespace == "" {
+		return false, nil
+	}
+	client, err := getK8sClient()
+	if err != nil {
+		return false, fmt.Errorf("kubernetes client not available: %w", err)
+	}
+	ns, err := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get namespace %q: %w", namespace, err)
+	}
+	return ns.Status.Phase == corev1.NamespaceActive, nil
 }
 
 // RemoveNamespaceInformers marks namespaces as inactive
