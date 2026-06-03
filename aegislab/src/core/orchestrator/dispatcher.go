@@ -66,6 +66,14 @@ type chaosServiceClient interface {
 // stays idempotent under retries.
 var errChaosServiceNotFound = errors.New("chaos service: resource not found")
 
+// errChaosServiceAtCapacity signals backpressure: chaos-service rejected the
+// inject with HTTP 429 because the per-system max_concurrent_injections cap is
+// full (crud/chaos ErrSystemAtCapacity). It is transient — the FaultInjection
+// worker classifies it via errors.Is and reschedules with backoff instead of
+// terminal-failing the trace. Deliberately distinct from the 4xx classes
+// (404 point-not-found, 400 schema-validation) which stay terminal.
+var errChaosServiceAtCapacity = errors.New("chaos service: system at capacity (429)")
+
 var defaultChaosServiceClient = func() (chaosServiceClient, error) {
 	url := strings.TrimSpace(config.GetChaosServiceURL())
 	if url == "" {
@@ -139,6 +147,7 @@ func (c *sdkChaosServiceClient) CreateInjectionBatch(ctx context.Context, body a
 // *why* (e.g. a missing required param) live in the body, so a bare status
 // line makes a rejection undiagnosable from the worker log.
 func chaosServiceErr(err error, httpResp *http.Response) error {
+	wrapped := err
 	var apiErr *apiclient.GenericOpenAPIError
 	if errors.As(err, &apiErr) {
 		if b := apiErr.Body(); len(b) > 0 {
@@ -146,10 +155,13 @@ func chaosServiceErr(err error, httpResp *http.Response) error {
 			if httpResp != nil {
 				status = httpResp.Status + ": "
 			}
-			return fmt.Errorf("%s: %s%s", err.Error(), status, strings.TrimSpace(string(b)))
+			wrapped = fmt.Errorf("%s: %s%s", err.Error(), status, strings.TrimSpace(string(b)))
 		}
 	}
-	return err
+	if httpResp != nil && httpResp.StatusCode == http.StatusTooManyRequests {
+		return fmt.Errorf("%w: %v", errChaosServiceAtCapacity, wrapped)
+	}
+	return wrapped
 }
 
 func (c *sdkChaosServiceClient) DeleteInjectionByTask(ctx context.Context, taskID string) error {

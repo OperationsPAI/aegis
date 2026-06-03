@@ -2,18 +2,26 @@ package consumer
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
+	"math/rand"
 	"sync"
 	"time"
 
+	"aegis/core/orchestrator/common"
+	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
+	"aegis/platform/model"
+	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
 	"aegis/platform/utils"
 
 	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
+	"gorm.io/gorm"
 )
 
 // injectionPayload contains all necessary data for executing a fault injection batch
@@ -146,6 +154,14 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		// `failed to acquire lock for namespace, retrying`.
 		toReleased := false
 		if err := monitor.CheckNamespaceToInject(payload.namespace, time.Now(), task.TraceID); err != nil {
+			// A sibling trace holds the ns lock (the RestartPedestal→FaultInjection
+			// release/reacquire window, issue #533). This is transient
+			// backpressure, not a permanent failure — reschedule with backoff
+			// instead of hard-failing the trace and burning its dedup slot. No
+			// lock to release here: the acquire itself failed.
+			if errors.Is(err, ErrNamespaceLockContended) {
+				return rescheduleFaultInjectionTask(childCtx, deps.DB, deps.RedisGateway, monitor, task, fmt.Sprintf("namespace lock contended: %v, retrying", err))
+			}
 			return handleExecutionError(span, logEntry, "failed to get namespace to inject fault", err)
 		}
 		toReleased = true
@@ -188,6 +204,19 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			return werr
 		})
 		if err != nil {
+			// 429 system-at-capacity (per-system max_concurrent_injections cap,
+			// issue #533) is backpressure, not a permanent failure: no chaos CR
+			// was created. Release the ns lock so a sibling can make progress,
+			// then reschedule with backoff instead of hard-failing the trace.
+			// All other dispatch errors (catalog 404, schema 400, system /
+			// capability not found) stay terminal.
+			if errors.Is(err, errChaosServiceAtCapacity) {
+				if relErr := monitor.ReleaseLock(childCtx, payload.namespace, task.TraceID); relErr != nil {
+					logEntry.WithError(relErr).Warn("failed to release namespace lock before fault-injection reschedule (continuing)")
+				}
+				toReleased = false
+				return rescheduleFaultInjectionTask(childCtx, deps.DB, deps.RedisGateway, monitor, task, fmt.Sprintf("chaos service at capacity (429): %v, retrying", err))
+			}
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
 		}
 		logEntry.Info("dispatcher: faults submitted")
@@ -303,4 +332,100 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		chaosInstance: chaosInstance,
 		chartVersion:  chartVersion,
 	}, nil
+}
+
+// faultInjectionMaxReschedule resolves the abandon cap for FaultInjection
+// reschedules from dynamic config, falling back to the consts default. Read on
+// every reschedule so an etcd push applies without a rebuild.
+func faultInjectionMaxReschedule() int {
+	v := config.GetInt(consts.FaultInjectionMaxRescheduleKey)
+	if v <= 0 {
+		return consts.DefaultFaultInjectionMaxReschedule
+	}
+	return v
+}
+
+// rescheduleFaultInjectionTask re-enqueues a FaultInjection task that hit
+// transient pre-dispatch backpressure (429 system-at-capacity or ns-lock
+// contention, issue #533) with exponential backoff and jitter. Once
+// task.ReStartNum has reached the abandon cap it stops rescheduling and fails
+// the trace so a genuinely unsatisfiable inject fails closed instead of looping
+// forever. The namespace lock must already be released by the caller — this
+// task re-acquires it on the next attempt.
+func rescheduleFaultInjectionTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, monitor NamespaceMonitor, task *dto.UnifiedTask, reason string) error {
+	if task.ReStartNum >= faultInjectionMaxReschedule() {
+		return abandonFaultInjectionTask(ctx, db, redisGateway, task, reason)
+	}
+	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
+		span := trace.SpanFromContext(ctx)
+
+		randomFactor := 0.3 + rand.Float64()*0.7
+		deltaTime := time.Duration(math.Min(math.Pow(2, float64(task.ReStartNum)), 5.0)*randomFactor) * consts.DefaultTimeUnit
+		executeTime := time.Now().Add(deltaTime)
+
+		span.AddEvent(fmt.Sprintf("rescheduling fault injection: %s", reason))
+		logrus.WithFields(logrus.Fields{
+			"task_id":     task.TaskID,
+			"trace_id":    task.TraceID,
+			"delay_mins":  deltaTime.Minutes(),
+			"retry_count": task.ReStartNum + 1,
+		}).Warnf("%s: %s", reason, executeTime)
+
+		tracing.SetSpanAttribute(ctx, consts.TaskStateKey, consts.GetTaskStateName(consts.TaskPending))
+
+		updateTaskState(ctx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				consts.TaskTypeFaultInjection,
+				consts.TaskRescheduled,
+				reason,
+			).withEvent(consts.EventFaultInjectionRescheduled, executeTime.String()).withDB(db).withRedis(redisGateway),
+		)
+
+		task.Reschedule(executeTime)
+		if err := common.SubmitTaskWithDB(ctx, db, redisGateway, task); err != nil {
+			span.RecordError(err)
+			span.AddEvent("failed to submit rescheduled fault injection task")
+			return fmt.Errorf("failed to submit rescheduled fault injection task: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// abandonFaultInjectionTask finalizes a FaultInjection task that has exhausted
+// its reschedule budget (issue #533): it marks the task errored and the trace
+// failed and emits fault.injection.failed. The namespace lock is already
+// released by the caller before each reschedule, so there is nothing to release
+// here.
+func abandonFaultInjectionTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, task *dto.UnifiedTask, reason string) error {
+	logEntry := logrus.WithFields(logrus.Fields{
+		"task_id":     task.TaskID,
+		"trace_id":    task.TraceID,
+		"retry_count": task.ReStartNum,
+	})
+	message := fmt.Sprintf("fault injection abandoned after %d reschedules: %s", task.ReStartNum, reason)
+	logEntry.Warn(message)
+
+	updateTaskState(ctx,
+		newTaskStateUpdate(
+			task.TraceID,
+			task.TaskID,
+			consts.TaskTypeFaultInjection,
+			consts.TaskError,
+			message,
+		).withEvent(consts.EventFaultInjectionFailed, message).withDB(db).withRedis(redisGateway),
+	)
+
+	if err := db.WithContext(ctx).Model(&model.Trace{}).
+		Where("id = ? AND state = ?", task.TraceID, consts.TraceRunning).
+		Updates(map[string]any{
+			"state":      consts.TraceFailed,
+			"last_event": consts.EventFaultInjectionFailed,
+			"end_time":   time.Now(),
+		}).Error; err != nil {
+		logEntry.WithError(err).Warn("failed to mark trace failed on fault-injection abandon (continuing)")
+	}
+	return nil
 }

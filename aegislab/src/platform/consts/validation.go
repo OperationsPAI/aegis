@@ -182,6 +182,7 @@ var ValidTaskEvents = map[TaskType][]EventType{
 		EventFaultInjectionStarted,
 		EventFaultInjectionCompleted,
 		EventFaultInjectionFailed,
+		EventFaultInjectionRescheduled,
 	},
 	TaskTypeRunAlgorithm: {
 		EventAlgoRunSucceed,

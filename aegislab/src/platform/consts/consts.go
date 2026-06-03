@@ -548,6 +548,18 @@ const (
 	// unsatisfiable.
 	RestartPedestalMaxRescheduleKey     = "rate_limiting.restart_pedestal_max_reschedule"
 	DefaultRestartPedestalMaxReschedule = 30
+
+	// FaultInjectionMaxRescheduleKey caps how many times a FaultInjection task
+	// may reschedule on transient pre-dispatch backpressure — a 429
+	// system-at-capacity (per-system max_concurrent_injections cap) or
+	// namespace-lock contention from a sibling trace — before it is abandoned:
+	// the trace is failed so it stops looping forever (issue #533). Read on
+	// every reschedule so a runtime etcd push applies without a rebuild.
+	// Default 30 mirrors RestartPedestal: at the 5-min backoff cap that is a
+	// ~2.5 h budget, well past which the capacity / lock pressure is no longer
+	// plausibly transient.
+	FaultInjectionMaxRescheduleKey     = "rate_limiting.fault_injection_max_reschedule"
+	DefaultFaultInjectionMaxReschedule = 30
 )
 
 type EventType string
@@ -560,6 +572,12 @@ const (
 	EventFaultInjectionStarted   EventType = "fault.injection.started"
 	EventFaultInjectionCompleted EventType = "fault.injection.completed"
 	EventFaultInjectionFailed    EventType = "fault.injection.failed"
+	// EventFaultInjectionRescheduled marks a FaultInjection task re-queued on
+	// transient dispatch backpressure (429 system-at-capacity or ns-lock
+	// contention, issue #533). Deliberately distinct from no.namespace.available
+	// so the stuck-trace reconciler's no-namespace recovery arm (which routes to
+	// recoverStuckRestartPedestal) does not sweep an actively-backing-off inject.
+	EventFaultInjectionRescheduled EventType = "fault.injection.rescheduled"
 
 	EventAlgoRunStarted       EventType = "algorithm.run.started"
 	EventAlgoRunSucceed       EventType = "algorithm.run.succeed"
