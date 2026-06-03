@@ -572,6 +572,12 @@ const (
 	EventFaultInjectionStarted   EventType = "fault.injection.started"
 	EventFaultInjectionCompleted EventType = "fault.injection.completed"
 	EventFaultInjectionFailed    EventType = "fault.injection.failed"
+	// EventFaultInjectionRescheduled marks a FaultInjection task re-queued on
+	// transient dispatch backpressure (429 system-at-capacity or ns-lock
+	// contention, issue #533). Deliberately distinct from no.namespace.available
+	// so the stuck-trace reconciler's no-namespace recovery arm (which routes to
+	// recoverStuckRestartPedestal) does not sweep an actively-backing-off inject.
+	EventFaultInjectionRescheduled EventType = "fault.injection.rescheduled"
 
 	EventAlgoRunStarted       EventType = "algorithm.run.started"
 	EventAlgoRunSucceed       EventType = "algorithm.run.succeed"

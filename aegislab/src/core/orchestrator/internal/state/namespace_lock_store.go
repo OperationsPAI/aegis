@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,6 +12,12 @@ import (
 
 	goredis "github.com/redis/go-redis/v9"
 )
+
+// ErrNamespaceLocked signals that Acquire was rejected because a different,
+// still-unexpired trace owns the namespace lock. Transient contention — callers
+// classify it via errors.Is to reschedule with backoff rather than terminal-fail
+// (issue #533).
+var ErrNamespaceLocked = errors.New("namespace is locked by another trace")
 
 type LockState struct {
 	EndTime int64
@@ -89,8 +96,8 @@ func (s LockStore) Acquire(ctx context.Context, namespace string, endTime time.T
 			return err
 		}
 		if state.TraceID != "" && state.TraceID != traceID && now.Unix() < state.EndTime {
-			return fmt.Errorf("namespace %s is locked by %s until %v",
-				namespace, state.TraceID, time.Unix(state.EndTime, 0).Format(time.RFC3339))
+			return fmt.Errorf("%w: namespace %s is locked by %s until %v",
+				ErrNamespaceLocked, namespace, state.TraceID, time.Unix(state.EndTime, 0).Format(time.RFC3339))
 		}
 		_, err = tx.TxPipelined(ctx, func(pipe goredis.Pipeliner) error {
 			pipe.HSet(ctx, s.Key(namespace), "end_time", endTime.Unix())

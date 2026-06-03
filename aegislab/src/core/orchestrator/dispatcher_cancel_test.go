@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"aegis/cli/apiclient"
+	guidedcli "aegis/platform/chaos"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -119,6 +121,44 @@ func TestChaosServiceErrClassifiesAtCapacity(t *testing.T) {
 	nilResp := chaosServiceErr(base, nil)
 	if errors.Is(nilResp, errChaosServiceAtCapacity) {
 		t.Fatalf("nil response wrongly classified as at-capacity: %v", nilResp)
+	}
+}
+
+type stubAtCapacityClient struct{}
+
+func (stubAtCapacityClient) CreateInjection(_ context.Context, _ apiclient.ChaosChaosCreateInjectionReq) (string, error) {
+	return "", chaosServiceErr(errors.New("429 Too Many Requests"), &http.Response{StatusCode: http.StatusTooManyRequests})
+}
+
+func (stubAtCapacityClient) CreateInjectionBatch(_ context.Context, _ apiclient.ChaosChaosCreateInjectionBatchReq) (string, error) {
+	return "", nil
+}
+
+func (stubAtCapacityClient) DeleteInjectionByTask(_ context.Context, _ string) error { return nil }
+
+// TestDispatchViaChaosServicePropagatesAtCapacity locks the full %w chain: a
+// 429 from CreateInjection must remain errors.Is-matchable as
+// errChaosServiceAtCapacity after dispatchViaChaosService wraps it with its
+// "dispatcher: POST ..." prefix, so the FaultInjection worker can classify it
+// as retryable. A future %v regression at that wrap would silently turn every
+// at-capacity inject back into a terminal failure (issue #533).
+func TestDispatchViaChaosServicePropagatesAtCapacity(t *testing.T) {
+	prevFactory := testChaosServiceClient
+	t.Cleanup(func() { testChaosServiceClient = prevFactory })
+	testChaosServiceClient = func() (chaosServiceClient, error) { return stubAtCapacityClient{}, nil }
+
+	configs := []guidedcli.GuidedConfig{{
+		System:     "ts",
+		SystemType: "ts",
+		Namespace:  "ts",
+		App:        "ts-order-service",
+		ChaosType:  "PodKill",
+		Duration:   faultDurationPtr(1),
+	}}
+
+	_, err := dispatchViaChaosService(context.Background(), logrus.NewEntry(logrus.StandardLogger()), "ts", "ts", configs, dispatcherDeps{traceID: "trace-1"})
+	if !errors.Is(err, errChaosServiceAtCapacity) {
+		t.Fatalf("at-capacity sentinel lost through dispatchViaChaosService wrap: %v", err)
 	}
 }
 

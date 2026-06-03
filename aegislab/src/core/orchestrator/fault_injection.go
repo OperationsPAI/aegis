@@ -380,7 +380,7 @@ func rescheduleFaultInjectionTask(ctx context.Context, db *gorm.DB, redisGateway
 				consts.TaskTypeFaultInjection,
 				consts.TaskRescheduled,
 				reason,
-			).withEvent(consts.EventNoNamespaceAvailable, executeTime.String()).withDB(db).withRedis(redisGateway),
+			).withEvent(consts.EventFaultInjectionRescheduled, executeTime.String()).withDB(db).withRedis(redisGateway),
 		)
 
 		task.Reschedule(executeTime)
