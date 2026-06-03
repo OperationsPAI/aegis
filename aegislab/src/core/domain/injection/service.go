@@ -19,6 +19,7 @@ import (
 	"aegis/platform/model"
 	container "aegis/core/domain/container"
 	dataset "aegis/core/domain/dataset"
+	chaoscrud "aegis/crud/chaos"
 	label "aegis/crud/iam/label"
 	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
@@ -335,6 +336,19 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	guidedSpecs := req.GuidedSpecs()
 	if len(guidedSpecs) == 0 {
 		return nil, fmt.Errorf("no guided specs available for fault injection")
+	}
+
+	// Reject malformed guided configs (missing required param / schema-rejected
+	// extra) here, before any namespace allocation or trace/task persistence,
+	// using the same rules the FaultInjection worker stage enforces at dispatch
+	// (#538). Without this the request runs the whole RestartPedestal stage and
+	// only fails at task.type=2 as fault.injection.failed.
+	for batchIdx, batch := range guidedSpecs {
+		for cfgIdx := range batch {
+			if err := chaoscrud.ValidateGuidedConfig(batch[cfgIdx]); err != nil {
+				return nil, fmt.Errorf("%w: guided spec batch %d config %d: %v", consts.ErrBadRequest, batchIdx, cfgIdx, err)
+			}
+		}
 	}
 
 	// #166: AutoAllocate path — for any batch whose configs leave namespace

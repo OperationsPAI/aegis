@@ -11,6 +11,7 @@ import (
 	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
+	chaoscrud "aegis/crud/chaos"
 	"aegis/platform/consts"
 
 	guidedcli "aegis/platform/chaos"
@@ -580,6 +581,15 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 	if len(cfgs) > 1 {
 		if err := validateBatchCompat(cfgs); err != nil {
 			return err
+		}
+	}
+	// Fail-fast before the round-trip: a config missing a required param or
+	// carrying a schema-rejected extra is rejected by the backend at submit
+	// (#538). The same validation runs locally because it needs no backend
+	// data (static required-param map + in-process seed schemas).
+	for i := range cfgs {
+		if err := chaoscrud.ValidateGuidedConfig(cfgs[i]); err != nil {
+			return usageErrorf("guided spec %d: %v", i, err)
 		}
 	}
 	for i := range cfgs {

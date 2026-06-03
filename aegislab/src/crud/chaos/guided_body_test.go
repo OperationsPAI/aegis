@@ -1,6 +1,8 @@
 package chaos
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	guidedcli "aegis/platform/chaos"
@@ -146,4 +148,48 @@ func TestGuidedToChaosTarget_JVMMysql(t *testing.T) {
 	if _, err := GuidedToChaosTarget("jvm_mysql_latency", missing); err == nil {
 		t.Error("expected error when database/table missing")
 	}
+}
+
+// TestValidateGuidedConfig is the #538 submit-time guard: the same
+// required-param + per-capability schema checks the FaultInjection worker
+// stage runs must reject a malformed config here, before the submit handler
+// persists any trace/task. A valid config must pass unchanged.
+func TestValidateGuidedConfig(t *testing.T) {
+	base := guidedcli.GuidedConfig{System: "ts", App: "ts-order-service"}
+
+	t.Run("missing required param is rejected", func(t *testing.T) {
+		cfg := base
+		cfg.ChaosType = "HTTPResponseReplaceCode"
+		cfg.Route = "/"
+		cfg.HTTPMethod = "GET"
+		err := ValidateGuidedConfig(cfg)
+		if err == nil {
+			t.Fatal("expected rejection for http_response_replace_code without status_code")
+		}
+		if !strings.Contains(err.Error(), "status_code") {
+			t.Errorf("error should name the missing param, got: %v", err)
+		}
+	})
+
+	t.Run("schema-rejected param is rejected", func(t *testing.T) {
+		cfg := base
+		cfg.ChaosType = "CPUStress"
+		cfg.CPULoad = intPtr(200)
+		err := ValidateGuidedConfig(cfg)
+		if err == nil {
+			t.Fatal("expected schema rejection for cpu_stress load_pct=200")
+		}
+		if !errors.Is(err, ErrSchemaValidation) {
+			t.Errorf("schema failures must wrap ErrSchemaValidation, got: %v", err)
+		}
+	})
+
+	t.Run("valid config passes", func(t *testing.T) {
+		cfg := base
+		cfg.ChaosType = "CPUStress"
+		cfg.CPULoad = intPtr(50)
+		if err := ValidateGuidedConfig(cfg); err != nil {
+			t.Errorf("valid cpu_stress config should pass, got: %v", err)
+		}
+	})
 }
