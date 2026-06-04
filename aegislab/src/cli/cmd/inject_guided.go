@@ -22,6 +22,7 @@ import (
 // Flags for `aegisctl inject guided`.
 var (
 	guidedCfgPath        string
+	guidedSessionDir     string
 	guidedResetConfig    bool
 	guidedNoSaveConfig   bool
 	guidedNamespace      string
@@ -176,7 +177,7 @@ datapack, no algorithm, always fresh catalog state — use
 			return usageErrorf("--stage and --apply are mutually exclusive: --stage saves the current cfg for later, --apply submits now")
 		}
 
-		batchPath, err := resolveGuidedBatchPath(guidedBatchPath)
+		batchPath, err := resolveGuidedBatchPath(guidedBatchPath, guidedSessionDir)
 		if err != nil {
 			return err
 		}
@@ -231,13 +232,9 @@ datapack, no algorithm, always fresh catalog state — use
 			return nil
 		}
 
-		path := guidedCfgPath
-		if path == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("determine home directory: %w", err)
-			}
-			path = home + "/.aegisctl/inject-guided.yaml"
+		path, err := resolveGuidedConfigPath(guidedCfgPath, guidedSessionDir)
+		if err != nil {
+			return err
 		}
 
 		fileCfg, err := loadGuidedConfigFile(path)
@@ -415,6 +412,7 @@ datapack, no algorithm, always fresh catalog state — use
 func init() {
 	f := injectGuidedCmd.Flags()
 	f.StringVar(&guidedCfgPath, "config", "", "Path to guided session YAML (default ~/.aegisctl/inject-guided.yaml)")
+	f.StringVar(&guidedSessionDir, "session-dir", "", "Directory to isolate the guided session + batch files under (places inject-guided.yaml and inject-guided-batch.yaml there instead of ~/.aegisctl/); use a per-loop dir so concurrent loops don't share/corrupt state. Overridden by explicit --config / --batch-config.")
 	f.BoolVar(&guidedResetConfig, "reset-config", false, "Discard the saved guided session before resolving")
 	f.BoolVar(&guidedNoSaveConfig, "no-save-config", false, "Do not persist the session snapshot")
 	f.StringVar(&guidedNamespace, "namespace", "", "Target namespace (e.g. ts, otel-demo0)")
