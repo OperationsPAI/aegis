@@ -196,6 +196,7 @@ for i in $(seq 1 "$ROUNDS"); do
 Autonomous injection round ${i} of ${ROUNDS}, target system: ${SYSTEM}.
 State directory: ${STATE_DIR}
 aegisctl binary: ${AEGISCTL_BIN}  (use this absolute path for every aegisctl invocation — it's the build matched to the current backend; do NOT rely on \`aegisctl\` from PATH).
+Pass \`--session-dir ${STATE_DIR}\` on EVERY \`inject guided\` invocation this round. This isolates the guided session + batch files under this system's state dir so concurrent per-system loops never share or corrupt \`~/.aegisctl/inject-guided*.yaml\` (issue #544).
 ${SOURCE_LINE}
 
 Follow the \`injection\` skill end-to-end this round. The skill body has the full schema for round files and the multi-source reward framework — read it before doing anything else.

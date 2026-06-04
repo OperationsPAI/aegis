@@ -27,9 +27,12 @@ func defaultGuidedBatchPath() (string, error) {
 	return filepath.Join(home, ".aegisctl", "inject-guided-batch.yaml"), nil
 }
 
-func resolveGuidedBatchPath(override string) (string, error) {
+func resolveGuidedBatchPath(override, sessionDir string) (string, error) {
 	if strings.TrimSpace(override) != "" {
 		return override, nil
+	}
+	if d := strings.TrimSpace(sessionDir); d != "" {
+		return filepath.Join(d, "inject-guided-batch.yaml"), nil
 	}
 	return defaultGuidedBatchPath()
 }
@@ -67,7 +70,7 @@ func saveGuidedBatch(path string, batch *guidedBatchFile) error {
 	if err != nil {
 		return fmt.Errorf("marshal guided batch file: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	if err := writeFileAtomic(path, data, 0o600); err != nil {
 		return fmt.Errorf("write guided batch file %s: %w", path, err)
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	chaos "aegis/platform/chaos"
@@ -18,6 +19,41 @@ func defaultGuidedConfigPath() (string, error) {
 		return "", fmt.Errorf("determine home directory: %w", err)
 	}
 	return filepath.Join(home, ".aegisctl", "inject-guided.yaml"), nil
+}
+
+// resolveGuidedConfigPath picks the session file: an explicit --config wins,
+// then --session-dir isolates it per-loop, otherwise the global default.
+func resolveGuidedConfigPath(override, sessionDir string) (string, error) {
+	if strings.TrimSpace(override) != "" {
+		return override, nil
+	}
+	if d := strings.TrimSpace(sessionDir); d != "" {
+		return filepath.Join(d, "inject-guided.yaml"), nil
+	}
+	return defaultGuidedConfigPath()
+}
+
+// writeFileAtomic writes data to a temp file in the same directory and renames
+// it over path, so concurrent writers can't observe a torn/interleaved file
+// (rename is atomic on POSIX). See issue #544.
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".aegisctl-tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpName, perm); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func loadGuidedConfigFile(path string) (*chaos.ConfigFile, error) {
@@ -86,7 +122,7 @@ func saveGuidedConfigFile(path string, cfg *chaos.ConfigFile, snapshot chaos.Gui
 	if err != nil {
 		return fmt.Errorf("marshal config file: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	if err := writeFileAtomic(path, data, 0o600); err != nil {
 		return fmt.Errorf("write config file: %w", err)
 	}
 	return nil
