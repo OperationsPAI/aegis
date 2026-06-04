@@ -482,11 +482,15 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      # Bumped 0.1.1 → 0.1.2 for benchmark-charts onlineboutique-aegis PR #16:
+      # the chart now deploys a per-namespace aegis-otel-collector (the prior
+      # otel-collector.otel.svc ExternalName pointed at a non-existent namespace
+      # → 0 spans → empty datapacks) and defaults images to the volces mirror.
+      - name: 0.1.2
         github_link: GoogleCloudPlatform/microservices-demo
         status: 1
         helm_config:
-          version: 0.1.1
+          version: 0.1.2
           chart_name: onlineboutique-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
