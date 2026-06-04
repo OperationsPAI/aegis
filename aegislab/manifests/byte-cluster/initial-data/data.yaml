@@ -1878,6 +1878,59 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
+  - key: injection.system.ob.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system OnlineBoutique to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.ob.ns_pattern
+    default_value: ^ob\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system OnlineBoutique instances
+    is_secret: false
+  - key: injection.system.ob.extract_pattern
+    default_value: ^(ob)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from OnlineBoutique instances
+    is_secret: false
+  - key: injection.system.ob.display_name
+    default_value: OnlineBoutique
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system OnlineBoutique
+    is_secret: false
+  - key: injection.system.ob.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select OnlineBoutique workloads
+    is_secret: false
+  - key: injection.system.ob.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether OnlineBoutique is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.ob.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system OnlineBoutique (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
   - key: injection.system.hs.count
     default_value: '1'
     value_type: 2
