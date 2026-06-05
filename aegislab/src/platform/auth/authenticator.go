@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"aegis/platform/crypto"
@@ -43,10 +44,11 @@ type Authenticator struct {
 	verifier Verifier
 	saStore  ServiceAccountStore
 	resolve  crypto.PublicKeyResolver
+	revStore RevocationStore
 }
 
-func NewAuthenticator(v Verifier, saStore ServiceAccountStore, resolve crypto.PublicKeyResolver) *Authenticator {
-	return &Authenticator{verifier: v, saStore: saStore, resolve: resolve}
+func NewAuthenticator(v Verifier, saStore ServiceAccountStore, resolve crypto.PublicKeyResolver, revStore RevocationStore) *Authenticator {
+	return &Authenticator{verifier: v, saStore: saStore, resolve: resolve, revStore: revStore}
 }
 
 func (a *Authenticator) Verify(ctx context.Context, cred Credential) (Principal, error) {
@@ -65,6 +67,23 @@ func (a *Authenticator) verifyBearer(ctx context.Context, token string) (Princip
 		return Principal{}, ErrUnauthenticated
 	}
 
+	p, err := a.resolveBearer(ctx, token)
+	if err != nil {
+		return Principal{}, err
+	}
+
+	if a.revStore != nil && p.JTI != "" {
+		if revoked, revErr := a.revStore.IsRevoked(ctx, p.JTI); revErr != nil {
+			log.Printf("auth: revocation check failed for jti %q: %v (fail-open)", p.JTI, revErr)
+		} else if revoked {
+			return Principal{}, fmt.Errorf("%w: token revoked", ErrUnauthenticated)
+		}
+	}
+
+	return p, nil
+}
+
+func (a *Authenticator) resolveBearer(ctx context.Context, token string) (Principal, error) {
 	// 1. Try unified token (new "aegis" issuer)
 	if a.resolve != nil {
 		if uc, err := crypto.ParseUnifiedToken(token, a.resolve); err == nil {
@@ -98,8 +117,6 @@ func (a *Authenticator) verifyBearer(ctx context.Context, token string) (Princip
 			}
 			return PrincipalFromServiceAccountClaims(saClaims, name), nil
 		}
-		// If ParseServiceAccountToken returned a non-ErrInvalidToken error
-		// (e.g. signature/expiry failure on what IS an SA token), reject hard.
 		if !errors.Is(saErr, crypto.ErrInvalidToken) {
 			return Principal{}, fmt.Errorf("%w: %v", ErrUnauthenticated, saErr)
 		}
