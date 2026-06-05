@@ -195,38 +195,51 @@ func TestQueryBucket_NoParquetObjects(t *testing.T) {
 	}
 }
 
-func TestSchemaBucket_ListsTables(t *testing.T) {
+// TestQueryBucket_SchemaDiscovery is the single-endpoint schema-discovery
+// path: the agent's list_tables runs an information_schema.columns query
+// through POST /query over the per-request views (no separate /schema
+// endpoint). It must return the registered view's columns.
+func TestQueryBucket_SchemaDiscovery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h, mock := newQueryHarness(t, BucketConfig{Name: "data", PublicRead: true})
 	seedParquet(t, mock, "metrics/a.parquet",
 		"SELECT * FROM (VALUES (1,10.0),(2,20.0)) AS t(id,latency)")
 
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/?prefix=metrics/", nil)
+	w, c := newQueryRequest(t, http.MethodPost, "application/json", map[string]any{
+		"prefix": "metrics/",
+		"sql":    "SELECT table_name, column_name, data_type FROM information_schema.columns ORDER BY table_name, ordinal_position",
+	})
 	c.Params = gin.Params{{Key: "bucket", Value: "data"}}
 	setUserCtx(c, 1, false, nil)
 
-	h.SchemaBucket(c)
+	h.QueryBucket(c)
 	if w.Code != http.StatusOK {
-		t.Fatalf("SchemaBucket: expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("schema discovery: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 	var resp struct {
-		Data schemaResp `json:"data"`
+		Data queryRowsResp `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, w.Body.String())
 	}
-	if len(resp.Data.Tables) != 1 {
-		t.Fatalf("tables: got %d want 1 (body=%s)", len(resp.Data.Tables), w.Body.String())
+	// The view "a" exposes columns id + latency.
+	if resp.Data.RowCount != 2 {
+		t.Fatalf("row_count: got %d want 2 (body=%s)", resp.Data.RowCount, w.Body.String())
 	}
-	if resp.Data.Tables[0].Table != "a" {
-		t.Fatalf("table name: got %q want a", resp.Data.Tables[0].Table)
+	cols := map[string]bool{}
+	table := ""
+	for _, r := range resp.Data.Rows {
+		if tn, ok := r["table_name"].(string); ok {
+			table = tn
+		}
+		if cn, ok := r["column_name"].(string); ok {
+			cols[cn] = true
+		}
 	}
-	if resp.Data.Tables[0].RowCount != 2 {
-		t.Fatalf("row_count: got %d want 2", resp.Data.Tables[0].RowCount)
+	if table != "a" {
+		t.Fatalf("table_name: got %q want a", table)
 	}
-	if len(resp.Data.Tables[0].Columns) != 2 {
-		t.Fatalf("columns: got %d want 2", len(resp.Data.Tables[0].Columns))
+	if !cols["id"] || !cols["latency"] {
+		t.Fatalf("expected columns id+latency, got %v", cols)
 	}
 }

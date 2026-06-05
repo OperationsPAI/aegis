@@ -42,24 +42,13 @@ type queryRowsResp struct {
 	Rows     []map[string]any `json:"rows"`
 }
 
-// schemaTable mirrors duckdbquery.Table for the schema response.
-type schemaTable struct {
-	Table    string               `json:"table"`
-	RowCount int64                `json:"row_count"`
-	Columns  []duckdbquery.Column `json:"columns"`
-}
-
-type schemaResp struct {
-	Tables []schemaTable `json:"tables"`
-}
-
 // QueryBucket runs a read-only SQL query over the parquet objects named
 // by {prefix | keys} and streams the result as Arrow IPC (default) or
 // JSON rows (Accept: application/json). One VIEW is registered per
 // *.parquet object; view name = sanitizeViewName(filestem).
 //
 //	@Summary		Query bucket parquet objects (SQL)
-//	@Description	Run a read-only SELECT/WITH query over the parquet objects under a prefix (or an explicit key list). Default response is an Arrow IPC stream; send Accept: application/json for decoded rows. One VIEW per *.parquet; view name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered.
+//	@Description	Run a read-only SELECT/WITH query over the parquet objects under a prefix (or an explicit key list). Default response is an Arrow IPC stream; send Accept: application/json for decoded rows. One VIEW per *.parquet; view name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered. Schema discovery is just a query: SELECT table_name, column_name, data_type FROM information_schema.columns over the per-request views.
 //	@Tags			Blob
 //	@ID				blob_query_bucket
 //	@Accept			json
@@ -122,51 +111,6 @@ func (h *Handler) QueryBucket(c *gin.Context) {
 	c.Header("X-Accel-Buffering", "no")
 	c.Status(http.StatusOK)
 	_, _ = io.Copy(c.Writer, reader)
-}
-
-// SchemaBucket lists the logical tables (one VIEW per *.parquet under
-// the selector) with their columns and row counts.
-//
-//	@Summary		Bucket parquet schema
-//	@Description	List the logical tables exposed over the parquet objects under a prefix (or an explicit key list): one VIEW per *.parquet with its columns and row count. Used to drive SQL against POST /query.
-//	@Tags			Blob
-//	@ID				blob_schema_bucket
-//	@Produce		json
-//	@Security		BearerAuth
-//	@Param			bucket	path		string						true	"Bucket name"
-//	@Param			prefix	query		string						false	"Key prefix selector"
-//	@Param			keys	query		[]string					false	"Explicit object keys selector"
-//	@Success		200		{object}	schemaResp					"Tables listed"
-//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid selector"
-//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
-//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
-//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket not found or no parquet objects"
-//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
-//	@Router			/api/v2/blob/buckets/{bucket}/schema [get]
-//	@x-api-type		{"portal":"true","sdk":"true"}
-func (h *Handler) SchemaBucket(c *gin.Context) {
-	bucket := c.Param("bucket")
-	if !h.authorizeBucketRead(c, bucket) {
-		return
-	}
-	ctx, cancel := context.WithTimeout(c.Request.Context(), queryStatementTimeout)
-	defer cancel()
-
-	sources, err := h.svc.resolveQuerySources(ctx, bucket, c.Query("prefix"), c.QueryArray("keys"))
-	if err != nil {
-		h.writeQueryError(c, err)
-		return
-	}
-	libTables, err := duckdbquery.Schema(ctx, sources, queryBucketLimits)
-	if err != nil {
-		h.writeQueryError(c, err)
-		return
-	}
-	tables := make([]schemaTable, 0, len(libTables))
-	for _, t := range libTables {
-		tables = append(tables, schemaTable{Table: t.Table, RowCount: t.RowCount, Columns: t.Columns})
-	}
-	dto.SuccessResponse(c, schemaResp{Tables: tables})
 }
 
 // authorizeBucketRead enforces the same bucket-level read ACL the other

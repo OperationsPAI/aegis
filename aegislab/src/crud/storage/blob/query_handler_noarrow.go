@@ -30,22 +30,3 @@ const errQueryRequiresTag = "bucket query requires building aegis-blob with -tag
 func (h *Handler) QueryBucket(c *gin.Context) {
 	dto.ErrorResponse(c, http.StatusNotImplemented, errQueryRequiresTag)
 }
-
-// SchemaBucket is the tagless stub.
-//
-//	@Summary		Bucket parquet schema
-//	@Description	List the logical tables exposed over the parquet objects under a prefix (or an explicit key list): one VIEW per *.parquet with its columns and row count.
-//	@Tags			Blob
-//	@ID				blob_schema_bucket
-//	@Produce		json
-//	@Security		BearerAuth
-//	@Param			bucket	path		string						true	"Bucket name"
-//	@Param			prefix	query		string						false	"Key prefix selector"
-//	@Param			keys	query		[]string					false	"Explicit object keys selector"
-//	@Success		200		{object}	dto.GenericResponse[any]	"Tables listed"
-//	@Failure		501		{object}	dto.GenericResponse[any]	"Built without duckdb_arrow"
-//	@Router			/api/v2/blob/buckets/{bucket}/schema [get]
-//	@x-api-type		{"portal":"true","sdk":"true"}
-func (h *Handler) SchemaBucket(c *gin.Context) {
-	dto.ErrorResponse(c, http.StatusNotImplemented, errQueryRequiresTag)
-}
