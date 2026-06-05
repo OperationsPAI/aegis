@@ -1,4 +1,4 @@
-__version__ = "0.5.0"
+__version__ = '1.3.0'
 
 from rcabench.client import RCABenchClient, RCABenchRuntimeClient
 
