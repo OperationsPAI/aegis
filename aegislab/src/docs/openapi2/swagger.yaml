@@ -8716,6 +8716,42 @@ definitions:
       username:
         type: string
     type: object
+  sso.createProviderReq:
+    properties:
+      authorize_url:
+        type: string
+      auto_provision:
+        type: boolean
+      client_id:
+        type: string
+      client_secret:
+        type: string
+      default_roles:
+        type: string
+      discovery_url:
+        type: string
+      display_name:
+        type: string
+      name:
+        type: string
+      scopes:
+        type: string
+      token_url:
+        type: string
+      type:
+        enum:
+        - oidc
+        - oauth2
+        type: string
+      userinfo_url:
+        type: string
+    required:
+    - client_id
+    - client_secret
+    - display_name
+    - name
+    - type
+    type: object
   sso.tokenResp:
     properties:
       access_token:
@@ -8725,6 +8761,31 @@ definitions:
       refresh_token:
         type: string
       token_type:
+        type: string
+    type: object
+  sso.updateProviderReq:
+    properties:
+      authorize_url:
+        type: string
+      auto_provision:
+        type: boolean
+      client_id:
+        type: string
+      client_secret:
+        type: string
+      default_roles:
+        type: string
+      discovery_url:
+        type: string
+      display_name:
+        type: string
+      enabled:
+        type: boolean
+      scopes:
+        type: string
+      token_url:
+        type: string
+      userinfo_url:
         type: string
     type: object
   system.AuditLogDetailResp:
@@ -21716,6 +21777,116 @@ paths:
       x-api-type:
         admin: "true"
         portal: "true"
+  /v1/identity-providers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List identity providers (admin)
+      tags:
+      - SSO Admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider config
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sso.createProviderReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create identity provider
+      tags:
+      - SSO Admin
+  /v1/identity-providers/{id}:
+    delete:
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete identity provider
+      tags:
+      - SSO Admin
+    get:
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get identity provider
+      tags:
+      - SSO Admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sso.updateProviderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update identity provider
+      tags:
+      - SSO Admin
   /v1/logout:
     post:
       consumes:
