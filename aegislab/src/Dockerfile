@@ -1,6 +1,10 @@
 FROM golang:1.26-bookworm AS builder
 
-ARG GO_BUILD_TAGS
+# duckdb_arrow is required by the DuckDB Arrow query engine used by both
+# /app/exp (injection datapack-query) and /app/aegis-blob (bucket query).
+# Default it here so a tagless image build still ships the engine; an
+# external pipeline may still override GO_BUILD_TAGS to add more tags.
+ARG GO_BUILD_TAGS=duckdb_arrow
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app

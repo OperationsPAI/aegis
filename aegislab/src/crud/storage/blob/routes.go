@@ -61,6 +61,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				g.POST("/buckets/:bucket/delete-batch", handler.BatchDelete)
 				// ZIP streaming — streams selected keys as an archive.
 				g.POST("/buckets/:bucket/zip", handler.ZipObjects)
+				// Generic DuckDB-over-presigned-URL query / schema over the
+				// bucket's parquet objects. Tagless builds return 501.
+				g.POST("/buckets/:bucket/query", handler.QueryBucket)
+				g.GET("/buckets/:bucket/schema", handler.SchemaBucket)
 			}
 
 			// /raw/:token is auth-free (the HMAC token IS the auth).

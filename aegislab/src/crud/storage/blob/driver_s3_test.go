@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -69,9 +70,48 @@ func newMockS3() *mockS3 {
 	return &mockS3{objects: map[string][]byte{}, cts: map[string]string{}}
 }
 
+// writeListV2 emits a minimal, non-truncated ListBucketResult for the
+// ListObjectsV2 path so the driver's List() can enumerate keys under a
+// prefix. Sufficient for the query/schema source-resolution tests.
+func (m *mockS3) writeListV2(w http.ResponseWriter, prefix string) {
+	m.mu.Lock()
+	keys := make([]string, 0, len(m.objects))
+	for k := range m.objects {
+		if prefix == "" || strings.HasPrefix(k, prefix) {
+			keys = append(keys, k)
+		}
+	}
+	sizes := make(map[string]int, len(keys))
+	for _, k := range keys {
+		sizes[k] = len(m.objects[k])
+	}
+	m.mu.Unlock()
+	sort.Strings(keys)
+
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>`)
+	b.WriteString(`<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">`)
+	b.WriteString(`<IsTruncated>false</IsTruncated>`)
+	for _, k := range keys {
+		fmt.Fprintf(&b, `<Contents><Key>%s</Key><Size>%d</Size><ETag>"deadbeef"</ETag><LastModified>%s</LastModified></Contents>`,
+			k, sizes[k], time.Now().UTC().Format(time.RFC3339))
+	}
+	b.WriteString(`</ListBucketResult>`)
+	w.Header().Set("Content-Type", "application/xml")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(b.String()))
+}
+
 func (m *mockS3) handler(t *testing.T) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
+		// ListObjectsV2 is GET /<bucket>/?list-type=2&prefix=… — handle it
+		// before the bucket/object path split (the trailing slash would
+		// otherwise route it to the object branch with an empty key).
+		if r.Method == http.MethodGet && r.URL.Query().Get("list-type") == "2" {
+			m.writeListV2(w, r.URL.Query().Get("prefix"))
+			return
+		}
 		parts := strings.SplitN(path, "/", 2)
 		if len(parts) == 0 || parts[0] == "" {
 			w.WriteHeader(http.StatusBadRequest)
