@@ -284,7 +284,7 @@ func (s *ssoBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error
 
 func (s *ssoBackedMiddlewareService) getResourceByName(db *gorm.DB, resourceName consts.ResourceName) (*model.Resource, error) {
 	var resource model.Resource
-	if err := db.Where("name = ? AND status != ?", resourceName, consts.CommonDeleted).First(&resource).Error; err != nil {
+	if err := db.Where("name = ?", resourceName).First(&resource).Error; err != nil {
 		return nil, err
 	}
 	return &resource, nil
