@@ -648,7 +648,7 @@ func (h *Handler) DownloadDatapackFile(c *gin.Context) {
 //	@Failure		404		{object}	dto.GenericResponse[any]	"Datapack or file not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
 //	@Router			/api/v2/injections/{id}/files/query [get]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) QueryDatapackFile(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "datapack ID")
 	if !ok {
@@ -697,7 +697,7 @@ func (h *Handler) QueryDatapackFile(c *gin.Context) {
 //	@Failure		404	{object}	dto.GenericResponse[any]				"Datapack not ready"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/injections/{id}/datapack-schema [get]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetDatapackSchema(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
@@ -735,7 +735,7 @@ func (h *Handler) GetDatapackSchema(c *gin.Context) {
 //	@Failure		404		{object}	dto.GenericResponse[any]	"Datapack not ready or no parquet files"
 //	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
 //	@Router			/api/v2/injections/{id}/datapack-query [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) QueryDatapack(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
