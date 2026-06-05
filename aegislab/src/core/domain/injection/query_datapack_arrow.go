@@ -4,30 +4,33 @@ package injection
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"aegis/platform/authz"
 	"aegis/platform/consts"
+	"aegis/platform/duckdbquery"
 
-	"github.com/apache/arrow-go/v18/arrow/ipc"
-	"github.com/duckdb/duckdb-go/v2"
 	"github.com/sirupsen/logrus"
 )
+
+// datapackQueryLimits is the per-session resource fence for datapack
+// queries. Presigned-URL sources are remote, so allowed_directories is
+// not set; the no-S3-secret posture + SQL denylist confine remote reads.
+var datapackQueryLimits = duckdbquery.Limits{
+	MemoryLimit: "2GB",
+	Threads:     2,
+}
 
 func (s *Service) queryDatapackFileContent(ctx context.Context, scope authz.CallerScope, id int, filePath string) (string, int64, io.ReadCloser, error) {
 	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return "", 0, nil, err
 	}
-
 	if filepath.Ext(filePath) != ".parquet" {
 		return "", 0, nil, fmt.Errorf("file is not a parquet file: %s", filePath)
 	}
@@ -36,117 +39,53 @@ func (s *Service) queryDatapackFileContent(ctx context.Context, scope authz.Call
 		return "", 0, nil, fmt.Errorf("resolve parquet: %w", err)
 	}
 
-	connector, err := newDuckDBConnector()
+	view := duckdbquery.SanitizeViewName(strings.TrimSuffix(filepath.Base(fullPath), filepath.Ext(fullPath)))
+	if view == "" {
+		view = "data"
+	}
+	src := duckdbquery.Source{View: view, URL: fullPath}
+
+	tables, err := duckdbquery.Schema(ctx, []duckdbquery.Source{src}, datapackQueryLimits)
 	if err != nil {
 		return "", 0, nil, err
 	}
+	var totalRows int64 = -1
+	if len(tables) > 0 {
+		totalRows = tables[0].RowCount
+	}
 
-	countConn, err := connector.Connect(ctx)
+	// Cast wide-unsigned columns to BIGINT so the Arrow stream stays
+	// portable; query the registered VIEW, not read_parquet (denied).
+	selectSQL := castSafeSelect(view, tables)
+	reader, err := duckdbquery.Query(ctx, []duckdbquery.Source{src}, selectSQL, datapackQueryLimits)
 	if err != nil {
-		logrus.Errorf("connect failed: %v", err)
 		return "", 0, nil, err
 	}
-	defer func() { _ = countConn.Close() }()
-
-	var totalRows int64
-	countQuery := fmt.Sprintf("SELECT count(*) FROM read_parquet('%s')", fullPath)
-
-	db := sql.OpenDB(connector)
-	if err := db.QueryRowContext(ctx, countQuery).Scan(&totalRows); err != nil {
-		return "", 0, nil, err
-	}
-
-	safeSQL, err := buildSafeParquetSQL(ctx, db, fullPath)
-	if err != nil {
-		return "", 0, nil, fmt.Errorf("failed to build safe parquet SQL: %w", err)
-	}
-
-	pr, pw := io.Pipe()
-	go func() {
-		defer func() { _ = pw.Close() }()
-
-		conn, err := connector.Connect(ctx)
-		if err != nil {
-			logrus.Errorf("connect failed: %v", err)
-			return
-		}
-		defer func() { _ = conn.Close() }()
-
-		arrow, err := duckdb.NewArrowFromConn(conn)
-		if err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("failed to get arrow interface: %w", err))
-			return
-		}
-
-		rdr, err := arrow.QueryContext(ctx, safeSQL)
-		if err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("query context failed: %w", err))
-			return
-		}
-		defer rdr.Release()
-
-		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()))
-		defer func() { _ = writer.Close() }()
-
-		for rdr.Next() {
-			record := rdr.RecordBatch()
-			if err := writer.Write(record); err != nil {
-				record.Release()
-				_ = pw.CloseWithError(fmt.Errorf("failed to write arrow record: %w", err))
-				return
-			}
-			record.Release()
-		}
-
-		if err := rdr.Err(); err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("reader error: %w", err))
-		}
-	}()
-
-	return filepath.Base(fullPath), totalRows, pr, nil
+	return filepath.Base(fullPath), totalRows, reader, nil
 }
 
-func buildSafeParquetSQL(ctx context.Context, db *sql.DB, filePath string) (string, error) {
-	fallbackSQL := fmt.Sprintf("SELECT * FROM read_parquet('%s')", filePath)
-	describeQuery := fmt.Sprintf("DESCRIBE SELECT * FROM read_parquet('%s')", filePath)
-	rows, err := db.QueryContext(ctx, describeQuery)
-	if err != nil {
-		logrus.Warnf("failed to describe parquet file, falling back to SELECT *: %v", err)
-		return fallbackSQL, nil
+// castSafeSelect builds a projection over the VIEW that casts UINT64 /
+// UHUGEINT columns to BIGINT. Falls back to SELECT * when no schema is
+// available.
+func castSafeSelect(view string, tables []duckdbquery.Table) string {
+	if len(tables) == 0 || len(tables[0].Columns) == 0 {
+		return "SELECT * FROM " + quoteIdent(view)
 	}
-	defer func() { _ = rows.Close() }()
-
-	var columns []string
-	for rows.Next() {
-		var colName, colType string
-		var null, key, def, extra sql.NullString
-		if err := rows.Scan(&colName, &colType, &null, &key, &def, &extra); err != nil {
-			return "", err
-		}
-		_ = null
-		_ = key
-		_ = def
-		_ = extra
-
-		quotedName := fmt.Sprintf("\"%s\"", strings.ReplaceAll(colName, "\"", "\"\""))
-		normalized := strings.ToUpper(strings.TrimSpace(colType))
-
-		switch normalized {
+	cols := make([]string, 0, len(tables[0].Columns))
+	for _, c := range tables[0].Columns {
+		quoted := quoteIdent(c.Name)
+		switch strings.ToUpper(strings.TrimSpace(c.Type)) {
 		case "UINT64", "UHUGEINT":
-			logrus.Infof("parquet column %q: casting %s -> BIGINT", colName, colType)
-			columns = append(columns, fmt.Sprintf("CAST(%s AS BIGINT) AS %s", quotedName, quotedName))
+			cols = append(cols, fmt.Sprintf("CAST(%s AS BIGINT) AS %s", quoted, quoted))
 		default:
-			columns = append(columns, quotedName)
+			cols = append(cols, quoted)
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return "", err
-	}
-	if len(columns) == 0 {
-		return fallbackSQL, nil
-	}
+	return fmt.Sprintf("SELECT %s FROM %s", strings.Join(cols, ", "), quoteIdent(view))
+}
 
-	return fmt.Sprintf("SELECT %s FROM read_parquet('%s')", strings.Join(columns, ", "), filePath), nil
+func quoteIdent(name string) string {
+	return fmt.Sprintf("\"%s\"", strings.ReplaceAll(name, "\"", "\"\""))
 }
 
 // datapackParquet binds a logical VIEW name to the parquet file it reads.
@@ -174,7 +113,7 @@ func (s *Service) listDatapackParquets(ctx context.Context, injectionName string
 		if !strings.HasSuffix(strings.ToLower(base), ".parquet") {
 			continue
 		}
-		view := sanitizeViewName(strings.TrimSuffix(base, filepath.Ext(base)))
+		view := duckdbquery.SanitizeViewName(strings.TrimSuffix(base, filepath.Ext(base)))
 		if view == "" {
 			continue
 		}
@@ -192,36 +131,12 @@ func (s *Service) listDatapackParquets(ctx context.Context, injectionName string
 	return out, nil
 }
 
-// newDuckDBConnector returns a duckdb connector whose init callback
-// loads the httpfs extension on every new connection. DuckDB extensions
-// are per-connection, so this must run before any read_parquet() against
-// an HTTPS URL (the S3-backed presigned URLs we hand out).
-func newDuckDBConnector() (*duckdb.Connector, error) {
-	return duckdb.NewConnector("", func(execer driver.ExecerContext) error {
-		for _, stmt := range []string{
-			"INSTALL httpfs",
-			"LOAD httpfs",
-		} {
-			if _, err := execer.ExecContext(context.Background(), stmt, nil); err != nil {
-				return fmt.Errorf("duckdb init %s: %w", stmt, err)
-			}
-		}
-		return nil
-	})
-}
-
-var viewNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_]+`)
-
-func sanitizeViewName(raw string) string {
-	cleaned := viewNameSanitizer.ReplaceAllString(raw, "_")
-	cleaned = strings.Trim(cleaned, "_")
-	if cleaned == "" {
-		return ""
+func parquetSources(parquets []datapackParquet) []duckdbquery.Source {
+	out := make([]duckdbquery.Source, 0, len(parquets))
+	for _, p := range parquets {
+		out = append(out, duckdbquery.Source{View: p.view, URL: p.path})
 	}
-	if cleaned[0] >= '0' && cleaned[0] <= '9' {
-		cleaned = "_" + cleaned
-	}
-	return cleaned
+	return out
 }
 
 func (s *Service) getDatapackSchema(ctx context.Context, scope authz.CallerScope, id int) (*DatapackSchemaResp, error) {
@@ -246,116 +161,37 @@ func (s *Service) getDatapackSchema(ctx context.Context, scope authz.CallerScope
 		return &DatapackSchemaResp{Tables: []DatapackTableSchema{}}, nil
 	}
 
-	connector, err := newDuckDBConnector()
+	libTables, err := duckdbquery.Schema(ctx, parquetSources(parquets), datapackQueryLimits)
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector)
-	defer func() { _ = db.Close() }()
-
-	tables := make([]DatapackTableSchema, 0, len(parquets))
+	// duckdbquery.Schema keys by VIEW name; re-attach the source file
+	// path the API contract exposes alongside each table.
+	fileByView := make(map[string]string, len(parquets))
 	for _, p := range parquets {
-		cols, err := describeParquetColumns(ctx, db, p.path)
-		if err != nil {
-			// One missing/corrupted parquet shouldn't blow up the whole listing.
-			logrus.WithError(err).Warnf("describe %s skipped", p.file)
-			continue
-		}
-		var rows int64 = -1
-		if err := db.QueryRowContext(ctx,
-			fmt.Sprintf("SELECT count(*) FROM read_parquet('%s')", p.path),
-		).Scan(&rows); err != nil {
-			logrus.WithError(err).Warnf("count %s failed, leaving rows=-1", p.file)
-			rows = -1
+		fileByView[p.view] = p.file
+	}
+	tables := make([]DatapackTableSchema, 0, len(libTables))
+	for _, lt := range libTables {
+		cols := make([]DatapackColumnSchema, 0, len(lt.Columns))
+		for _, c := range lt.Columns {
+			cols = append(cols, DatapackColumnSchema{Name: c.Name, Type: c.Type})
 		}
 		tables = append(tables, DatapackTableSchema{
-			Name:    p.view,
-			File:    p.file,
-			Rows:    rows,
+			Name:    lt.Table,
+			File:    fileByView[lt.Table],
+			Rows:    lt.RowCount,
 			Columns: cols,
 		})
 	}
 	return &DatapackSchemaResp{Tables: tables}, nil
 }
 
-func describeParquetColumns(ctx context.Context, db *sql.DB, parquetPath string) ([]DatapackColumnSchema, error) {
-	rows, err := db.QueryContext(ctx,
-		fmt.Sprintf("DESCRIBE SELECT * FROM read_parquet('%s')", parquetPath),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", consts.ErrNotFound, err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var out []DatapackColumnSchema
-	for rows.Next() {
-		var name, typ string
-		var null, key, def, extra sql.NullString
-		if err := rows.Scan(&name, &typ, &null, &key, &def, &extra); err != nil {
-			return nil, err
-		}
-		out = append(out, DatapackColumnSchema{Name: name, Type: typ})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// validateDatapackSQL applies a conservative whitelist: only SELECT / WITH
-// queries, no semicolons (single trailing semicolon allowed), no extension
-// loading, no DDL/DML, no raw file-reader functions. The user is expected to
-// query the pre-registered VIEWs.
-func validateDatapackSQL(raw string) (string, error) {
-	stripped := stripSQLComments(raw)
-	stripped = strings.TrimSpace(stripped)
-	stripped = strings.TrimRight(stripped, ";")
-	stripped = strings.TrimSpace(stripped)
-	if stripped == "" {
-		return "", fmt.Errorf("%w: SQL is empty", consts.ErrBadRequest)
-	}
-	if strings.Contains(stripped, ";") {
-		return "", fmt.Errorf("%w: multi-statement SQL is not allowed", consts.ErrBadRequest)
-	}
-	lowered := strings.ToLower(stripped)
-	first := strings.Fields(lowered)[0]
-	if first != "select" && first != "with" {
-		return "", fmt.Errorf("%w: only SELECT / WITH queries are allowed", consts.ErrBadRequest)
-	}
-	for _, word := range sqlBlacklist {
-		if wordRegex(word).MatchString(lowered) {
-			return "", fmt.Errorf("%w: keyword %q is not allowed", consts.ErrBadRequest, word)
-		}
-	}
-	return stripped, nil
-}
-
-var sqlBlacklist = []string{
-	"attach", "copy", "pragma", "install", "load", "call",
-	"insert", "update", "delete", "create", "drop", "alter", "truncate",
-	"export", "import", "set", "reset", "begin", "commit", "rollback",
-	"read_parquet", "read_csv", "read_json", "read_ndjson", "read_text",
-	"read_blob", "glob", "system", "shell_exec",
-}
-
-func wordRegex(word string) *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(word) + `\b`)
-}
-
-var (
-	lineCommentRe  = regexp.MustCompile(`--[^\n]*`)
-	blockCommentRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
-)
-
-func stripSQLComments(in string) string {
-	out := lineCommentRe.ReplaceAllString(in, " ")
-	out = blockCommentRe.ReplaceAllString(out, " ")
-	return out
-}
-
 func (s *Service) runDatapackQuery(ctx context.Context, scope authz.CallerScope, id int, userSQL string) (io.ReadCloser, error) {
-	cleanSQL, err := validateDatapackSQL(userSQL)
-	if err != nil {
+	// Reject bad SQL before touching the datapack so an invalid query
+	// surfaces as 400 regardless of datapack readiness (preserves the
+	// pre-refactor ordering).
+	if _, err := duckdbquery.ValidateSQL(userSQL); err != nil {
 		return nil, err
 	}
 	injection, err := s.getReadyDatapack(scope, id)
@@ -369,99 +205,24 @@ func (s *Service) runDatapackQuery(ctx context.Context, scope authz.CallerScope,
 	if len(parquets) == 0 {
 		return nil, fmt.Errorf("%w: datapack has no parquet files", consts.ErrNotFound)
 	}
-
-	connector, err := newDuckDBConnector()
-	if err != nil {
-		return nil, err
-	}
-
-	// Single connection for setup + query. Opening a second connection in
-	// the goroutine fails with "could not connect to database" once the
-	// setup conn is released, because go-duckdb tears the in-memory DB
-	// down with the last open conn. Running the VIEW DDL on the same
-	// conn that later serves the Arrow query also sidesteps any
-	// per-connection visibility surprises.
-	conn, err := connector.Connect(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("duckdb connect: %w", err)
-	}
-	execer, ok := conn.(driver.ExecerContext)
-	if !ok {
-		_ = conn.Close()
-		return nil, fmt.Errorf("duckdb conn does not implement ExecerContext")
-	}
-	for _, p := range parquets {
-		stmt := fmt.Sprintf(
-			"CREATE OR REPLACE VIEW %s AS SELECT * FROM read_parquet('%s')",
-			quoteIdent(p.view), p.path,
-		)
-		if _, err := execer.ExecContext(ctx, stmt, nil); err != nil {
-			_ = conn.Close()
-			return nil, fmt.Errorf("failed to register view %s: %w", p.view, err)
-		}
-	}
-
-	pr, pw := io.Pipe()
-	go func() {
-		defer func() { _ = pw.Close() }()
-		defer func() { _ = conn.Close() }()
-
-		arrow, err := duckdb.NewArrowFromConn(conn)
-		if err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("failed to get arrow interface: %w", err))
-			return
-		}
-
-		rdr, err := arrow.QueryContext(ctx, cleanSQL)
-		if err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("%w: %v", consts.ErrBadRequest, err))
-			return
-		}
-		defer rdr.Release()
-
-		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()))
-		defer func() { _ = writer.Close() }()
-
-		for rdr.Next() {
-			record := rdr.RecordBatch()
-			if err := writer.Write(record); err != nil {
-				record.Release()
-				_ = pw.CloseWithError(fmt.Errorf("failed to write arrow record: %w", err))
-				return
-			}
-			record.Release()
-		}
-		if err := rdr.Err(); err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("reader error: %w", err))
-		}
-	}()
-
-	return pr, nil
+	return duckdbquery.Query(ctx, parquetSources(parquets), userSQL, datapackQueryLimits)
 }
 
-func quoteIdent(name string) string {
-	return fmt.Sprintf("\"%s\"", strings.ReplaceAll(name, "\"", "\"\""))
-}
-
-// countParquetRows resolves the parquet file's reader path and runs
-// SELECT count(*). Returns (0,false) if any step fails — the caller treats
+// countParquetRows resolves the parquet file's reader path and returns
+// its row count. Returns (0,false) if any step fails — the caller treats
 // nil-rows as "unknown" rather than "zero".
 func (s *Service) countParquetRows(ctx context.Context, datapackName, file string) (int64, bool) {
 	path, err := s.store.ParquetReaderPath(ctx, datapackName, file, 15*time.Minute)
 	if err != nil {
 		return 0, false
 	}
-	connector, err := newDuckDBConnector()
-	if err != nil {
+	view := duckdbquery.SanitizeViewName(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
+	if view == "" {
+		view = "data"
+	}
+	tables, err := duckdbquery.Schema(ctx, []duckdbquery.Source{{View: view, URL: path}}, datapackQueryLimits)
+	if err != nil || len(tables) == 0 || tables[0].RowCount < 0 {
 		return 0, false
 	}
-	db := sql.OpenDB(connector)
-	defer func() { _ = db.Close() }()
-	var rows int64
-	if err := db.QueryRowContext(ctx,
-		fmt.Sprintf("SELECT count(*) FROM read_parquet('%s')", path),
-	).Scan(&rows); err != nil {
-		return 0, false
-	}
-	return rows, true
+	return tables[0].RowCount, true
 }

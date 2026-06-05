@@ -233,6 +233,21 @@ type BlobAPI interface {
 	BlobPutBucketLifecycleExecute(r ApiBlobPutBucketLifecycleRequest) (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error)
 
 	/*
+		BlobQueryBucket Query bucket parquet objects (SQL)
+
+		Run a read-only SELECT/WITH query over the parquet objects under a prefix (or an explicit key list). Default response is an Arrow IPC stream; send Accept: application/json for decoded rows. One VIEW per *.parquet; view name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@return ApiBlobQueryBucketRequest
+	*/
+	BlobQueryBucket(ctx context.Context, bucket string) ApiBlobQueryBucketRequest
+
+	// BlobQueryBucketExecute executes the request
+	//  @return DtoGenericResponseAny
+	BlobQueryBucketExecute(r ApiBlobQueryBucketRequest) (*DtoGenericResponseAny, *http.Response, error)
+
+	/*
 		BlobRaw Localfs signed token GET/PUT
 
 		Auth-free endpoint that verifies an HMAC-signed token and either streams (GET) or persists (PUT) the object body. The token itself is the auth.
@@ -2696,6 +2711,146 @@ func (a *BlobAPIService) BlobPutBucketLifecycleExecute(r ApiBlobPutBucketLifecyc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiBlobQueryBucketRequest struct {
+	ctx         context.Context
+	ApiService  BlobAPI
+	bucket      string
+	requestBody *map[string]interface{}
+}
+
+// Query request
+func (r ApiBlobQueryBucketRequest) RequestBody(requestBody map[string]interface{}) ApiBlobQueryBucketRequest {
+	r.requestBody = &requestBody
+	return r
+}
+
+func (r ApiBlobQueryBucketRequest) Execute() (*DtoGenericResponseAny, *http.Response, error) {
+	return r.ApiService.BlobQueryBucketExecute(r)
+}
+
+/*
+BlobQueryBucket Query bucket parquet objects (SQL)
+
+Run a read-only SELECT/WITH query over the parquet objects under a prefix (or an explicit key list). Default response is an Arrow IPC stream; send Accept: application/json for decoded rows. One VIEW per *.parquet; view name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobQueryBucketRequest
+*/
+func (a *BlobAPIService) BlobQueryBucket(ctx context.Context, bucket string) ApiBlobQueryBucketRequest {
+	return ApiBlobQueryBucketRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseAny
+func (a *BlobAPIService) BlobQueryBucketExecute(r ApiBlobQueryBucketRequest) (*DtoGenericResponseAny, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseAny
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobQueryBucket")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/query"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.requestBody == nil {
+		return localVarReturnValue, nil, reportError("requestBody is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.requestBody
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 501 {
 			var v DtoGenericResponseAny
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

@@ -197,6 +197,21 @@ data:
     auth     = "none"
 
     [[gateway.routes]]
+    # Bucket ops, including the DuckDB query/schema endpoints. Machine
+    # clients (agentm) hit POST /buckets/{bucket}/query with a service
+    # token, so accept jwt-or-service and leave audiences unrestricted.
+    # Longer prefix wins over /api/v2/blob/ below. The query route does a
+    # big parquet scan before first byte — give it a generous timeout and
+    # extra rate-limit headroom over the global limiter.
+    prefix          = "/api/v2/blob/buckets/"
+    upstream        = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth            = "jwt-or-service"
+    timeout_seconds = 180
+    [gateway.routes.rate_limit]
+    rps   = 50
+    burst = 100
+
+    [[gateway.routes]]
     prefix   = "/api/v2/blob/"
     upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "jwt"

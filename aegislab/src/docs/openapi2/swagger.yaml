@@ -544,6 +544,29 @@ definitions:
       ttl_seconds:
         type: integer
     type: object
+  blob.queryReq:
+    properties:
+      keys:
+        items:
+          type: string
+        type: array
+      prefix:
+        type: string
+      sql:
+        type: string
+    required:
+    - sql
+    type: object
+  blob.queryRowsResp:
+    properties:
+      row_count:
+        type: integer
+      rows:
+        items:
+          additionalProperties: {}
+          type: object
+        type: array
+    type: object
   blob.zipReq:
     properties:
       archive_name:
@@ -10772,6 +10795,47 @@ paths:
       - Blob
       x-api-type:
         portal: "true"
+  /api/v2/blob/buckets/{bucket}/query:
+    post:
+      consumes:
+      - application/json
+      description: 'Run a read-only SELECT/WITH query over the parquet objects under
+        a prefix (or an explicit key list). Default response is an Arrow IPC stream;
+        send Accept: application/json for decoded rows. One VIEW per *.parquet; view
+        name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered.'
+      operationId: blob_query_bucket
+      parameters:
+      - description: Bucket name
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Query request
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Decoded rows or Arrow IPC stream
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "501":
+          description: Built without duckdb_arrow
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Query bucket parquet objects (SQL)
+      tags:
+      - Blob
+      x-api-type:
+        portal: "true"
+        sdk: "true"
   /api/v2/blob/buckets/{bucket}/stream/{key}:
     get:
       description: Stream object bytes for keys that contain slashes (zip streaming,
@@ -13984,6 +14048,7 @@ paths:
       - Injections
       x-api-type:
         portal: "true"
+        sdk: "true"
   /api/v2/injections/{id}/datapack-schema:
     get:
       description: List logical tables exposed over the datapack's parquet files (one
@@ -14030,6 +14095,7 @@ paths:
       - Injections
       x-api-type:
         portal: "true"
+        sdk: "true"
   /api/v2/injections/{id}/diagnose:
     get:
       description: Report which required datapack artifacts are missing, which required
@@ -14260,6 +14326,7 @@ paths:
       - Injections
       x-api-type:
         portal: "true"
+        sdk: "true"
   /api/v2/injections/{id}/groundtruth:
     put:
       consumes:

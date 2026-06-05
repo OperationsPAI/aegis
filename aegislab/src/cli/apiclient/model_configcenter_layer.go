@@ -21,10 +21,11 @@ type ConfigcenterLayer string
 
 // List of configcenter.Layer
 const (
-	CONFIGCENTERLAYER_LayerEtcd    ConfigcenterLayer = "etcd"
-	CONFIGCENTERLAYER_LayerEnv     ConfigcenterLayer = "env"
-	CONFIGCENTERLAYER_LayerTOML    ConfigcenterLayer = "toml"
-	CONFIGCENTERLAYER_LayerDefault ConfigcenterLayer = "default"
+	CONFIGCENTERLAYER_LayerEtcd      ConfigcenterLayer = "etcd"
+	CONFIGCENTERLAYER_LayerEnv       ConfigcenterLayer = "env"
+	CONFIGCENTERLAYER_LayerTOML      ConfigcenterLayer = "toml"
+	CONFIGCENTERLAYER_LayerDBDefault ConfigcenterLayer = "db_default"
+	CONFIGCENTERLAYER_LayerDefault   ConfigcenterLayer = "default"
 )
 
 // All allowed values of ConfigcenterLayer enum
@@ -32,6 +33,7 @@ var AllowedConfigcenterLayerEnumValues = []ConfigcenterLayer{
 	"etcd",
 	"env",
 	"toml",
+	"db_default",
 	"default",
 }
 

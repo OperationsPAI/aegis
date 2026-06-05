@@ -1959,6 +1959,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/blob/buckets/{bucket}/query": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Run a read-only SELECT/WITH query over the parquet objects under a prefix (or an explicit key list). Default response is an Arrow IPC stream; send Accept: application/json for decoded rows. One VIEW per *.parquet; view name = sanitized filestem. p50/p90/p95/p99 percentile macros are pre-registered.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Blob"
+                ],
+                "summary": "Query bucket parquet objects (SQL)",
+                "operationId": "blob_query_bucket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Query request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Decoded rows or Arrow IPC stream",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "501": {
+                        "description": "Built without duckdb_arrow",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "portal": "true",
+                    "sdk": "true"
+                }
+            }
+        },
         "/api/v2/blob/buckets/{bucket}/stream/{key}": {
             "get": {
                 "security": [
@@ -7076,7 +7134,8 @@ const docTemplate = `{
                     }
                 },
                 "x-api-type": {
-                    "portal": "true"
+                    "portal": "true",
+                    "sdk": "true"
                 }
             }
         },
@@ -7144,7 +7203,8 @@ const docTemplate = `{
                     }
                 },
                 "x-api-type": {
-                    "portal": "true"
+                    "portal": "true",
+                    "sdk": "true"
                 }
             }
         },
@@ -7492,7 +7552,8 @@ const docTemplate = `{
                     }
                 },
                 "x-api-type": {
-                    "portal": "true"
+                    "portal": "true",
+                    "sdk": "true"
                 }
             }
         },
@@ -20780,6 +20841,41 @@ const docTemplate = `{
                 },
                 "ttl_seconds": {
                     "type": "integer"
+                }
+            }
+        },
+        "blob.queryReq": {
+            "type": "object",
+            "required": [
+                "sql"
+            ],
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "sql": {
+                    "type": "string"
+                }
+            }
+        },
+        "blob.queryRowsResp": {
+            "type": "object",
+            "properties": {
+                "row_count": {
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
                 }
             }
         },
