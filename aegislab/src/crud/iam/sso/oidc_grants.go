@@ -2,7 +2,6 @@ package sso
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"aegis/platform/consts"
@@ -126,32 +125,6 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 	})
 }
 
-// grantPassword handles the `password` grant on /token.
-//
-//	@Summary		OIDC token: password grant
-//	@Description	Internal dispatch path of /token for `grant_type=password`. Verifies the resource owner's username/password and issues an access token. Intended for trusted first-party CLI/test clients only.
-//	@Tags			OIDC
-//	@ID				oidc_token_password
-//	@Accept			x-www-form-urlencoded
-//	@Produce		json
-//	@Param			username	formData	string	true	"Username or email"
-//	@Param			password	formData	string	true	"Password"
-//	@Success		200	{object}	tokenResp			"Token response"
-//	@Failure		401	{object}	map[string]string	"Invalid credentials"
-func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
-	username := c.PostForm("username")
-	password := c.PostForm("password")
-	u, err := s.users.GetByUsername(c.Request.Context(), username)
-	if err != nil && strings.Contains(username, "@") {
-		u, err = s.users.GetByEmail(c.Request.Context(), username)
-	}
-	if err != nil || !crypto.VerifyPassword(password, u.Password) || !u.IsActive {
-		tokenError(c, http.StatusUnauthorized, consts.OIDCErrorInvalidGrant, "invalid credentials")
-		return
-	}
-	s.respondUserToken(c, cli, u, false)
-}
-
 func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u *model.User, withRefresh bool) {
 	roles, _ := s.users.ListRoleNames(c.Request.Context(), u.ID)
 	isAdmin := false
@@ -161,7 +134,12 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 			break
 		}
 	}
-	access, expiresAt, err := crypto.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, s.signer.PrivateKey, s.signer.Kid)
+	access, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
+		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,
+		AuthType: "user", Idp: "local",
+		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 		return

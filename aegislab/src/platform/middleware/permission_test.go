@@ -11,10 +11,10 @@ import (
 
 type permissionCheckerStub struct{}
 
-func (permissionCheckerStub) VerifyToken(context.Context, string) (*crypto.Claims, error) {
+func (permissionCheckerStub) VerifyToken(context.Context, string) (*crypto.UnifiedClaims, error) {
 	return nil, nil
 }
-func (permissionCheckerStub) VerifyServiceToken(context.Context, string) (*crypto.ServiceClaims, error) {
+func (permissionCheckerStub) VerifyServiceToken(context.Context, string) (*crypto.UnifiedClaims, error) {
 	return nil, nil
 }
 func (permissionCheckerStub) CheckUserPermission(context.Context, *dto.CheckPermissionParams) (bool, error) {

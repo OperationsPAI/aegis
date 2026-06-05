@@ -98,11 +98,12 @@ func TestServiceAccountIssue_Roundtrip(t *testing.T) {
 	require.NotEmpty(t, resp.Data.Token)
 
 	pub := &signer.PrivateKey.PublicKey
-	claims, err := crypto.ParseServiceAccountToken(resp.Data.Token, func(string) (*rsa.PublicKey, error) {
+	claims, err := crypto.ParseUnifiedToken(resp.Data.Token, func(string) (*rsa.PublicKey, error) {
 		return pub, nil
 	})
 	require.NoError(t, err)
 	require.Equal(t, "chaos-service", claims.Subject)
+	require.Equal(t, "service_account", claims.Typ)
 	require.Equal(t, []string{"chaos.inject.write", "chaos.webhook.write"}, claims.Scopes)
 }
 

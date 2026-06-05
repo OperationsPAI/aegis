@@ -14,7 +14,6 @@ var OIDCGrantsSupported = []string{
 	OIDCGrantAuthorizationCode,
 	OIDCGrantRefreshToken,
 	OIDCGrantClientCredentials,
-	OIDCGrantPassword,
 }
 
 // OIDC standard scopes.

@@ -27,6 +27,10 @@ func issueServiceToken(taskID string) (string, error) {
 	if s == nil {
 		return "", fmt.Errorf("jwt signer not initialized")
 	}
-	token, _, err := crypto.GenerateServiceToken(taskID, s.PrivateKey, s.Kid)
+	token, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ:      "task",
+		TaskID:   taskID,
+		Lifetime: crypto.ServiceTokenExpiration,
+	}, s.PrivateKey, s.Kid)
 	return token, err
 }

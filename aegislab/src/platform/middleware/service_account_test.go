@@ -34,7 +34,11 @@ func saTestSetup(t *testing.T) (*gorm.DB, *rsa.PrivateKey, crypto.PublicKeyResol
 
 func saMintToken(t *testing.T, priv *rsa.PrivateKey, name string, scopes []string, lifetime time.Duration) string {
 	t.Helper()
-	tok, _, err := crypto.GenerateServiceAccountToken(name, scopes, lifetime, priv, "test-kid")
+	tok, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "service_account", Service: name,
+		Scopes: scopes, AuthType: consts.AuthTypeServiceAccount,
+		Lifetime: lifetime,
+	}, priv, "test-kid")
 	require.NoError(t, err)
 	return tok
 }
@@ -44,10 +48,6 @@ func saRouter(t *testing.T, db *gorm.DB, resolve crypto.PublicKeyResolver, allow
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(RequireServiceAccount(db, resolve, allowed...))
-	// Fallback handler used to verify "fall through" behaviour: returns 418
-	// so tests can distinguish a successful SA auth (no abort, hits the
-	// probe handler) from a fall-through path (probe handler also runs but
-	// without SA context flags set).
 	r.POST("/probe", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"auth_type":  c.GetString(consts.CtxKeyAuthType),
@@ -104,12 +104,11 @@ func TestRequireServiceAccount_Revoked_Returns401(t *testing.T) {
 func TestRequireServiceAccount_Expired_Returns401(t *testing.T) {
 	db, priv, resolve := saTestSetup(t)
 	require.NoError(t, db.Create(&model.ServiceAccount{Name: "chaos-service"}).Error)
-	// Mint a structurally-valid SA token with exp in the past so jwt
-	// validation rejects on expiry rather than on lifetime construction.
 	past := time.Now().Add(-time.Hour)
 	claims := jwt.MapClaims{
+		"typ":       "service_account",
 		"sub":       "chaos-service",
-		"iss":       consts.JWTIssuerServiceAccount,
+		"iss":       crypto.JWTIssuerUnified,
 		"auth_type": consts.AuthTypeServiceAccount,
 		"scopes":    []string{},
 		"iat":       past.Add(-time.Hour).Unix(),
@@ -131,8 +130,11 @@ func TestRequireServiceAccount_Expired_Returns401(t *testing.T) {
 
 func TestRequireServiceAccount_NonSABearer_FallsThrough(t *testing.T) {
 	db, priv, resolve := saTestSetup(t)
-	// User token (different issuer) — must fall through, not 401.
-	userTok, _, err := crypto.GenerateToken(7, "alice", "a@x", true, false, nil, priv, "test-kid")
+	// Human token -- must fall through, not 401.
+	userTok, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: 7, Username: "alice", Email: "a@x",
+		IsActive: true, Lifetime: crypto.TokenExpiration,
+	}, priv, "test-kid")
 	require.NoError(t, err)
 	r := saRouter(t, db, resolve, "chaos-service")
 
@@ -141,15 +143,11 @@ func TestRequireServiceAccount_NonSABearer_FallsThrough(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
-	// Crucially: ctx flags were NOT stamped — fall-through path.
 	require.NotContains(t, w.Body.String(), `"auth_type":"service_account"`)
 	require.Contains(t, w.Body.String(), `"is_service":false`)
 }
 
 func TestRequireServiceAccount_NonJWTBearer_FallsThrough(t *testing.T) {
-	// Raw hex static bearer (dispatcher's CHAOS_OUTBOUND_BEARER fallback) is
-	// not a JWT at all. Must fall through to the next auth middleware rather
-	// than 401-abort.
 	db, _, resolve := saTestSetup(t)
 	r := saRouter(t, db, resolve, "chaos-service")
 

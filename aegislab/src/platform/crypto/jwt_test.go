@@ -16,24 +16,36 @@ func resolver() PublicKeyResolver {
 	}
 }
 
-func TestGenerateAndParseUserToken(t *testing.T) {
-	tok, _, err := GenerateToken(42, "alice", "alice@x.com", true, false, []string{"admin"}, testRSAKey, "test-kid")
+func TestGenerateAndParseHumanToken(t *testing.T) {
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 42, Username: "alice", Email: "alice@x.com",
+		IsActive: true, IsAdmin: false, Roles: []string{"admin"},
+		AuthType: "user", Idp: "local",
+		Lifetime: TokenExpiration, Audience: []string{"portal"},
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	claims, err := ParseToken(tok, resolver())
+	claims, err := ParseUnifiedToken(tok, resolver())
 	require.NoError(t, err)
+	require.Equal(t, "human", claims.Typ)
 	require.Equal(t, 42, claims.UserID)
 	require.Equal(t, "alice", claims.Username)
 	require.Equal(t, []string{"admin"}, claims.Roles)
 	require.True(t, claims.IsActive)
 	require.Equal(t, "user", claims.AuthType)
+	require.Equal(t, JWTIssuerUnified, claims.Issuer)
 }
 
 func TestGenerateAPIKeyToken(t *testing.T) {
-	tok, _, err := GenerateAPIKeyToken(7, "bob", "b@x", true, true, []string{"admin"}, 99, []string{"read"}, testRSAKey, "test-kid")
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 7, Username: "bob", Email: "b@x",
+		IsActive: true, IsAdmin: true, Roles: []string{"admin"},
+		AuthType: "api_key", APIKeyID: 99, APIKeyScopes: []string{"read"},
+		Idp: "local", Lifetime: TokenExpiration, Audience: []string{"portal"},
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	claims, err := ParseToken(tok, resolver())
+	claims, err := ParseUnifiedToken(tok, resolver())
 	require.NoError(t, err)
 	require.Equal(t, "api_key", claims.AuthType)
 	require.Equal(t, 99, claims.APIKeyID)
@@ -41,74 +53,76 @@ func TestGenerateAPIKeyToken(t *testing.T) {
 }
 
 func TestParseToken_RejectsInactiveUser(t *testing.T) {
-	tok, _, err := GenerateToken(42, "alice", "alice@x.com", false, false, nil, testRSAKey, "test-kid")
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 42, Username: "alice", Email: "alice@x.com",
+		IsActive: false, Lifetime: TokenExpiration,
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	_, err = ParseToken(tok, resolver())
+	_, err = ParseUnifiedToken(tok, resolver())
 	require.Error(t, err)
 }
 
-func TestServiceToken(t *testing.T) {
-	tok, _, err := GenerateServiceToken("task-xyz", testRSAKey, "test-kid")
+func TestTaskToken(t *testing.T) {
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "task", TaskID: "task-xyz", Lifetime: ServiceTokenExpiration,
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	claims, err := ParseServiceToken(tok, resolver())
+	claims, err := ParseUnifiedToken(tok, resolver())
 	require.NoError(t, err)
+	require.Equal(t, "task", claims.Typ)
 	require.Equal(t, "task-xyz", claims.TaskID)
+	require.Equal(t, "task-xyz", claims.Subject)
 }
 
 func TestServiceAccountToken_Roundtrip(t *testing.T) {
 	scopes := []string{"chaos.inject.write", "chaos.webhook.write"}
-	tok, exp, err := GenerateServiceAccountToken("chaos-service", scopes, 24*time.Hour, testRSAKey, "test-kid")
+	tok, exp, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "service_account", Service: "chaos-service",
+		Scopes: scopes, AuthType: "service_account",
+		Lifetime: 24 * time.Hour,
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 	require.NotEmpty(t, tok)
 	require.True(t, exp.After(time.Now()))
 
-	claims, err := ParseServiceAccountToken(tok, resolver())
+	claims, err := ParseUnifiedToken(tok, resolver())
 	require.NoError(t, err)
 	require.Equal(t, "chaos-service", claims.Subject)
-	require.Equal(t, "rcabench-sa", claims.Issuer)
+	require.Equal(t, JWTIssuerUnified, claims.Issuer)
 	require.Equal(t, "service_account", claims.AuthType)
 	require.Equal(t, scopes, claims.Scopes)
-
-	// Service-account parser must reject a user token (wrong issuer).
-	userTok, _, err := GenerateToken(1, "u", "u@x", true, false, nil, testRSAKey, "test-kid")
-	require.NoError(t, err)
-	_, err = ParseServiceAccountToken(userTok, resolver())
-	require.ErrorIs(t, err, ErrInvalidToken)
 }
 
-func TestParseServiceAccountToken_NonJWTFallsThrough(t *testing.T) {
-	// A raw hex bearer (e.g. the dispatcher's CHAOS_OUTBOUND_BEARER fallback)
-	// is not a JWT at all. The parser must surface this as ErrInvalidToken so
-	// the SA middleware falls through to the next auth scheme.
-	_, err := ParseServiceAccountToken("deadbeef-not-a-jwt", resolver())
+func TestParseUnifiedToken_NonJWTFallsThrough(t *testing.T) {
+	_, err := ParseUnifiedToken("deadbeef-not-a-jwt", resolver())
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrInvalidToken)
 }
 
-func TestParseServiceAccountToken_BadSignatureIsRejection(t *testing.T) {
-	// `a.b.c` is JWT-shaped but the segments are not valid base64 JSON, so the
-	// parser fails before signature verification — still a malformed-token
-	// path (fall through). Use a real RS256 token signed by a different key
-	// to force a signature-validation failure, which must NOT wrap
-	// ErrInvalidToken (rejection path, 401).
+func TestParseUnifiedToken_BadSignatureIsRejection(t *testing.T) {
 	otherKey, err := generateOtherKey()
 	require.NoError(t, err)
-	tok, _, err := GenerateServiceAccountToken("chaos-service", nil, time.Hour, otherKey, "test-kid")
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "service_account", Service: "chaos-service",
+		Lifetime: time.Hour,
+	}, otherKey, "test-kid")
 	require.NoError(t, err)
 
-	_, err = ParseServiceAccountToken(tok, resolver())
+	_, err = ParseUnifiedToken(tok, resolver())
 	require.Error(t, err)
 	require.NotErrorIs(t, err, ErrInvalidToken)
 }
 
 func TestParseToken_RejectsWrongKey(t *testing.T) {
-	tok, _, err := GenerateToken(1, "a", "a@x", true, false, nil, testRSAKey, "test-kid")
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 1, Username: "a", Email: "a@x",
+		IsActive: true, Lifetime: TokenExpiration,
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	_, err = ParseToken(tok, func(_ string) (*rsa.PublicKey, error) {
-		// return a different key
+	_, err = ParseUnifiedToken(tok, func(_ string) (*rsa.PublicKey, error) {
 		other, _ := generateOtherKey()
 		return &other.PublicKey, nil
 	})
@@ -116,13 +130,29 @@ func TestParseToken_RejectsWrongKey(t *testing.T) {
 }
 
 func TestParseToken_ResolverErrorRejects(t *testing.T) {
-	tok, _, err := GenerateToken(1, "a", "a@x", true, false, nil, testRSAKey, "test-kid")
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 1, Username: "a", Email: "a@x",
+		IsActive: true, Lifetime: TokenExpiration,
+	}, testRSAKey, "test-kid")
 	require.NoError(t, err)
 
-	_, err = ParseToken(tok, func(_ string) (*rsa.PublicKey, error) {
+	_, err = ParseUnifiedToken(tok, func(_ string) (*rsa.PublicKey, error) {
 		return nil, errExample
 	})
 	require.Error(t, err)
+}
+
+func TestParseUnifiedToken_RejectsUnknownIssuer(t *testing.T) {
+	tok, _, err := GenerateUnifiedToken(UnifiedTokenParams{
+		Typ: "human", UserID: 1, Username: "a", Email: "a@x",
+		IsActive: true, Lifetime: TokenExpiration,
+	}, testRSAKey, "test-kid")
+	require.NoError(t, err)
+
+	// Verify that a valid unified-issuer token parses fine.
+	claims, err := ParseUnifiedToken(tok, resolver())
+	require.NoError(t, err)
+	require.Equal(t, JWTIssuerUnified, claims.Issuer)
 }
 
 var errExample = errors.New("boom")

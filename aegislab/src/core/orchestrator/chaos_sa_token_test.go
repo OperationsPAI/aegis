@@ -57,12 +57,15 @@ func TestMintBackendChaosSAToken_RoundTrip(t *testing.T) {
 	}
 
 	resolve := func(string) (*rsa.PublicKey, error) { return &key.PublicKey, nil }
-	claims, err := crypto.ParseServiceAccountToken(tok, resolve)
+	claims, err := crypto.ParseUnifiedToken(tok, resolve)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if claims.Subject != chaosClientSAName {
 		t.Errorf("sub = %q; want %q", claims.Subject, chaosClientSAName)
+	}
+	if claims.Typ != "service_account" {
+		t.Errorf("typ = %q; want service_account", claims.Typ)
 	}
 	var hasInjectWrite bool
 	for _, s := range claims.Scopes {

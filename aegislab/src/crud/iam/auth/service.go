@@ -173,7 +173,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 		return nil, fmt.Errorf("token refresh request is nil")
 	}
 
-	refreshClaims, err := crypto.ParseToken(req.Token, s.verifier.Resolve)
+	refreshClaims, err := crypto.ParseUnifiedToken(req.Token, s.verifier.Resolve)
 	if err != nil {
 		return nil, fmt.Errorf("token refresh failed: %w", err)
 	}
@@ -195,7 +195,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, claims *crypto.Claims) error {
+func (s *Service) Logout(ctx context.Context, claims *crypto.UnifiedClaims) error {
 	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/logout")
 	defer span.End()
 	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(claims.UserID))
@@ -211,11 +211,11 @@ func (s *Service) Logout(ctx context.Context, claims *crypto.Claims) error {
 	return nil
 }
 
-func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.Claims, error) {
+func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error) {
 	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/verify_token")
 	defer span.End()
 
-	claims, err := crypto.ParseToken(token, s.verifier.Resolve)
+	claims, err := crypto.ParseUnifiedToken(token, s.verifier.Resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +230,6 @@ func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.Claims
 			return nil, fmt.Errorf("%w: token has been revoked", consts.ErrAuthenticationFailed)
 		}
 
-		// Per-user revocation: an admin password-reset bumps revoke:user:<id>
-		// to mark every pre-existing token invalid. A token survives only if
-		// it was issued AFTER the marker timestamp.
 		revokedAt, ok, err := s.tokenStore.UserRevokedSince(ctx, claims.UserID)
 		if err != nil {
 			return nil, err
@@ -247,8 +244,8 @@ func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.Claims
 	return claims, nil
 }
 
-func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*crypto.ServiceClaims, error) {
-	return crypto.ParseServiceToken(token, s.verifier.Resolve)
+func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error) {
+	return crypto.ParseUnifiedToken(token, s.verifier.Resolve)
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req *ChangePasswordReq, userID int) error {
@@ -559,7 +556,12 @@ func (s *Service) generateTokenWithRoles(roleRepo *RoleRepository, user *model.U
 		}
 	}
 
-	token, expiresAt, err := crypto.GenerateToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, s.signer.PrivateKey, s.signer.Kid)
+	token, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
+		IsActive: user.IsActive, IsAdmin: isAdmin, Roles: roleNames,
+		AuthType: "user", Idp: "local",
+		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -582,7 +584,12 @@ func (s *Service) generateAPIKeyTokenWithRoles(roleRepo *RoleRepository, user *m
 		}
 	}
 
-	token, expiresAt, err := crypto.GenerateAPIKeyToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, apiKeyID, apiKeyScopes, s.signer.PrivateKey, s.signer.Kid)
+	token, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
+		IsActive: user.IsActive, IsAdmin: isAdmin, Roles: roleNames,
+		AuthType: "api_key", APIKeyID: apiKeyID, APIKeyScopes: apiKeyScopes,
+		Idp: "local", Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate api key token: %w", err)
 	}

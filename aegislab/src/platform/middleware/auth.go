@@ -5,11 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
-	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
 	"aegis/platform/dto"
@@ -40,7 +38,7 @@ const (
 // setUserClaims stashes JWT claims onto the Gin context using the canonical
 // keys from consts/context_keys.go. Both JWTAuth and OptionalJWTAuth funnel
 // successful validations through this helper so the key list is in one place.
-func setUserClaims(c *gin.Context, claims *crypto.Claims) {
+func setUserClaims(c *gin.Context, claims *crypto.UnifiedClaims) {
 	c.Set(consts.CtxKeyUserID, claims.UserID)
 	c.Set(consts.CtxKeyUsername, claims.Username)
 	c.Set(consts.CtxKeyEmail, claims.Email)
@@ -56,11 +54,10 @@ func extractTokenFromHeader(header string) (string, error) {
 	return crypto.ExtractTokenFromHeader(header)
 }
 
-// JWTAuth is the JWT authentication middleware
-// Supports both user tokens and service tokens (for K8s jobs)
+// JWTAuth is the JWT authentication middleware.
+// Supports human, task, and service_account tokens via the unified claim set.
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extract token from Authorization header
 		authHeader := c.GetHeader("Authorization")
 		token, err := extractTokenFromHeader(authHeader)
 		if err != nil {
@@ -71,33 +68,31 @@ func JWTAuth() gin.HandlerFunc {
 
 		service := serviceFromContext(c)
 
-		// Try to validate as user token first
 		claims, err := service.VerifyToken(c.Request.Context(), token)
-		if err == nil {
-			// Valid user token - store user information in context
-			setUserClaims(c, claims)
-			c.Set("token_expires_at", claims.ExpiresAt.Time)
-			c.Set(consts.CtxKeyTokenType, "user")
-			c.Next()
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized: "+err.Error())
+			c.Abort()
 			return
 		}
 
-		// Try to validate as service token (for K8s jobs)
-		serviceClaims, serviceErr := service.VerifyServiceToken(c.Request.Context(), token)
-		if serviceErr == nil {
-			// Valid service token - store service information in context
-			c.Set(consts.CtxKeyTaskID, serviceClaims.TaskID)
-			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
+		c.Set("token_expires_at", claims.ExpiresAt.Time)
+		switch claims.Typ {
+		case "task":
+			c.Set(consts.CtxKeyTaskID, claims.TaskID)
 			c.Set(consts.CtxKeyTokenType, "service")
 			c.Set(consts.CtxKeyIsServiceToken, true)
-			c.Set(consts.CtxKeyScopes, append([]string(nil), serviceClaims.Scopes...))
-			c.Next()
-			return
+			c.Set(consts.CtxKeyScopes, append([]string(nil), claims.Scopes...))
+		case "service_account":
+			c.Set(consts.CtxKeyIsServiceToken, true)
+			c.Set(consts.CtxKeyTokenType, "service_account")
+			c.Set(consts.CtxKeyAuthType, consts.AuthTypeServiceAccount)
+			c.Set(consts.CtxKeyUsername, claims.Service)
+			c.Set(consts.CtxKeyScopes, append([]string(nil), claims.Scopes...))
+		default:
+			setUserClaims(c, claims)
+			c.Set(consts.CtxKeyTokenType, "user")
 		}
-
-		// Both validations failed, return the user token error (more common case)
-		dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized: "+err.Error())
-		c.Abort()
+		c.Next()
 	}
 }
 
@@ -110,16 +105,8 @@ func JWTAuth() gin.HandlerFunc {
 // The signing key is read lazily from viper key "gateway.trusted_header_key".
 // If the key is empty the service refuses to start (caller should assert
 // this at boot time via AssertTrustedHeaderKeyConfigured).
-//
-// AEGIS_DEV_JWT_BYPASS=true falls back to JWT for direct service access when
-// no X-Aegis-Signature header is present. Production deployments must NOT set
-// this variable.
 func TrustedHeaderAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// A preceding RequireServiceAccount may have already authenticated
-		// the caller as a non-revoked service account. Skip further auth
-		// in that case — re-running JWTAuth on the SA bearer would 401
-		// because SA tokens are neither user JWTs nor legacy service JWTs.
 		if v, _ := c.Get(consts.CtxKeyAuthType); v == consts.AuthTypeServiceAccount {
 			c.Next()
 			return
@@ -127,20 +114,9 @@ func TrustedHeaderAuth() gin.HandlerFunc {
 		hasSig := c.GetHeader(trustedHeaderSignature) != ""
 		hasBearer := c.GetHeader("Authorization") != ""
 		// Inter-service / K8s-Job callers bypass the gateway and present
-		// a service-token JWT directly (e.g. orchestrator k8s.Job →
-		// rcabench-aegis-api with RCABENCH_TOKEN). Gateway hasn't signed
-		// trusted headers for them. Treat "no signature + bearer present"
-		// as a service-direct call and fall through to JWTAuth, which
-		// itself distinguishes user vs service tokens against SSO. Only
-		// in-cluster callers can reach a service directly anyway — the
-		// gateway is the sole internet ingress.
+		// a JWT directly. Treat "no signature + bearer present" as a
+		// service-direct call and fall through to JWTAuth.
 		if !hasSig && hasBearer {
-			JWTAuth()(c)
-			return
-		}
-		// Dev escape valve for engineers port-forwarding straight to a
-		// service. Explicit opt-in only; production must NOT set this.
-		if !hasSig && os.Getenv("AEGIS_DEV_JWT_BYPASS") == "true" {
 			JWTAuth()(c)
 			return
 		}
@@ -235,70 +211,50 @@ func AssertTrustedHeaderKeyConfigured() {
 	if strings.TrimSpace(viper.GetString("gateway.trusted_header_key")) == "" {
 		logrus.Fatal("gateway.trusted_header_key must be set; service refuses to start without a signing key")
 	}
-	AssertNoDevJWTBypassInProd()
 }
 
-// AssertNoDevJWTBypassInProd refuses to boot when AEGIS_DEV_JWT_BYPASS is set
-// in a production environment. The flag is a dev escape hatch that lets
-// engineers port-forward straight to a service and skip the gateway's
-// trusted-header signing; shipping it to prod silently disables authz.
-func AssertNoDevJWTBypassInProd() {
-	if !config.IsProduction() {
-		return
-	}
-	if os.Getenv("AEGIS_DEV_JWT_BYPASS") == "" {
-		return
-	}
-	logrus.Fatal("AEGIS_DEV_JWT_BYPASS must not be set in production; refusing to boot")
-}
-
-// OptionalJWTAuth is an optional JWT authentication middleware
-// If token is provided, it validates it and sets user/service info
-// If no token is provided, it continues without authentication
-// Supports both user tokens and service tokens (for K8s jobs)
+// OptionalJWTAuth is an optional JWT authentication middleware.
+// If token is provided, it validates it and sets identity info.
+// If no token is provided, it continues without authentication.
 func OptionalJWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// No authentication provided, continue
 			c.Next()
 			return
 		}
 
 		token, err := extractTokenFromHeader(authHeader)
 		if err != nil {
-			// Invalid header format, continue without auth
 			c.Next()
 			return
 		}
 
 		service := serviceFromContext(c)
 
-		// Try to validate as user token first
 		claims, err := service.VerifyToken(c.Request.Context(), token)
-		if err == nil {
-			// Valid user token, set user information
-			setUserClaims(c, claims)
-			c.Set("token_expires_at", claims.ExpiresAt.Time)
-			c.Set(consts.CtxKeyTokenType, "user")
+		if err != nil {
 			c.Next()
 			return
 		}
 
-		// Try to validate as service token (for K8s jobs)
-		serviceClaims, serviceErr := service.VerifyServiceToken(c.Request.Context(), token)
-		if serviceErr == nil {
-			// Valid service token, set service information
-			c.Set(consts.CtxKeyTaskID, serviceClaims.TaskID)
-			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
+		c.Set("token_expires_at", claims.ExpiresAt.Time)
+		switch claims.Typ {
+		case "task":
+			c.Set(consts.CtxKeyTaskID, claims.TaskID)
 			c.Set(consts.CtxKeyTokenType, "service")
 			c.Set(consts.CtxKeyIsServiceToken, true)
-			c.Set(consts.CtxKeyScopes, append([]string(nil), serviceClaims.Scopes...))
-			c.Next()
-			return
+			c.Set(consts.CtxKeyScopes, append([]string(nil), claims.Scopes...))
+		case "service_account":
+			c.Set(consts.CtxKeyIsServiceToken, true)
+			c.Set(consts.CtxKeyTokenType, "service_account")
+			c.Set(consts.CtxKeyAuthType, consts.AuthTypeServiceAccount)
+			c.Set(consts.CtxKeyUsername, claims.Service)
+			c.Set(consts.CtxKeyScopes, append([]string(nil), claims.Scopes...))
+		default:
+			setUserClaims(c, claims)
+			c.Set(consts.CtxKeyTokenType, "user")
 		}
-
-		// Invalid token, continue without auth
 		c.Next()
 	}
 }

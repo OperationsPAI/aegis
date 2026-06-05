@@ -11,8 +11,8 @@ type HandlerService interface {
 	Login(context.Context, *LoginReq) (*LoginResp, error)
 	Register(context.Context, *RegisterReq) (*UserInfo, error)
 	RefreshToken(context.Context, *TokenRefreshReq) (*TokenRefreshResp, error)
-	Logout(context.Context, *crypto.Claims) error
-	VerifyToken(context.Context, string) (*crypto.Claims, error)
+	Logout(context.Context, *crypto.UnifiedClaims) error
+	VerifyToken(context.Context, string) (*crypto.UnifiedClaims, error)
 	ChangePassword(context.Context, *ChangePasswordReq, int) error
 	GetProfile(context.Context, int) (*UserProfileResp, error)
 	CreateAPIKey(context.Context, int, *CreateAPIKeyReq) (*APIKeyWithSecretResp, error)

@@ -123,13 +123,21 @@ func TestVerifyToken_RejectsForged(t *testing.T) {
 	defer srv.Close()
 	c := newTestClient(t, srv.URL, &priv.PublicKey)
 
-	good, _, err := crypto.GenerateToken(42, "alice", "alice@x.com", true, false, []string{"user"}, priv, testKid)
+	good, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: 42, Username: "alice", Email: "alice@x.com",
+		IsActive: true, IsAdmin: false, Roles: []string{"user"},
+		AuthType: "user", Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, priv, testKid)
 	require.NoError(t, err)
 	claims, err := c.VerifyToken(context.Background(), good)
 	require.NoError(t, err)
 	require.Equal(t, 42, claims.UserID)
 
-	forged, _, err := crypto.GenerateToken(42, "alice", "alice@x.com", true, false, []string{"admin"}, other, testKid)
+	forged, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: 42, Username: "alice", Email: "alice@x.com",
+		IsActive: true, IsAdmin: false, Roles: []string{"admin"},
+		AuthType: "user", Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, other, testKid)
 	require.NoError(t, err)
 	_, err = c.VerifyToken(context.Background(), forged)
 	require.Error(t, err)
