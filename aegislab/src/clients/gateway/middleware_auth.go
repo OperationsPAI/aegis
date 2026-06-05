@@ -11,10 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/auth"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/clients/sso"
 	"aegis/platform/crypto"
+	"aegis/platform/jwtkeys"
 
 	"github.com/sirupsen/logrus"
 )
@@ -26,23 +28,22 @@ import (
 type Authenticator struct {
 	client *ssoclient.Client
 	key    []byte
+	signer *jwtkeys.Signer
 }
 
-// NewAuthenticator wires the SSO client + the gateway-wide HMAC signing
-// key. In production an empty key is fatal: the fallback exists only so
-// `go run ./main.go` works without setup. Configure
-// `gateway.trusted_header_key` (or env GATEWAY_TRUSTED_HEADER_KEY)
-// before deploying.
-func NewAuthenticator(client *ssoclient.Client, key string) (*Authenticator, error) {
+func NewAuthenticator(client *ssoclient.Client, key string, signer *jwtkeys.Signer) (*Authenticator, error) {
 	k := strings.TrimSpace(key)
-	if k == "" {
+	if k == "" && signer == nil {
 		if config.IsProduction() {
-			return nil, errors.New("gateway.trusted_header_key is required in production")
+			return nil, errors.New("gateway: either trusted_header_key or signer must be configured in production")
 		}
-		logrus.Warnf("gateway: trusted_header_key is empty; using dev fallback (env=%s). Set [gateway].trusted_header_key in production.", config.Env())
+		logrus.Warnf("gateway: trusted_header_key is empty; using dev fallback (env=%s).", config.Env())
 		k = "aegis-dev-trusted-header-key-do-not-use-in-prod"
 	}
-	return &Authenticator{client: client, key: []byte(k)}, nil
+	if signer != nil {
+		logrus.Info("gateway: signer available; will mint internal assertion tokens")
+	}
+	return &Authenticator{client: client, key: []byte(k), signer: signer}, nil
 }
 
 // Middleware returns an http middleware that enforces the route's
@@ -102,6 +103,15 @@ func (a *Authenticator) enforce(r *http.Request, route *Route) error {
 }
 
 func (a *Authenticator) injectHeaders(r *http.Request, c *crypto.UnifiedClaims) {
+	if a.signer != nil {
+		it, err := auth.MintInternalTokenFromUnifiedClaims(c, a.signer.PrivateKey, a.signer.Kid)
+		if err == nil {
+			r.Header.Set(auth.HeaderInternalToken, it)
+			return
+		}
+		logrus.WithError(err).Warn("gateway: failed to mint internal token, falling back to HMAC")
+	}
+
 	aud := ""
 	if len(c.Audience) > 0 {
 		aud = c.Audience[0]

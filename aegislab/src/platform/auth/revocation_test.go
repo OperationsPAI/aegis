@@ -72,7 +72,7 @@ func TestAuthenticator_RevokedToken(t *testing.T) {
 	store.revoked["jti-1"] = true
 
 	v := &mockVerifier{
-		userClaims: &crypto.Claims{
+		userClaims: &crypto.UnifiedClaims{
 			UserID:   1,
 			Username: "alice",
 			IsActive: true,
@@ -95,7 +95,7 @@ func TestAuthenticator_RevocationStoreError_FailOpen(t *testing.T) {
 	store.err = errors.New("redis connection refused")
 
 	v := &mockVerifier{
-		userClaims: &crypto.Claims{
+		userClaims: &crypto.UnifiedClaims{
 			UserID:   1,
 			Username: "bob",
 			IsActive: true,
@@ -118,7 +118,7 @@ func TestAuthenticator_RevocationStoreError_FailOpen(t *testing.T) {
 
 func TestAuthenticator_NoRevocationStore(t *testing.T) {
 	v := &mockVerifier{
-		userClaims: &crypto.Claims{
+		userClaims: &crypto.UnifiedClaims{
 			UserID:   1,
 			Username: "carol",
 			IsActive: true,

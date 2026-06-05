@@ -2,10 +2,16 @@ package sso
 
 import (
 	"aegis/crud/iam/rbac"
+	"aegis/platform/auth"
+	"aegis/platform/redis"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
+
+func newRevocationStore(gw *redis.Gateway) auth.RevocationStore {
+	return auth.NewRedisRevocationStore(gw.Client())
+}
 
 // Module wires the SSO admin REST surface (`/v1/*` per
 // sso-extraction-design.md §5), the OIDC client management API, and the
@@ -25,6 +31,7 @@ var Module = fx.Module("sso",
 		NewServiceAccountHandler,
 		NewFederationRepository,
 		NewFederationHandler,
+		newRevocationStore,
 	),
 	fx.Provide(
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),

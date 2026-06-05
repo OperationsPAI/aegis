@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
+	"aegis/platform/auth"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
@@ -399,11 +402,25 @@ func (s *OIDCService) userinfo(c *gin.Context) {
 //	@Success		200	{object}	map[string]string	"Logout acknowledged"
 //	@Router			/v1/logout [post]
 func (s *OIDCService) logout(c *gin.Context) {
-	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/logout")
+	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/logout")
 	defer span.End()
+
+	if bearer := c.GetHeader("Authorization"); bearer != "" {
+		if raw, err := crypto.ExtractTokenFromHeader(bearer); err == nil {
+			resolve := func(_ string) (*rsa.PublicKey, error) { return s.signer.PublicKey(), nil }
+			if claims, err := crypto.ParseUnifiedToken(raw, resolve); err == nil && claims.ID != "" {
+				var exp time.Time
+				if claims.ExpiresAt != nil {
+					exp = claims.ExpiresAt.Time
+				}
+				_ = auth.RevokeToken(ctx, s.revStore, claims.ID, exp)
+			}
+		}
+	}
+
 	rt := c.PostForm("refresh_token")
 	if rt != "" {
-		_, _ = s.redis.DeleteKey(c.Request.Context(), refreshRedisPrefix+rt)
+		_, _ = s.redis.DeleteKey(ctx, refreshRedisPrefix+rt)
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

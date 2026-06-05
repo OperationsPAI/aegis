@@ -52,6 +52,10 @@ func (g *Gateway) clientOrInit() *redis.Client {
 	return g.client
 }
 
+func (g *Gateway) Client() redis.Cmdable {
+	return g.clientOrInit()
+}
+
 func (g *Gateway) close() error {
 	if g.client == nil {
 		return nil

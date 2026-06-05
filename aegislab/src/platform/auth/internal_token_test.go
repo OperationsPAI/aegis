@@ -76,7 +76,7 @@ func TestInternalToken_ShortTTL(t *testing.T) {
 func TestInternalToken_WrongIssuerRejected(t *testing.T) {
 	// Mint a regular user token (issuer = "rcabench"), try to parse it as
 	// internal — must be rejected.
-	userTok, _, err := crypto.GenerateToken(1, "u", "u@x", true, false, nil, testKey, "kid-1")
+	userTok, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{Typ: "human", UserID: 1, Username: "u", Email: "u@x", IsActive: true, Lifetime: time.Hour}, testKey, "kid-1")
 	require.NoError(t, err)
 
 	_, err = ParseInternalToken(userTok, testResolver())
@@ -121,8 +121,8 @@ func TestInternalToken_WrongKeyRejected(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestMintInternalTokenFromClaims(t *testing.T) {
-	src := &crypto.Claims{
+func TestMintInternalTokenFromUnifiedClaims(t *testing.T) {
+	src := &crypto.UnifiedClaims{
 		UserID:       10,
 		Username:     "bob",
 		Email:        "bob@x.com",
@@ -134,7 +134,7 @@ func TestMintInternalTokenFromClaims(t *testing.T) {
 		APIKeyScopes: []string{"read"},
 	}
 
-	tok, err := MintInternalTokenFromClaims(src, testKey, "kid-1")
+	tok, err := MintInternalTokenFromUnifiedClaims(src, testKey, "kid-1")
 	require.NoError(t, err)
 
 	parsed, err := ParseInternalToken(tok, testResolver())

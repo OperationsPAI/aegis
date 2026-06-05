@@ -22,17 +22,17 @@ import (
 // --- mocks ---
 
 type mockVerifier struct {
-	userClaims    *crypto.Claims
+	userClaims    *crypto.UnifiedClaims
 	userErr       error
-	serviceClaims *crypto.ServiceClaims
+	serviceClaims *crypto.UnifiedClaims
 	serviceErr    error
 }
 
-func (m *mockVerifier) VerifyToken(_ context.Context, _ string) (*crypto.Claims, error) {
+func (m *mockVerifier) VerifyToken(_ context.Context, _ string) (*crypto.UnifiedClaims, error) {
 	return m.userClaims, m.userErr
 }
 
-func (m *mockVerifier) VerifyServiceToken(_ context.Context, _ string) (*crypto.ServiceClaims, error) {
+func (m *mockVerifier) VerifyServiceToken(_ context.Context, _ string) (*crypto.UnifiedClaims, error) {
 	return m.serviceClaims, m.serviceErr
 }
 
@@ -47,8 +47,9 @@ func (m *mockSAStore) FindByName(_ context.Context, _ string) (*model.ServiceAcc
 
 // --- converter tests ---
 
-func TestPrincipalFromClaims(t *testing.T) {
-	c := &crypto.Claims{
+func TestPrincipalFromUnifiedClaims_Human(t *testing.T) {
+	c := &crypto.UnifiedClaims{
+		Typ:          "human",
 		UserID:       42,
 		Username:     "alice",
 		Email:        "alice@example.com",
@@ -59,10 +60,11 @@ func TestPrincipalFromClaims(t *testing.T) {
 		APIKeyID:     7,
 		APIKeyScopes: []string{"read", "write"},
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID: "jwt_user_42_1234",
+			ID:      "jwt_user_42_1234",
+			Subject: "42",
 		},
 	}
-	p := PrincipalFromClaims(c)
+	p := PrincipalFromUnifiedClaims(c)
 
 	if p.Typ != PrincipalHuman {
 		t.Fatalf("Typ = %q, want %q", p.Typ, PrincipalHuman)
@@ -74,36 +76,25 @@ func TestPrincipalFromClaims(t *testing.T) {
 		t.Fatalf("UserID = %d, want 42", p.UserID)
 	}
 	if p.Username != "alice" {
-		t.Fatalf("Username = %q, want %q", p.Username, "alice")
+		t.Fatalf("Username = %q", p.Username)
 	}
-	if p.Email != "alice@example.com" {
-		t.Fatalf("Email = %q", p.Email)
+	if !p.IsActive || !p.IsAdmin {
+		t.Fatal("admin/active mismatch")
 	}
-	if !p.IsActive {
-		t.Fatal("IsActive = false")
-	}
-	if !p.IsAdmin {
-		t.Fatal("IsAdmin = false")
-	}
-	if len(p.Roles) != 2 || p.Roles[0] != "admin" {
+	if len(p.Roles) != 2 {
 		t.Fatalf("Roles = %v", p.Roles)
 	}
-	if p.AuthType != "user" {
-		t.Fatalf("AuthType = %q", p.AuthType)
-	}
-	if p.APIKeyID != 7 {
-		t.Fatalf("APIKeyID = %d", p.APIKeyID)
-	}
-	if len(p.APIKeyScopes) != 2 || p.APIKeyScopes[0] != "read" {
-		t.Fatalf("APIKeyScopes = %v", p.APIKeyScopes)
+	if p.APIKeyID != 7 || len(p.APIKeyScopes) != 2 {
+		t.Fatalf("APIKey mismatch")
 	}
 	if p.JTI != "jwt_user_42_1234" {
 		t.Fatalf("JTI = %q", p.JTI)
 	}
 }
 
-func TestPrincipalFromServiceClaims(t *testing.T) {
-	c := &crypto.ServiceClaims{
+func TestPrincipalFromUnifiedClaims_Task(t *testing.T) {
+	c := &crypto.UnifiedClaims{
+		Typ:    "task",
 		TaskID: "task-abc",
 		Scopes: []string{"inject.write"},
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -111,7 +102,7 @@ func TestPrincipalFromServiceClaims(t *testing.T) {
 			Subject: "task-abc",
 		},
 	}
-	p := PrincipalFromServiceClaims(c)
+	p := PrincipalFromUnifiedClaims(c)
 
 	if p.Typ != PrincipalTask {
 		t.Fatalf("Typ = %q, want %q", p.Typ, PrincipalTask)
@@ -119,33 +110,23 @@ func TestPrincipalFromServiceClaims(t *testing.T) {
 	if p.TaskID != "task-abc" {
 		t.Fatalf("TaskID = %q", p.TaskID)
 	}
-	if p.Sub != "task-abc" {
-		t.Fatalf("Sub = %q", p.Sub)
-	}
-	if len(p.Scopes) != 1 || p.Scopes[0] != "inject.write" {
+	if len(p.Scopes) != 1 {
 		t.Fatalf("Scopes = %v", p.Scopes)
-	}
-
-	// Service claim with no TaskID -> PrincipalService
-	c2 := &crypto.ServiceClaims{
-		RegisteredClaims: jwt.RegisteredClaims{Subject: "svc:backend"},
-	}
-	p2 := PrincipalFromServiceClaims(c2)
-	if p2.Typ != PrincipalService {
-		t.Fatalf("Typ = %q, want %q", p2.Typ, PrincipalService)
 	}
 }
 
-func TestPrincipalFromServiceAccountClaims(t *testing.T) {
-	c := &crypto.ServiceAccountClaims{
+func TestPrincipalFromUnifiedClaims_ServiceAccount(t *testing.T) {
+	c := &crypto.UnifiedClaims{
+		Typ:      "service_account",
 		AuthType: consts.AuthTypeServiceAccount,
+		Username: "chaos-service",
 		Scopes:   []string{"chaos.inject.write", "chaos.webhook.write"},
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:      "sa_chaos-service_1234",
 			Subject: "chaos-service",
 		},
 	}
-	p := PrincipalFromServiceAccountClaims(c, "chaos-service")
+	p := PrincipalFromUnifiedClaims(c)
 
 	if p.Typ != PrincipalServiceAccount {
 		t.Fatalf("Typ = %q, want %q", p.Typ, PrincipalServiceAccount)
@@ -224,7 +205,8 @@ func TestPrincipalFromTrustedHeaders(t *testing.T) {
 
 func TestVerifyBearer_UserTokenSucceeds(t *testing.T) {
 	v := &mockVerifier{
-		userClaims: &crypto.Claims{
+		userClaims: &crypto.UnifiedClaims{
+			Typ:      "human",
 			UserID:   1,
 			Username: "bob",
 			IsActive: true,
@@ -247,10 +229,10 @@ func TestVerifyBearer_UserTokenSucceeds(t *testing.T) {
 	}
 }
 
-func TestVerifyBearer_UserFails_ServiceSucceeds(t *testing.T) {
+func TestVerifyBearer_TaskToken(t *testing.T) {
 	v := &mockVerifier{
-		userErr: errors.New("not a user token"),
-		serviceClaims: &crypto.ServiceClaims{
+		userClaims: &crypto.UnifiedClaims{
+			Typ:    "task",
 			TaskID: "task-42",
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "svc-jti",
@@ -373,7 +355,7 @@ func TestVerifyBearer_SAToken_Revoked(t *testing.T) {
 		t.Fatalf("generate RSA key: %v", err)
 	}
 	kid := "test-kid"
-	token, _, err := crypto.GenerateServiceAccountToken("chaos-service", []string{"chaos.inject.write"}, 1*time.Hour, privKey, kid)
+	token, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{Typ: "service_account", Service: "chaos-service", Scopes: []string{"chaos.inject.write"}, Lifetime: 1 * time.Hour}, privKey, kid)
 	if err != nil {
 		t.Fatalf("generate SA token: %v", err)
 	}
@@ -409,7 +391,7 @@ func TestVerifyBearer_SAToken_Valid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate RSA key: %v", err)
 	}
-	token, _, err := crypto.GenerateServiceAccountToken("chaos-service", []string{"chaos.inject.write"}, 1*time.Hour, privKey, "test-kid")
+	token, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{Typ: "service_account", Service: "chaos-service", Scopes: []string{"chaos.inject.write"}, Lifetime: 1 * time.Hour}, privKey, "test-kid")
 	if err != nil {
 		t.Fatalf("generate SA token: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"aegis/crud/iam/user"
+	"aegis/platform/auth"
 	"aegis/platform/config"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/redis"
@@ -57,11 +58,12 @@ type OIDCService struct {
 	clients     *Service
 	users       *user.Service
 	redis       *redis.Gateway
+	revStore    auth.RevocationStore
 	issuer      string
 	jwksHandler *jwksDoc
 }
 
-func NewOIDCService(signer *jwtkeys.Signer, clients *Service, users *user.Service, redisGW *redis.Gateway) (*OIDCService, error) {
+func NewOIDCService(signer *jwtkeys.Signer, clients *Service, users *user.Service, redisGW *redis.Gateway, revStore auth.RevocationStore) (*OIDCService, error) {
 	doc, err := newJWKSDoc(signer)
 	if err != nil {
 		return nil, err
@@ -78,6 +80,7 @@ func NewOIDCService(signer *jwtkeys.Signer, clients *Service, users *user.Servic
 		clients:     clients,
 		users:       users,
 		redis:       redisGW,
+		revStore:    revStore,
 		issuer:      issuer,
 		jwksHandler: doc,
 	}, nil
