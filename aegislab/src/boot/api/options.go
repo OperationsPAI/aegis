@@ -2,8 +2,10 @@ package api
 
 import (
 	"aegis/boot"
+	configcenterclient "aegis/clients/configcenter"
 	runtimeclient "aegis/clients/runtime"
 	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"
+	configcenter "aegis/crud/admin/configcenter"
 	rbac "aegis/crud/iam/rbac"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
@@ -33,6 +35,8 @@ func Options(confPath, port string) fx.Option {
 		app.BuildInfraOptions(),
 		chaos.Module,
 		k8s.Module,
+		configcenter.Module,
+		configcenterclient.Module,
 		app.ProducerHTTPOptions(port),
 		// rbac stays here (not in monolithHTTPModules) because aegis-api
 		// must contribute its module-internal RoleGrantsRegistrar /

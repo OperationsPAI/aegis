@@ -2,7 +2,9 @@ package runtimeapp
 
 import (
 	"aegis/boot"
+	configcenterclient "aegis/clients/configcenter"
 	"aegis/core/orchestrator"
+	configcenter "aegis/crud/admin/configcenter"
 
 	"go.uber.org/fx"
 )
@@ -24,6 +26,8 @@ func Options(confPath string) fx.Option {
 		app.DataOptions(),
 		app.CoordinationOptions(),
 		app.BuildInfraOptions(),
+		configcenter.Module,
+		configcenterclient.Module,
 		app.ExecutionInjectionOwnerModules(),
 		app.RuntimeWorkerStackOptions(),
 		consumer.RemoteOwnerOptions(),

@@ -1,7 +1,6 @@
 package app
 
 import (
-	configcenterclient "aegis/clients/configcenter"
 	"aegis/clients/runtime"
 	chaossystem "aegis/core/domain/chaossystem"
 	task "aegis/core/domain/task"
@@ -10,7 +9,6 @@ import (
 	grpcruntime "aegis/core/orchestrator/transport/grpc/runtime"
 	receiver "aegis/core/orchestrator/transport/receiver"
 	worker "aegis/core/orchestrator/transport/worker"
-	configcenter "aegis/crud/admin/configcenter"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
 	runtimeinfra "aegis/platform/runtime"
@@ -35,8 +33,6 @@ func RuntimeWorkerStackOptions() fx.Option {
 		chaos.Module,
 		k8s.Module,
 		runtimeclient.Module,
-		configcenter.Module,
-		configcenterclient.Module,
 		consumer.Module,
 		consumer.JWTSignerModule,
 		consumer.ChaosSATokenModule,

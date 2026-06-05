@@ -3,9 +3,7 @@ package app
 import (
 	"context"
 
-	chaos "aegis/platform/chaos"
 	etcd "aegis/platform/etcd"
-	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	httpapi "aegis/boot/wiring/http"
 	"aegis/clients/sso"
@@ -16,15 +14,6 @@ import (
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
-
-func ProducerOptions(confPath string, port string) fx.Option {
-	return fx.Options(
-		CommonOptions(confPath),
-		chaos.Module,
-		k8s.Module,
-		ProducerHTTPOptions(port),
-	)
-}
 
 func ProducerHTTPOptions(port string) fx.Option {
 	return fx.Options(

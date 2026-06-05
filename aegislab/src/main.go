@@ -22,7 +22,6 @@ package main
 import (
 	"os"
 
-	"aegis/boot"
 	apiboot "aegis/boot/api"
 	runtimeapp "aegis/boot/runtime"
 	sso "aegis/boot/sso"
@@ -50,7 +49,7 @@ func main() {
 		Use:   "rcabench",
 		Short: "RCA Bench is a benchmarking tool",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Println("Please specify a mode: producer, consumer, both, aegis-api, runtime-worker-service, or sso")
+			logrus.Println("Please specify a mode: aegis-api, runtime-worker-service, or sso")
 		},
 	}
 
@@ -64,15 +63,6 @@ func main() {
 		logrus.Fatalf("failed to bind flag: %v", err)
 	}
 
-	producerCmd := newModeCommand("producer", "Run as a producer", func() {
-		fx.New(app.ProducerOptions(viper.GetString("conf"), viper.GetString("port"))).Run()
-	})
-	consumerCmd := newModeCommand("consumer", "Run as a consumer", func() {
-		fx.New(app.ConsumerOptions(viper.GetString("conf"))).Run()
-	})
-	bothCmd := newModeCommand("both", "Run as both producer and consumer", func() {
-		fx.New(app.BothOptions(viper.GetString("conf"), viper.GetString("port"))).Run()
-	})
 	aegisAPICmd := newModeCommand("aegis-api", "Run as the aegis business API process", func() {
 		fx.New(apiboot.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
@@ -88,9 +78,6 @@ func main() {
 	})
 
 	rootCmd.AddCommand(
-		producerCmd,
-		consumerCmd,
-		bothCmd,
 		aegisAPICmd,
 		runtimeWorkerServiceCmd,
 		ssoCmd,

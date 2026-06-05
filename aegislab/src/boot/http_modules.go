@@ -4,7 +4,6 @@ import (
 	"context"
 
 	blobclient "aegis/clients/blob"
-	configcenterclient "aegis/clients/configcenter"
 	gateway "aegis/clients/gateway"
 	notificationclient "aegis/clients/notification"
 	chaossystem "aegis/core/domain/chaossystem"
@@ -18,7 +17,6 @@ import (
 	pedestal "aegis/core/domain/pedestal"
 	task "aegis/core/domain/task"
 	chaosprune "aegis/crud/admin/chaosprune"
-	configcenter "aegis/crud/admin/configcenter"
 	ratelimiter "aegis/crud/admin/ratelimiter"
 	widget "aegis/crud/admin/widget"
 	chaoshooks "aegis/crud/hooks/chaos"
@@ -94,13 +92,11 @@ func apiHTTPModules() []fx.Option {
 
 		// crud/admin
 		chaosprune.Module,
-		configcenter.Module,
 		ratelimiter.Module,
 		widget.Module,
 
 		// in-process clients (HTTP/gRPC adapters consumed by handlers)
 		blobclient.Module,
-		configcenterclient.Module,
 		gateway.Module,
 		notificationclient.Module,
 
@@ -122,8 +118,8 @@ func apiHTTPModuleNames() []string {
 		"pages",
 		"notification",
 		"hooks.chaos",
-		"chaosprune", "configcenter", "ratelimiter", "widget",
-		"blobclient", "configcenterclient", "gateway", "notificationclient",
+		"chaosprune", "ratelimiter", "widget",
+		"blobclient", "gateway", "notificationclient",
 	}
 }
 
