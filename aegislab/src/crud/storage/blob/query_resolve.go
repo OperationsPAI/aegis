@@ -53,7 +53,7 @@ func (s *Service) resolveQuerySources(ctx context.Context, bucket, prefix string
 		}
 		seen[view] = struct{}{}
 
-		pr, err := s.PresignGet(ctx, bucket, key, GetOpts{TTL: queryPresignTTL})
+		pr, err := s.PresignGet(ctx, bucket, key, GetOpts{TTL: queryPresignTTL, Internal: true})
 		if err != nil {
 			return nil, fmt.Errorf("presign %q: %w", key, err)
 		}

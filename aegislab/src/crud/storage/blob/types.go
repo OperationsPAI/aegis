@@ -70,6 +70,10 @@ type GetOpts struct {
 	ResponseContentType        string
 	ResponseContentDisposition string
 	TTL                        time.Duration
+	// Internal requests a presigned URL using the cluster-internal S3
+	// endpoint instead of the public endpoint. Use for server-side
+	// consumers (DuckDB) that run inside the cluster.
+	Internal bool
 }
 
 // ObjectMeta is the storage-side metadata for one object. The DB row

@@ -159,7 +159,11 @@ func (d *S3Driver) PresignGet(ctx context.Context, key string, opts GetOpts) (*P
 	if opts.ResponseContentDisposition != "" {
 		params.Set("response-content-disposition", opts.ResponseContentDisposition)
 	}
-	u, err := d.presignClient.PresignedGetObject(ctx, d.bucket, key, ttl, params)
+	signer := d.presignClient
+	if opts.Internal {
+		signer = d.client
+	}
+	u, err := signer.PresignedGetObject(ctx, d.bucket, key, ttl, params)
 	if err != nil {
 		return nil, fmt.Errorf("s3 presign get %q: %w", key, err)
 	}
