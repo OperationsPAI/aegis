@@ -231,7 +231,7 @@ func TestVerifyBearer_UserTokenSucceeds(t *testing.T) {
 			RegisteredClaims: jwt.RegisteredClaims{ID: "jti-1"},
 		},
 	}
-	a := NewAuthenticator(v, nil, nil)
+	a := NewAuthenticator(v, nil, nil, nil)
 	p, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: "some-jwt",
@@ -258,7 +258,7 @@ func TestVerifyBearer_UserFails_ServiceSucceeds(t *testing.T) {
 			},
 		},
 	}
-	a := NewAuthenticator(v, nil, nil)
+	a := NewAuthenticator(v, nil, nil, nil)
 	p, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: "some-jwt",
@@ -279,7 +279,7 @@ func TestVerifyBearer_BothFail(t *testing.T) {
 		userErr:    errors.New("nope"),
 		serviceErr: errors.New("nope"),
 	}
-	a := NewAuthenticator(v, nil, nil)
+	a := NewAuthenticator(v, nil, nil, nil)
 	_, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: "bad-token",
@@ -307,7 +307,7 @@ func TestVerifyTrustedHeader_ValidHMAC(t *testing.T) {
 	}
 	h.Signature = computeHMAC(key, h)
 
-	a := NewAuthenticator(nil, nil, nil)
+	a := NewAuthenticator(nil, nil, nil, nil)
 	p, err := a.Verify(context.Background(), Credential{
 		Type:    CredTrustedHeader,
 		Headers: h,
@@ -334,7 +334,7 @@ func TestVerifyTrustedHeader_InvalidHMAC(t *testing.T) {
 		Signature: "deadbeef",
 		IsActive:  "1",
 	}
-	a := NewAuthenticator(nil, nil, nil)
+	a := NewAuthenticator(nil, nil, nil, nil)
 	_, err := a.Verify(context.Background(), Credential{
 		Type:    CredTrustedHeader,
 		Headers: h,
@@ -352,7 +352,7 @@ func TestVerifyBearer_NoResolverSkipsSA(t *testing.T) {
 	}
 	// saStore is set but resolve is nil → SA branch is skipped entirely.
 	// This verifies the guard `a.saStore != nil && a.resolve != nil`.
-	a := NewAuthenticator(v, &mockSAStore{}, nil)
+	a := NewAuthenticator(v, &mockSAStore{}, nil, nil)
 	_, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: "sa-token",
@@ -389,7 +389,7 @@ func TestVerifyBearer_SAToken_Revoked(t *testing.T) {
 		return &privKey.PublicKey, nil
 	}
 
-	a := NewAuthenticator(v, store, resolve)
+	a := NewAuthenticator(v, store, resolve, nil)
 	_, err = a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: token,
@@ -423,7 +423,7 @@ func TestVerifyBearer_SAToken_Valid(t *testing.T) {
 		return &privKey.PublicKey, nil
 	}
 
-	a := NewAuthenticator(v, store, resolve)
+	a := NewAuthenticator(v, store, resolve, nil)
 	p, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: token,
