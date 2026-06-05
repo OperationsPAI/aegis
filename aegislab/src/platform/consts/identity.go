@@ -9,14 +9,14 @@ const (
 	LegacyProjectName = "rcabench"
 )
 
-// JWT issuers. Values are the strings currently emitted in the `iss` claim;
-// changing a value breaks all live tokens minted with the old issuer.
+// Legacy JWT issuers. No new tokens are minted with these values; all issuance
+// now uses crypto.JWTIssuerUnified ("aegis"). These constants survive only so
+// ParseUnifiedToken can accept tokens minted before the migration.
 const (
-	JWTIssuerUser    = "rcabench"         // user access tokens (utils/jwt.go GenerateToken)
-	JWTIssuerRefresh = "rcabench-refresh" // refresh tokens
-	JWTIssuerService        = "rcabench-service" // legacy service tokens (utils/jwt.go GenerateServiceToken)
-	JWTIssuerServiceAccount = "rcabench-sa"      // long-lived service-account tokens (utils/jwt.go GenerateServiceAccountToken)
-	JWTIssuerUnified        = "aegis"            // unified issuer for all new token types (P1)
+	JWTIssuerUser           = "rcabench"
+	JWTIssuerRefresh        = "rcabench-refresh"
+	JWTIssuerService        = "rcabench-service"
+	JWTIssuerServiceAccount = "rcabench-sa"
 )
 
 // JTI (JWT ID claim) prefixes used as the first segment of the `jti` claim.

@@ -75,14 +75,14 @@ func NewClient(cfg Config, verifier *jwtkeys.Verifier) *Client {
 	}
 }
 
-func (c *Client) VerifyToken(ctx context.Context, raw string) (*crypto.Claims, error) {
+func (c *Client) VerifyToken(ctx context.Context, raw string) (*crypto.UnifiedClaims, error) {
 	_ = ctx
-	return crypto.ParseToken(raw, c.verifier.Resolve)
+	return crypto.ParseUnifiedToken(raw, c.verifier.Resolve)
 }
 
-func (c *Client) VerifyServiceToken(ctx context.Context, raw string) (*crypto.ServiceClaims, error) {
+func (c *Client) VerifyServiceToken(ctx context.Context, raw string) (*crypto.UnifiedClaims, error) {
 	_ = ctx
-	return crypto.ParseServiceToken(raw, c.verifier.Resolve)
+	return crypto.ParseUnifiedToken(raw, c.verifier.Resolve)
 }
 
 func (c *Client) GetUser(ctx context.Context, id int) (*UserInfo, error) {

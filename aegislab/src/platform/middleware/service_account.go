@@ -40,19 +40,21 @@ func RequireServiceAccount(db *gorm.DB, resolve crypto.PublicKeyResolver, allowe
 			return
 		}
 
-		claims, err := crypto.ParseServiceAccountToken(token, resolve)
+		claims, err := crypto.ParseUnifiedToken(token, resolve)
 		if err != nil {
-			// Distinguish "not an SA token" (wrong issuer → ErrInvalidToken)
-			// from "an SA token that failed signature/expiry checks". The
-			// former should fall through to other auth middleware; the
-			// latter must be rejected so a tampered/expired SA token isn't
-			// silently accepted by a downstream user-JWT path.
 			if errors.Is(err, crypto.ErrInvalidToken) {
 				c.Next()
 				return
 			}
 			dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized: "+err.Error())
 			c.Abort()
+			return
+		}
+
+		// Only service_account tokens are accepted by this middleware;
+		// other types fall through to downstream auth.
+		if claims.Typ != "service_account" {
+			c.Next()
 			return
 		}
 

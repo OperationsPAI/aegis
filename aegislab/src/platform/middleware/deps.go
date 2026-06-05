@@ -17,8 +17,8 @@ import (
 )
 
 type TokenVerifier interface {
-	VerifyToken(ctx context.Context, token string) (*crypto.Claims, error)
-	VerifyServiceToken(ctx context.Context, token string) (*crypto.ServiceClaims, error)
+	VerifyToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error)
+	VerifyServiceToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error)
 }
 
 // PermissionChecker is the narrow interface middleware needs from SSO. The
@@ -124,14 +124,14 @@ type ssoBackedMiddlewareService struct {
 	db       *gorm.DB
 }
 
-func (s *ssoBackedMiddlewareService) VerifyToken(ctx context.Context, token string) (*crypto.Claims, error) {
+func (s *ssoBackedMiddlewareService) VerifyToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error) {
 	if s.verifier == nil {
 		return nil, fmt.Errorf("token verifier not initialized")
 	}
 	return s.verifier.VerifyToken(ctx, token)
 }
 
-func (s *ssoBackedMiddlewareService) VerifyServiceToken(ctx context.Context, token string) (*crypto.ServiceClaims, error) {
+func (s *ssoBackedMiddlewareService) VerifyServiceToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error) {
 	if s.verifier == nil {
 		return nil, fmt.Errorf("token verifier not initialized")
 	}
@@ -296,10 +296,10 @@ func (s *ssoBackedMiddlewareService) createAuditLog(db *gorm.DB, log *model.Audi
 
 type noopMiddlewareService struct{}
 
-func (noopMiddlewareService) VerifyToken(context.Context, string) (*crypto.Claims, error) {
+func (noopMiddlewareService) VerifyToken(context.Context, string) (*crypto.UnifiedClaims, error) {
 	return nil, fmt.Errorf("token verifier not initialized")
 }
-func (noopMiddlewareService) VerifyServiceToken(context.Context, string) (*crypto.ServiceClaims, error) {
+func (noopMiddlewareService) VerifyServiceToken(context.Context, string) (*crypto.UnifiedClaims, error) {
 	return nil, fmt.Errorf("token verifier not initialized")
 }
 

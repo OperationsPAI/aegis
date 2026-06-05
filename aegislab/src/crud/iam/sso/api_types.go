@@ -99,7 +99,6 @@ var allowedGrants = map[string]struct{}{
 	consts.OIDCGrantAuthorizationCode: {},
 	consts.OIDCGrantRefreshToken:      {},
 	consts.OIDCGrantClientCredentials: {},
-	consts.OIDCGrantPassword:          {},
 }
 
 func isAllowedGrant(g string) bool {

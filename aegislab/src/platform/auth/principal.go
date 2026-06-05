@@ -40,66 +40,6 @@ type Principal struct {
 	ExpiresAt    time.Time
 }
 
-func PrincipalFromClaims(c *crypto.Claims) Principal {
-	var exp time.Time
-	if c.ExpiresAt != nil {
-		exp = c.ExpiresAt.Time
-	}
-	return Principal{
-		Sub:          strconv.Itoa(c.UserID),
-		Typ:          PrincipalHuman,
-		JTI:          c.ID,
-		Idp:          "local",
-		UserID:       c.UserID,
-		Username:     c.Username,
-		Email:        c.Email,
-		IsActive:     c.IsActive,
-		IsAdmin:      c.IsAdmin,
-		Roles:        append([]string(nil), c.Roles...),
-		AuthType:     c.AuthType,
-		APIKeyID:     c.APIKeyID,
-		APIKeyScopes: append([]string(nil), c.APIKeyScopes...),
-		ExpiresAt:    exp,
-	}
-}
-
-func PrincipalFromServiceClaims(c *crypto.ServiceClaims) Principal {
-	typ := PrincipalService
-	if c.TaskID != "" {
-		typ = PrincipalTask
-	}
-	var exp time.Time
-	if c.ExpiresAt != nil {
-		exp = c.ExpiresAt.Time
-	}
-	return Principal{
-		Sub:       c.Subject,
-		Typ:       typ,
-		Scopes:    append([]string(nil), c.Scopes...),
-		JTI:       c.ID,
-		Idp:       "local",
-		TaskID:    c.TaskID,
-		ExpiresAt: exp,
-	}
-}
-
-func PrincipalFromServiceAccountClaims(c *crypto.ServiceAccountClaims, name string) Principal {
-	var exp time.Time
-	if c.ExpiresAt != nil {
-		exp = c.ExpiresAt.Time
-	}
-	return Principal{
-		Sub:       name,
-		Typ:       PrincipalServiceAccount,
-		Scopes:    append([]string(nil), c.Scopes...),
-		JTI:       c.ID,
-		Idp:       "local",
-		AuthType:  consts.AuthTypeServiceAccount,
-		Username:  name,
-		ExpiresAt: exp,
-	}
-}
-
 func PrincipalFromTrustedHeaders(h TrustedHeaderSet) Principal {
 	uid, _ := strconv.Atoi(h.UserID)
 	apiKeyID, _ := strconv.Atoi(h.APIKeyID)

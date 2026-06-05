@@ -313,8 +313,6 @@ func (s *OIDCService) token(c *gin.Context) {
 		s.grantRefresh(c, cli)
 	case consts.OIDCGrantClientCredentials:
 		s.grantClientCredentials(c, cli)
-	case consts.OIDCGrantPassword:
-		s.grantPassword(c, cli)
 	default:
 		tokenError(c, http.StatusBadRequest, consts.OIDCErrorUnsupportedGrantType, "unsupported grant_type")
 	}
@@ -364,7 +362,7 @@ func (s *OIDCService) userinfo(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
 		return
 	}
-	claims, err := crypto.ParseToken(token, func(kid string) (*rsa.PublicKey, error) {
+	claims, err := crypto.ParseUnifiedToken(token, func(kid string) (*rsa.PublicKey, error) {
 		if kid != "" && kid != s.signer.Kid {
 			return nil, errors.New("unknown kid")
 		}

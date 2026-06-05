@@ -241,7 +241,7 @@ func (h *Handler) GetTaskLogsWS(c *gin.Context) {
 		return
 	}
 
-	if _, err := crypto.ParseToken(token, h.verifier.Resolve); err != nil {
+	if _, err := crypto.ParseUnifiedToken(token, h.verifier.Resolve); err != nil {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "invalid token: "+err.Error())
 		return
 	}

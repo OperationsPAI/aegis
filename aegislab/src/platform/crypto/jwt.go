@@ -17,12 +17,16 @@ import (
 const (
 	// JWTSecretEnvVar names the symmetric secret used to derive the API-key
 	// envelope KEK (see access_key_crypto.go). It is NOT used for JWT signing
-	// anymore — JWTs are RS256-signed via an SSO-owned RSA keypair.
+	// anymore -- JWTs are RS256-signed via an SSO-owned RSA keypair.
 	JWTSecretEnvVar = "AEGIS_JWT_SECRET"
 
 	TokenExpiration        = 24 * time.Hour
 	RefreshTokenExpiration = 7 * 24 * time.Hour
 	ServiceTokenExpiration = 24 * time.Hour
+
+	// JWTIssuerUnified is the single issuer for all tokens minted by the
+	// unified token pipeline. Legacy per-type issuers are no longer emitted.
+	JWTIssuerUnified = "aegis"
 )
 
 var JWTSecret string
@@ -43,54 +47,63 @@ func ValidateJWTSecret() error {
 	return nil
 }
 
-type Claims struct {
-	UserID       int      `json:"user_id"`
-	Username     string   `json:"username"`
-	Email        string   `json:"email"`
-	IsActive     bool     `json:"is_active"`
-	IsAdmin      bool     `json:"is_admin"`
-	Roles        []string `json:"roles"`
-	AuthType     string   `json:"auth_type,omitempty"`
-	APIKeyID     int      `json:"api_key_id,omitempty"`
-	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
-	jwt.RegisteredClaims
-}
-
-type RefreshClaims struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
-
-type ServiceClaims struct {
-	TaskID    string   `json:"task_id"`
-	TokenType string   `json:"token_type,omitempty"` // "service" for OIDC client_credentials
-	Service   string   `json:"service,omitempty"`    // OIDC client_id
-	Scopes    []string `json:"scopes,omitempty"`     // OIDC scopes
-	jwt.RegisteredClaims
-}
-
-// ServiceAccountClaims is the claim set for tokens minted by the SSO
-// /v1/service-accounts/{name}/issue endpoint. Service-account tokens carry
-// no task_id (they're not bound to a single task) and identify the caller
-// purely by the SA name in `sub`.
-type ServiceAccountClaims struct {
-	AuthType string   `json:"auth_type"`
-	Scopes   []string `json:"scopes"`
-	jwt.RegisteredClaims
-}
-
 // ErrInvalidToken is returned (wrapped) by Parse* when the input is "not a
-// token of this kind" — either it doesn't structure-parse as a JWT at all, or
+// token of this kind" -- either it doesn't structure-parse as a JWT at all, or
 // it parses but fails our policy checks (wrong issuer, etc.). Callers can use
 // errors.Is to fall through to alternative auth schemes. Signature / expiry
 // failures bubble up as raw errors from jwt.ParseWithClaims and are NOT
-// wrapped with ErrInvalidToken — those must reject the request.
+// wrapped with ErrInvalidToken -- those must reject the request.
 var ErrInvalidToken = errors.New("invalid token")
 
 // PublicKeyResolver maps a JWT header kid to the RSA public key that should
 // verify the signature. Returning an error rejects the token.
 type PublicKeyResolver func(kid string) (*rsa.PublicKey, error)
+
+// UnifiedClaims is the single JWT claim set for all token types (human, task,
+// service_account). The Typ field discriminates; fields irrelevant to a given
+// type are zero-valued and omitted from JSON.
+type UnifiedClaims struct {
+	Typ      string   `json:"typ"`                    // "human", "task", "service_account"
+	UserID   int      `json:"user_id,omitempty"`      // human tokens
+	Username string   `json:"username,omitempty"`      // human tokens
+	Email    string   `json:"email,omitempty"`         // human tokens
+	IsActive bool     `json:"is_active,omitempty"`     // human tokens
+	IsAdmin  bool     `json:"is_admin,omitempty"`      // human tokens
+	Roles    []string `json:"roles,omitempty"`         // human tokens
+	AuthType string   `json:"auth_type,omitempty"`     // "user", "api_key", "service_account"
+	Idp      string   `json:"idp,omitempty"`           // identity provider ("local", OIDC provider name)
+	TaskID   string   `json:"task_id,omitempty"`       // task tokens
+	Service  string   `json:"service,omitempty"`       // service_account tokens
+	Scopes   []string `json:"scopes,omitempty"`        // service_account / api_key tokens
+
+	APIKeyID     int      `json:"api_key_id,omitempty"`     // api_key tokens
+	APIKeyScopes []string `json:"api_key_scopes,omitempty"` // api_key tokens
+
+	jwt.RegisteredClaims
+}
+
+// UnifiedTokenParams collects the inputs for GenerateUnifiedToken. Callers
+// populate only the fields relevant to the token type.
+type UnifiedTokenParams struct {
+	Typ      string        // "human", "task", "service_account"
+	UserID   int           // human
+	Username string        // human
+	Email    string        // human
+	IsActive bool          // human
+	IsAdmin  bool          // human
+	Roles    []string      // human
+	AuthType string        // "user", "api_key", "service_account"
+	Idp      string        // identity provider
+	TaskID   string        // task
+	Service  string        // service_account
+	Scopes   []string      // service_account / api_key
+	Lifetime time.Duration // token validity
+
+	APIKeyID     int      // api_key
+	APIKeyScopes []string // api_key
+
+	Audience []string // JWT aud claim
+}
 
 func signRS256(claims jwt.Claims, priv *rsa.PrivateKey, kid string) (string, error) {
 	if priv == nil {
@@ -103,39 +116,63 @@ func signRS256(claims jwt.Claims, priv *rsa.PrivateKey, kid string) (string, err
 	return token.SignedString(priv)
 }
 
-func GenerateToken(userID int, username, email string, isActive, isAdmin bool, roles []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "user", 0, nil, priv, kid)
-}
+func GenerateUnifiedToken(p UnifiedTokenParams, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
+	now := time.Now()
+	lifetime := p.Lifetime
+	if lifetime <= 0 {
+		lifetime = TokenExpiration
+	}
+	exp := now.Add(lifetime)
 
-func GenerateAPIKeyToken(userID int, username, email string, isActive, isAdmin bool, roles []string, apiKeyID int, apiKeyScopes []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "api_key", apiKeyID, apiKeyScopes, priv, kid)
-}
+	var sub string
+	var jtiPrefix string
+	switch p.Typ {
+	case "human":
+		sub = strconv.Itoa(p.UserID)
+		jtiPrefix = consts.JWTJTIPrefixUser
+	case "task":
+		sub = p.TaskID
+		jtiPrefix = consts.JWTJTIPrefixService
+	case "service_account":
+		if p.Service == "" {
+			return "", time.Time{}, errors.New("service account name is required")
+		}
+		sub = p.Service
+		jtiPrefix = consts.JWTJTIPrefixServiceAccount
+	default:
+		return "", time.Time{}, fmt.Errorf("unknown token type: %q", p.Typ)
+	}
 
-func generateUserToken(userID int, username, email string, isActive, isAdmin bool, roles []string, authType string, apiKeyID int, apiKeyScopes []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	expirationTime := time.Now().Add(TokenExpiration)
+	jti := fmt.Sprintf("%s_%s_%d", jtiPrefix, sub, now.Unix())
 
-	claims := &Claims{
-		UserID:       userID,
-		Username:     username,
-		Email:        email,
-		IsActive:     isActive,
-		IsAdmin:      isAdmin,
-		Roles:        roles,
-		AuthType:     authType,
-		APIKeyID:     apiKeyID,
-		APIKeyScopes: append([]string(nil), apiKeyScopes...),
+	var aud jwt.ClaimStrings
+	if len(p.Audience) > 0 {
+		aud = jwt.ClaimStrings(p.Audience)
+	}
+
+	claims := &UnifiedClaims{
+		Typ:          p.Typ,
+		UserID:       p.UserID,
+		Username:     p.Username,
+		Email:        p.Email,
+		IsActive:     p.IsActive,
+		IsAdmin:      p.IsAdmin,
+		Roles:        p.Roles,
+		AuthType:     p.AuthType,
+		Idp:          p.Idp,
+		TaskID:       p.TaskID,
+		Service:      p.Service,
+		Scopes:       append([]string(nil), p.Scopes...),
+		APIKeyID:     p.APIKeyID,
+		APIKeyScopes: append([]string(nil), p.APIKeyScopes...),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("%s_%s_%d_%d", consts.JWTJTIPrefixUser, authType, userID, time.Now().Unix()),
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    consts.JWTIssuerUser,
-			Subject:   strconv.Itoa(userID),
-			// Human-user tokens carry the "portal" audience so the
-			// gateway's per-route `audiences = ["portal"]` check (e.g.
-			// /api/v2/share/) accepts them. Service tokens stay on
-			// AudienceSSOInternal — they have no human user.
-			Audience: jwt.ClaimStrings{"portal"},
+			ID:        jti,
+			ExpiresAt: jwt.NewNumericDate(exp),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    JWTIssuerUnified,
+			Subject:   sub,
+			Audience:  aud,
 		},
 	}
 
@@ -143,102 +180,7 @@ func generateUserToken(userID int, username, email string, isActive, isAdmin boo
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %v", err)
 	}
-	return tokenString, expirationTime, nil
-}
-
-func GenerateRefreshToken(userID int, username string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	expirationTime := time.Now().Add(RefreshTokenExpiration)
-
-	claims := &RefreshClaims{
-		UserID:   userID,
-		Username: username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    consts.JWTIssuerRefresh,
-			Subject:   strconv.Itoa(userID),
-		},
-	}
-
-	tokenString, err := signRS256(claims, priv, kid)
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("failed to generate refresh token: %v", err)
-	}
-	return tokenString, expirationTime, nil
-}
-
-func GenerateServiceToken(taskID string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	expirationTime := time.Now().Add(ServiceTokenExpiration)
-
-	claims := &ServiceClaims{
-		TaskID: taskID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("%s_%s_%d", consts.JWTJTIPrefixService, taskID, time.Now().Unix()),
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    consts.JWTIssuerService,
-			Subject:   taskID,
-		},
-	}
-
-	tokenString, err := signRS256(claims, priv, kid)
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("failed to generate service token: %v", err)
-	}
-	return tokenString, expirationTime, nil
-}
-
-func GenerateServiceAccountToken(name string, scopes []string, lifetime time.Duration, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	if name == "" {
-		return "", time.Time{}, errors.New("service account name is required")
-	}
-	if lifetime <= 0 {
-		return "", time.Time{}, errors.New("lifetime must be positive")
-	}
-	expirationTime := time.Now().Add(lifetime)
-	claims := &ServiceAccountClaims{
-		AuthType: consts.AuthTypeServiceAccount,
-		Scopes:   append([]string(nil), scopes...),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("%s_%s_%d", consts.JWTJTIPrefixServiceAccount, name, time.Now().Unix()),
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    consts.JWTIssuerServiceAccount,
-			Subject:   name,
-		},
-	}
-	tokenString, err := signRS256(claims, priv, kid)
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("failed to generate service-account token: %v", err)
-	}
-	return tokenString, expirationTime, nil
-}
-
-func ParseServiceAccountToken(tokenString string, resolve PublicKeyResolver) (*ServiceAccountClaims, error) {
-	if tokenString == "" {
-		return nil, errors.New("service-account token is required")
-	}
-	if resolve == nil {
-		return nil, errors.New("public key resolver is nil")
-	}
-	token, err := jwt.ParseWithClaims(tokenString, &ServiceAccountClaims{}, keyFunc(resolve))
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenMalformed) {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
-		}
-		return nil, fmt.Errorf("failed to parse service-account token: %v", err)
-	}
-	claims, ok := token.Claims.(*ServiceAccountClaims)
-	if !ok || !token.Valid {
-		return nil, ErrInvalidToken
-	}
-	if claims.Issuer != consts.JWTIssuerServiceAccount {
-		return nil, ErrInvalidToken
-	}
-	return claims, nil
+	return tokenString, exp, nil
 }
 
 func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {
@@ -251,66 +193,42 @@ func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {
 	}
 }
 
-func ParseToken(tokenString string, resolve PublicKeyResolver) (*Claims, error) {
+// ParseUnifiedToken validates and returns unified claims. It accepts tokens
+// with the unified issuer ("aegis") as well as all legacy issuers so that
+// tokens minted before the migration still work during rollout.
+func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedClaims, error) {
 	if tokenString == "" {
-		return nil, errors.New("token is required")
+		return nil, fmt.Errorf("%w: empty token", ErrInvalidToken)
 	}
 	if resolve == nil {
 		return nil, errors.New("public key resolver is nil")
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc(resolve))
+	token, err := jwt.ParseWithClaims(tokenString, &UnifiedClaims{}, keyFunc(resolve))
 	if err != nil {
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+		}
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(*UnifiedClaims)
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
-	if !claims.IsActive {
+	switch claims.Issuer {
+	case JWTIssuerUnified:
+		// New unified issuer -- accept as-is.
+	case consts.JWTIssuerUser, consts.JWTIssuerService, consts.JWTIssuerServiceAccount:
+		// Legacy issuers accepted during migration rollout.
+	default:
+		return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
+	}
+
+	// Policy: human tokens for inactive users are rejected.
+	if claims.Typ == "human" && !claims.IsActive {
 		return nil, errors.New("user account is inactive")
-	}
-
-	return claims, nil
-}
-
-func ParseTokenWithCustomClaims(tokenString string, resolve PublicKeyResolver, validateFunc func(*Claims) error) (*Claims, error) {
-	claims, err := ParseToken(tokenString, resolve)
-	if err != nil {
-		return nil, err
-	}
-	if validateFunc != nil {
-		if err := validateFunc(claims); err != nil {
-			return nil, fmt.Errorf("custom validation failed: %v", err)
-		}
-	}
-	return claims, nil
-}
-
-func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceClaims, error) {
-	if tokenString == "" {
-		return nil, errors.New("service token is required")
-	}
-	if resolve == nil {
-		return nil, errors.New("public key resolver is nil")
-	}
-
-	token, err := jwt.ParseWithClaims(tokenString, &ServiceClaims{}, keyFunc(resolve))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse service token: %v", err)
-	}
-
-	claims, ok := token.Claims.(*ServiceClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid service token")
-	}
-
-	// Accept legacy consts.JWTIssuerService issuer + any token tagged
-	// token_type=consts.TokenTypeService (OIDC client_credentials grants from sso use the issuer URL).
-	if claims.Issuer != consts.JWTIssuerService && claims.TokenType != consts.TokenTypeService {
-		return nil, errors.New("not a valid service token")
 	}
 
 	return claims, nil
@@ -318,13 +236,13 @@ func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceC
 
 // ParseTokenWithoutValidation parses a token without verifying signature or
 // expiration. Used to extract a user_id from an expired token for logging.
-func ParseTokenWithoutValidation(tokenString string) (*Claims, error) {
-	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &Claims{})
+func ParseTokenWithoutValidation(tokenString string) (*UnifiedClaims, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &UnifiedClaims{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(*UnifiedClaims)
 	if !ok {
 		return nil, errors.New("invalid token claims")
 	}
@@ -345,139 +263,3 @@ func ExtractTokenFromHeader(header string) (string, error) {
 	return parts[1], nil
 }
 
-// ---------------------------------------------------------------------------
-// Unified token format — single issuer "aegis" + typ claim (P1)
-// ---------------------------------------------------------------------------
-
-type UnifiedClaims struct {
-	Typ          string   `json:"typ"`
-	UserID       int      `json:"user_id,omitempty"`
-	Username     string   `json:"username,omitempty"`
-	Email        string   `json:"email,omitempty"`
-	IsActive     bool     `json:"is_active,omitempty"`
-	IsAdmin      bool     `json:"is_admin,omitempty"`
-	Roles        []string `json:"roles,omitempty"`
-	AuthType     string   `json:"auth_type,omitempty"`
-	APIKeyID     int      `json:"api_key_id,omitempty"`
-	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
-	TaskID       string   `json:"task_id,omitempty"`
-	Service      string   `json:"service,omitempty"`
-	Scopes       []string `json:"scopes,omitempty"`
-	Idp          string   `json:"idp,omitempty"`
-	jwt.RegisteredClaims
-}
-
-var validUnifiedTypes = map[string]bool{
-	"human": true, "service": true, "task": true,
-	"service_account": true, "refresh": true,
-}
-
-type UnifiedTokenParams struct {
-	Typ          string
-	UserID       int
-	Username     string
-	Email        string
-	IsActive     bool
-	IsAdmin      bool
-	Roles        []string
-	AuthType     string
-	APIKeyID     int
-	APIKeyScopes []string
-	TaskID       string
-	Service      string
-	Scopes       []string
-	Idp          string
-	Lifetime     time.Duration
-	Audience     []string
-}
-
-func GenerateUnifiedToken(params UnifiedTokenParams, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
-	if !validUnifiedTypes[params.Typ] {
-		return "", time.Time{}, fmt.Errorf("unknown unified token type %q", params.Typ)
-	}
-	if params.Lifetime <= 0 {
-		return "", time.Time{}, errors.New("lifetime must be positive")
-	}
-
-	now := time.Now()
-	exp := now.Add(params.Lifetime)
-	sub := unifiedSubject(params)
-	jti := fmt.Sprintf("%s_%s_%s_%d", consts.JWTJTIPrefixUnified, params.Typ, sub, now.Unix())
-
-	claims := &UnifiedClaims{
-		Typ:          params.Typ,
-		UserID:       params.UserID,
-		Username:     params.Username,
-		Email:        params.Email,
-		IsActive:     params.IsActive,
-		IsAdmin:      params.IsAdmin,
-		Roles:        append([]string(nil), params.Roles...),
-		AuthType:     params.AuthType,
-		APIKeyID:     params.APIKeyID,
-		APIKeyScopes: append([]string(nil), params.APIKeyScopes...),
-		TaskID:       params.TaskID,
-		Service:      params.Service,
-		Scopes:       append([]string(nil), params.Scopes...),
-		Idp:          params.Idp,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        jti,
-			ExpiresAt: jwt.NewNumericDate(exp),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    consts.JWTIssuerUnified,
-			Subject:   sub,
-			Audience:  jwt.ClaimStrings(params.Audience),
-		},
-	}
-
-	tokenString, err := signRS256(claims, priv, kid)
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("failed to generate unified token: %v", err)
-	}
-	return tokenString, exp, nil
-}
-
-func unifiedSubject(p UnifiedTokenParams) string {
-	switch p.Typ {
-	case "human", "refresh":
-		return strconv.Itoa(p.UserID)
-	case "task":
-		return p.TaskID
-	case "service", "service_account":
-		return p.Service
-	default:
-		return ""
-	}
-}
-
-func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedClaims, error) {
-	if tokenString == "" {
-		return nil, errors.New("token is required")
-	}
-	if resolve == nil {
-		return nil, errors.New("public key resolver is nil")
-	}
-
-	token, err := jwt.ParseWithClaims(tokenString, &UnifiedClaims{}, keyFunc(resolve))
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenMalformed) {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
-		}
-		return nil, fmt.Errorf("failed to parse unified token: %v", err)
-	}
-
-	claims, ok := token.Claims.(*UnifiedClaims)
-	if !ok || !token.Valid {
-		return nil, ErrInvalidToken
-	}
-	if claims.Issuer != consts.JWTIssuerUnified {
-		return nil, ErrInvalidToken
-	}
-	if !validUnifiedTypes[claims.Typ] {
-		return nil, fmt.Errorf("%w: unknown typ %q", ErrInvalidToken, claims.Typ)
-	}
-	if claims.Typ == "human" && !claims.IsActive {
-		return nil, errors.New("user account is inactive")
-	}
-	return claims, nil
-}

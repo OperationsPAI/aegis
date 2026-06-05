@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"aegis/platform/consts"
 	"aegis/platform/crypto"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/model"
@@ -99,7 +100,13 @@ func mintBackendChaosSAToken(ctx context.Context, db *gorm.DB, signer *jwtkeys.S
 	if sa.RevokedAt != nil {
 		return "", time.Time{}, fmt.Errorf("service account %q is revoked at %s", chaosClientSAName, sa.RevokedAt.Format(time.RFC3339))
 	}
-	return crypto.GenerateServiceAccountToken(sa.Name, parseChaosSAScopes(sa.Scopes), lifetime, signer.PrivateKey, signer.Kid)
+	return crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ:      "service_account",
+		Service:  sa.Name,
+		Scopes:   parseChaosSAScopes(sa.Scopes),
+		AuthType: consts.AuthTypeServiceAccount,
+		Lifetime: lifetime,
+	}, signer.PrivateKey, signer.Kid)
 }
 
 func parseChaosSAScopes(s string) []string {

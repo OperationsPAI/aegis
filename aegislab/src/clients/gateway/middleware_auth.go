@@ -75,40 +75,33 @@ func (a *Authenticator) enforce(r *http.Request, route *Route) error {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	claims, err := a.client.VerifyToken(ctx, raw)
+	if err != nil {
+		return err
+	}
+
 	switch route.Auth {
 	case AuthServiceToken:
-		sc, err := a.client.VerifyServiceToken(ctx, raw)
-		if err != nil {
-			return err
+		if claims.Typ != "task" && claims.Typ != "service_account" {
+			return errMissingToken
 		}
-		a.injectServiceHeaders(r, sc)
 	case AuthJWT:
-		uc, err := a.client.VerifyToken(ctx, raw)
-		if err != nil {
+		if err := checkAudience(claims, route.Audiences); err != nil {
 			return err
 		}
-		if err := checkAudience(uc, route.Audiences); err != nil {
-			return err
-		}
-		a.injectUserHeaders(r, uc)
 	case AuthJWTOrService:
-		if uc, err := a.client.VerifyToken(ctx, raw); err == nil {
-			if err := checkAudience(uc, route.Audiences); err != nil {
+		if claims.Typ == "human" {
+			if err := checkAudience(claims, route.Audiences); err != nil {
 				return err
 			}
-			a.injectUserHeaders(r, uc)
-			return nil
 		}
-		sc, err := a.client.VerifyServiceToken(ctx, raw)
-		if err != nil {
-			return err
-		}
-		a.injectServiceHeaders(r, sc)
 	}
+
+	a.injectHeaders(r, claims)
 	return nil
 }
 
-func (a *Authenticator) injectUserHeaders(r *http.Request, c *crypto.Claims) {
+func (a *Authenticator) injectHeaders(r *http.Request, c *crypto.UnifiedClaims) {
 	aud := ""
 	if len(c.Audience) > 0 {
 		aud = c.Audience[0]
@@ -121,6 +114,7 @@ func (a *Authenticator) injectUserHeaders(r *http.Request, c *crypto.Claims) {
 	if c.IsAdmin {
 		isAdmin = "1"
 	}
+
 	headers := map[string]string{
 		HeaderUserID:       strconv.Itoa(c.UserID),
 		HeaderUserEmail:    c.Email,
@@ -133,29 +127,21 @@ func (a *Authenticator) injectUserHeaders(r *http.Request, c *crypto.Claims) {
 		HeaderAuthType:     c.AuthType,
 		HeaderAPIKeyID:     strconv.Itoa(c.APIKeyID),
 		HeaderAPIKeyScopes: strings.Join(c.APIKeyScopes, ","),
-	}
-	a.applyAndSign(r, headers)
-}
-
-func (a *Authenticator) injectServiceHeaders(r *http.Request, c *crypto.ServiceClaims) {
-	aud := ""
-	if len(c.Audience) > 0 {
-		aud = c.Audience[0]
-	}
-	headers := map[string]string{
-		HeaderUserID:       "0",
-		HeaderUserEmail:    "",
-		HeaderRoles:        consts.ClaimSubjectServicePrefix + c.Service,
-		HeaderTokenAud:     aud,
-		HeaderTokenJti:     c.ID,
-		HeaderUsername:     "service",
-		HeaderIsActive:     "1",
-		HeaderIsAdmin:      "0",
-		HeaderAuthType:     consts.AuthTypeService,
-		HeaderAPIKeyID:     "0",
-		HeaderAPIKeyScopes: "",
 		HeaderTaskID:       c.TaskID,
 	}
+
+	if c.Typ == "task" || c.Typ == "service_account" {
+		headers[HeaderUserID] = "0"
+		headers[HeaderRoles] = consts.ClaimSubjectServicePrefix + c.Service
+		headers[HeaderUsername] = "service"
+		headers[HeaderIsActive] = "1"
+		headers[HeaderIsAdmin] = "0"
+		headers[HeaderAuthType] = c.AuthType
+		if c.AuthType == "" {
+			headers[HeaderAuthType] = consts.AuthTypeService
+		}
+	}
+
 	a.applyAndSign(r, headers)
 }
 
@@ -190,7 +176,7 @@ func bearer(r *http.Request) string {
 	return strings.TrimSpace(h[len(consts.AuthSchemeBearer):])
 }
 
-func checkAudience(c *crypto.Claims, want []string) error {
+func checkAudience(c *crypto.UnifiedClaims, want []string) error {
 	if len(want) == 0 {
 		return nil
 	}

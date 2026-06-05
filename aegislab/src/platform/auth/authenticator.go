@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -31,10 +30,9 @@ type Credential struct {
 }
 
 // Verifier is the narrow interface the Authenticator needs from SSO.
-// It matches the existing middleware.TokenVerifier interface.
 type Verifier interface {
-	VerifyToken(ctx context.Context, token string) (*crypto.Claims, error)
-	VerifyServiceToken(ctx context.Context, token string) (*crypto.ServiceClaims, error)
+	VerifyToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error)
+	VerifyServiceToken(ctx context.Context, token string) (*crypto.UnifiedClaims, error)
 }
 
 // ServiceAccountStore checks whether a service account is revoked.
@@ -88,41 +86,28 @@ func (a *Authenticator) verifyBearer(ctx context.Context, token string) (Princip
 }
 
 func (a *Authenticator) resolveBearer(ctx context.Context, token string) (Principal, error) {
-	// 1. Try unified token (new "aegis" issuer)
+	// Single path: ParseUnifiedToken accepts both the new "aegis" issuer
+	// and legacy issuers (rcabench, rcabench-service, rcabench-sa).
 	if a.resolve != nil {
-		if uc, err := crypto.ParseUnifiedToken(token, a.resolve); err == nil {
+		uc, err := crypto.ParseUnifiedToken(token, a.resolve)
+		if err == nil {
+			if uc.Typ == "service_account" && a.saStore != nil {
+				sa, findErr := a.saStore.FindByName(ctx, uc.Subject)
+				if findErr != nil {
+					return Principal{}, fmt.Errorf("%w: unknown service account", ErrUnauthenticated)
+				}
+				if sa.RevokedAt != nil {
+					return Principal{}, fmt.Errorf("%w: service account revoked", ErrUnauthenticated)
+				}
+			}
 			return PrincipalFromUnifiedClaims(uc), nil
 		}
 	}
 
-	// 2. Try legacy user token
-	claims, err := a.verifier.VerifyToken(ctx, token)
-	if err == nil {
-		return PrincipalFromClaims(claims), nil
-	}
-
-	// 3. Try legacy service/task token
-	serviceClaims, err := a.verifier.VerifyServiceToken(ctx, token)
-	if err == nil {
-		return PrincipalFromServiceClaims(serviceClaims), nil
-	}
-
-	// 4. Try legacy service-account token (if store + resolver configured)
-	if a.saStore != nil && a.resolve != nil {
-		saClaims, saErr := crypto.ParseServiceAccountToken(token, a.resolve)
-		if saErr == nil {
-			name := saClaims.Subject
-			sa, findErr := a.saStore.FindByName(ctx, name)
-			if findErr != nil {
-				return Principal{}, fmt.Errorf("%w: unknown service account", ErrUnauthenticated)
-			}
-			if sa.RevokedAt != nil {
-				return Principal{}, fmt.Errorf("%w: service account revoked", ErrUnauthenticated)
-			}
-			return PrincipalFromServiceAccountClaims(saClaims, name), nil
-		}
-		if !errors.Is(saErr, crypto.ErrInvalidToken) {
-			return Principal{}, fmt.Errorf("%w: %v", ErrUnauthenticated, saErr)
+	// Fallback: delegate to Verifier (SSO HTTP client)
+	if a.verifier != nil {
+		if uc, err := a.verifier.VerifyToken(ctx, token); err == nil {
+			return PrincipalFromUnifiedClaims(uc), nil
 		}
 	}
 

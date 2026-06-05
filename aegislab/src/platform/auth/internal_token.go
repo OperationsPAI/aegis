@@ -66,10 +66,9 @@ func MintInternalToken(c *InternalClaims, priv *rsa.PrivateKey, kid string) (str
 	return token.SignedString(priv)
 }
 
-// MintInternalTokenFromClaims converts a verified crypto.Claims (user token)
-// into an internal assertion. Service-token callers should use
-// MintInternalTokenFromServiceClaims instead.
-func MintInternalTokenFromClaims(src *crypto.Claims, priv *rsa.PrivateKey, kid string) (string, error) {
+// MintInternalTokenFromUnifiedClaims converts verified UnifiedClaims into an
+// internal assertion.
+func MintInternalTokenFromUnifiedClaims(src *crypto.UnifiedClaims, priv *rsa.PrivateKey, kid string) (string, error) {
 	ic := &InternalClaims{
 		UserID:       src.UserID,
 		Username:     src.Username,
@@ -80,17 +79,7 @@ func MintInternalTokenFromClaims(src *crypto.Claims, priv *rsa.PrivateKey, kid s
 		AuthType:     src.AuthType,
 		APIKeyID:     src.APIKeyID,
 		APIKeyScopes: append([]string(nil), src.APIKeyScopes...),
-	}
-	return MintInternalToken(ic, priv, kid)
-}
-
-// MintInternalTokenFromServiceClaims converts a verified crypto.ServiceClaims
-// into an internal assertion.
-func MintInternalTokenFromServiceClaims(src *crypto.ServiceClaims, priv *rsa.PrivateKey, kid string) (string, error) {
-	ic := &InternalClaims{
-		AuthType: consts.AuthTypeService,
-		TaskID:   src.TaskID,
-		Roles:    []string{consts.ClaimSubjectServicePrefix + src.Service},
+		TaskID:       src.TaskID,
 	}
 	return MintInternalToken(ic, priv, kid)
 }

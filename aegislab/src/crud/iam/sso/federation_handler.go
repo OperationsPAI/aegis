@@ -304,7 +304,12 @@ func (h *FederationHandler) findOrProvisionUser(ctx context.Context, idp *Identi
 		}
 	}
 
-	signed, expiresAt, err := crypto.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, h.oidc.signer.PrivateKey, h.oidc.signer.Kid)
+	signed, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
+		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,
+		AuthType: "user", Idp: providerName,
+		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+	}, h.oidc.signer.PrivateKey, h.oidc.signer.Kid)
 	if err != nil {
 		return "", 0, fmt.Errorf("mint token: %w", err)
 	}

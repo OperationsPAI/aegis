@@ -125,7 +125,13 @@ func (s *ServiceAccountService) Issue(ctx context.Context, name string, lifetime
 		return nil, fmt.Errorf("%w: service account %s is revoked", consts.ErrConflict, name)
 	}
 	lifetime := time.Duration(lifetimeDays) * 24 * time.Hour
-	tok, exp, err := crypto.GenerateServiceAccountToken(sa.Name, parseScopes(sa.Scopes), lifetime, s.signer.PrivateKey, s.signer.Kid)
+	tok, exp, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ:      "service_account",
+		Service:  sa.Name,
+		Scopes:   parseScopes(sa.Scopes),
+		AuthType: consts.AuthTypeServiceAccount,
+		Lifetime: lifetime,
+	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return nil, err
 	}
