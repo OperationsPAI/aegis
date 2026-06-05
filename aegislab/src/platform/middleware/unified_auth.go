@@ -89,6 +89,10 @@ func extractCredential(c *gin.Context) auth.Credential {
 }
 
 func setLegacyContext(c *gin.Context, p auth.Principal) {
+	if !p.ExpiresAt.IsZero() {
+		c.Set("token_expires_at", p.ExpiresAt)
+	}
+
 	switch p.Typ {
 	case auth.PrincipalService, auth.PrincipalTask:
 		c.Set(consts.CtxKeyIsServiceToken, true)
@@ -97,6 +101,7 @@ func setLegacyContext(c *gin.Context, p auth.Principal) {
 			c.Set(consts.CtxKeyTaskID, p.TaskID)
 		}
 		c.Set(consts.CtxKeyScopes, append([]string(nil), p.Scopes...))
+		return
 	case auth.PrincipalServiceAccount:
 		c.Set(consts.CtxKeyIsServiceToken, true)
 		c.Set(consts.CtxKeyTokenType, "service_account")

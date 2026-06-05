@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -343,22 +345,14 @@ func TestVerifyTrustedHeader_InvalidHMAC(t *testing.T) {
 	}
 }
 
-func TestVerifyBearer_SAToken_Revoked(t *testing.T) {
+func TestVerifyBearer_NoResolverSkipsSA(t *testing.T) {
 	v := &mockVerifier{
 		userErr:    errors.New("not a user token"),
 		serviceErr: errors.New("not a service token"),
 	}
-	now := time.Now()
-	store := &mockSAStore{
-		sa: &model.ServiceAccount{
-			Name:      "chaos-service",
-			RevokedAt: &now,
-		},
-	}
-	// We can't easily mint a real SA JWT without a private key, so we skip
-	// the ParseServiceAccountToken path by not providing a resolver. This
-	// tests the cascade correctly falls through to ErrUnauthenticated.
-	a := NewAuthenticator(v, store, nil)
+	// saStore is set but resolve is nil → SA branch is skipped entirely.
+	// This verifies the guard `a.saStore != nil && a.resolve != nil`.
+	a := NewAuthenticator(v, &mockSAStore{}, nil)
 	_, err := a.Verify(context.Background(), Credential{
 		Type:        CredBearer,
 		BearerToken: "sa-token",
@@ -366,6 +360,90 @@ func TestVerifyBearer_SAToken_Revoked(t *testing.T) {
 	if !errors.Is(err, ErrUnauthenticated) {
 		t.Fatalf("err = %v, want ErrUnauthenticated", err)
 	}
+}
+
+func TestVerifyBearer_SAToken_Revoked(t *testing.T) {
+	v := &mockVerifier{
+		userErr:    errors.New("not a user token"),
+		serviceErr: errors.New("not a service token"),
+	}
+
+	privKey, err := generateTestRSAKey()
+	if err != nil {
+		t.Fatalf("generate RSA key: %v", err)
+	}
+	kid := "test-kid"
+	token, _, err := crypto.GenerateServiceAccountToken("chaos-service", []string{"chaos.inject.write"}, 1*time.Hour, privKey, kid)
+	if err != nil {
+		t.Fatalf("generate SA token: %v", err)
+	}
+
+	now := time.Now()
+	store := &mockSAStore{
+		sa: &model.ServiceAccount{
+			Name:      "chaos-service",
+			RevokedAt: &now,
+		},
+	}
+	resolve := func(_ string) (*rsa.PublicKey, error) {
+		return &privKey.PublicKey, nil
+	}
+
+	a := NewAuthenticator(v, store, resolve)
+	_, err = a.Verify(context.Background(), Credential{
+		Type:        CredBearer,
+		BearerToken: token,
+	})
+	if !errors.Is(err, ErrUnauthenticated) {
+		t.Fatalf("err = %v, want ErrUnauthenticated (revoked)", err)
+	}
+}
+
+func TestVerifyBearer_SAToken_Valid(t *testing.T) {
+	v := &mockVerifier{
+		userErr:    errors.New("not a user token"),
+		serviceErr: errors.New("not a service token"),
+	}
+
+	privKey, err := generateTestRSAKey()
+	if err != nil {
+		t.Fatalf("generate RSA key: %v", err)
+	}
+	token, _, err := crypto.GenerateServiceAccountToken("chaos-service", []string{"chaos.inject.write"}, 1*time.Hour, privKey, "test-kid")
+	if err != nil {
+		t.Fatalf("generate SA token: %v", err)
+	}
+
+	store := &mockSAStore{
+		sa: &model.ServiceAccount{
+			Name: "chaos-service",
+		},
+	}
+	resolve := func(_ string) (*rsa.PublicKey, error) {
+		return &privKey.PublicKey, nil
+	}
+
+	a := NewAuthenticator(v, store, resolve)
+	p, err := a.Verify(context.Background(), Credential{
+		Type:        CredBearer,
+		BearerToken: token,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.Typ != PrincipalServiceAccount {
+		t.Fatalf("Typ = %q, want %q", p.Typ, PrincipalServiceAccount)
+	}
+	if p.Sub != "chaos-service" {
+		t.Fatalf("Sub = %q, want %q", p.Sub, "chaos-service")
+	}
+	if len(p.Scopes) != 1 || p.Scopes[0] != "chaos.inject.write" {
+		t.Fatalf("Scopes = %v", p.Scopes)
+	}
+}
+
+func generateTestRSAKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(rand.Reader, 2048)
 }
 
 func computeHMAC(key []byte, h TrustedHeaderSet) string {

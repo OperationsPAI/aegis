@@ -3,6 +3,7 @@ package auth
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
@@ -36,9 +37,14 @@ type Principal struct {
 	APIKeyID     int
 	APIKeyScopes []string
 	TaskID       string
+	ExpiresAt    time.Time
 }
 
 func PrincipalFromClaims(c *crypto.Claims) Principal {
+	var exp time.Time
+	if c.ExpiresAt != nil {
+		exp = c.ExpiresAt.Time
+	}
 	return Principal{
 		Sub:          strconv.Itoa(c.UserID),
 		Typ:          PrincipalHuman,
@@ -53,6 +59,7 @@ func PrincipalFromClaims(c *crypto.Claims) Principal {
 		AuthType:     c.AuthType,
 		APIKeyID:     c.APIKeyID,
 		APIKeyScopes: append([]string(nil), c.APIKeyScopes...),
+		ExpiresAt:    exp,
 	}
 }
 
@@ -61,25 +68,35 @@ func PrincipalFromServiceClaims(c *crypto.ServiceClaims) Principal {
 	if c.TaskID != "" {
 		typ = PrincipalTask
 	}
+	var exp time.Time
+	if c.ExpiresAt != nil {
+		exp = c.ExpiresAt.Time
+	}
 	return Principal{
-		Sub:    c.Subject,
-		Typ:    typ,
-		Scopes: append([]string(nil), c.Scopes...),
-		JTI:    c.ID,
-		Idp:    "local",
-		TaskID: c.TaskID,
+		Sub:       c.Subject,
+		Typ:       typ,
+		Scopes:    append([]string(nil), c.Scopes...),
+		JTI:       c.ID,
+		Idp:       "local",
+		TaskID:    c.TaskID,
+		ExpiresAt: exp,
 	}
 }
 
 func PrincipalFromServiceAccountClaims(c *crypto.ServiceAccountClaims, name string) Principal {
+	var exp time.Time
+	if c.ExpiresAt != nil {
+		exp = c.ExpiresAt.Time
+	}
 	return Principal{
-		Sub:      name,
-		Typ:      PrincipalServiceAccount,
-		Scopes:   append([]string(nil), c.Scopes...),
-		JTI:      c.ID,
-		Idp:      "local",
-		AuthType: consts.AuthTypeServiceAccount,
-		Username: name,
+		Sub:       name,
+		Typ:       PrincipalServiceAccount,
+		Scopes:    append([]string(nil), c.Scopes...),
+		JTI:       c.ID,
+		Idp:       "local",
+		AuthType:  consts.AuthTypeServiceAccount,
+		Username:  name,
+		ExpiresAt: exp,
 	}
 }
 
