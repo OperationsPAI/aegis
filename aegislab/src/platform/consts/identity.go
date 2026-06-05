@@ -16,6 +16,7 @@ const (
 	JWTIssuerRefresh = "rcabench-refresh" // refresh tokens
 	JWTIssuerService        = "rcabench-service" // legacy service tokens (utils/jwt.go GenerateServiceToken)
 	JWTIssuerServiceAccount = "rcabench-sa"      // long-lived service-account tokens (utils/jwt.go GenerateServiceAccountToken)
+	JWTIssuerUnified        = "aegis"            // unified issuer for all new token types (P1)
 )
 
 // JTI (JWT ID claim) prefixes used as the first segment of the `jti` claim.
@@ -24,6 +25,7 @@ const (
 	JWTJTIPrefixUser           = "jwt"
 	JWTJTIPrefixService        = "svc"
 	JWTJTIPrefixServiceAccount = "sa"
+	JWTJTIPrefixUnified        = "u"
 )
 
 // OpenTelemetry tracer instrumentation namespaces. Currently use the legacy

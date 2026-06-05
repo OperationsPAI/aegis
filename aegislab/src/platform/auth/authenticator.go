@@ -65,19 +65,26 @@ func (a *Authenticator) verifyBearer(ctx context.Context, token string) (Princip
 		return Principal{}, ErrUnauthenticated
 	}
 
-	// 1. Try user token
+	// 1. Try unified token (new "aegis" issuer)
+	if a.resolve != nil {
+		if uc, err := crypto.ParseUnifiedToken(token, a.resolve); err == nil {
+			return PrincipalFromUnifiedClaims(uc), nil
+		}
+	}
+
+	// 2. Try legacy user token
 	claims, err := a.verifier.VerifyToken(ctx, token)
 	if err == nil {
 		return PrincipalFromClaims(claims), nil
 	}
 
-	// 2. Try service/task token
+	// 3. Try legacy service/task token
 	serviceClaims, err := a.verifier.VerifyServiceToken(ctx, token)
 	if err == nil {
 		return PrincipalFromServiceClaims(serviceClaims), nil
 	}
 
-	// 3. Try service-account token (if store + resolver configured)
+	// 4. Try legacy service-account token (if store + resolver configured)
 	if a.saStore != nil && a.resolve != nil {
 		saClaims, saErr := crypto.ParseServiceAccountToken(token, a.resolve)
 		if saErr == nil {

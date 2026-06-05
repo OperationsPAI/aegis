@@ -344,3 +344,140 @@ func ExtractTokenFromHeader(header string) (string, error) {
 
 	return parts[1], nil
 }
+
+// ---------------------------------------------------------------------------
+// Unified token format — single issuer "aegis" + typ claim (P1)
+// ---------------------------------------------------------------------------
+
+type UnifiedClaims struct {
+	Typ          string   `json:"typ"`
+	UserID       int      `json:"user_id,omitempty"`
+	Username     string   `json:"username,omitempty"`
+	Email        string   `json:"email,omitempty"`
+	IsActive     bool     `json:"is_active,omitempty"`
+	IsAdmin      bool     `json:"is_admin,omitempty"`
+	Roles        []string `json:"roles,omitempty"`
+	AuthType     string   `json:"auth_type,omitempty"`
+	APIKeyID     int      `json:"api_key_id,omitempty"`
+	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
+	TaskID       string   `json:"task_id,omitempty"`
+	Service      string   `json:"service,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+	Idp          string   `json:"idp,omitempty"`
+	jwt.RegisteredClaims
+}
+
+var validUnifiedTypes = map[string]bool{
+	"human": true, "service": true, "task": true,
+	"service_account": true, "refresh": true,
+}
+
+type UnifiedTokenParams struct {
+	Typ          string
+	UserID       int
+	Username     string
+	Email        string
+	IsActive     bool
+	IsAdmin      bool
+	Roles        []string
+	AuthType     string
+	APIKeyID     int
+	APIKeyScopes []string
+	TaskID       string
+	Service      string
+	Scopes       []string
+	Idp          string
+	Lifetime     time.Duration
+	Audience     []string
+}
+
+func GenerateUnifiedToken(params UnifiedTokenParams, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
+	if !validUnifiedTypes[params.Typ] {
+		return "", time.Time{}, fmt.Errorf("unknown unified token type %q", params.Typ)
+	}
+	if params.Lifetime <= 0 {
+		return "", time.Time{}, errors.New("lifetime must be positive")
+	}
+
+	now := time.Now()
+	exp := now.Add(params.Lifetime)
+	sub := unifiedSubject(params)
+	jti := fmt.Sprintf("%s_%s_%s_%d", consts.JWTJTIPrefixUnified, params.Typ, sub, now.Unix())
+
+	claims := &UnifiedClaims{
+		Typ:          params.Typ,
+		UserID:       params.UserID,
+		Username:     params.Username,
+		Email:        params.Email,
+		IsActive:     params.IsActive,
+		IsAdmin:      params.IsAdmin,
+		Roles:        append([]string(nil), params.Roles...),
+		AuthType:     params.AuthType,
+		APIKeyID:     params.APIKeyID,
+		APIKeyScopes: append([]string(nil), params.APIKeyScopes...),
+		TaskID:       params.TaskID,
+		Service:      params.Service,
+		Scopes:       append([]string(nil), params.Scopes...),
+		Idp:          params.Idp,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        jti,
+			ExpiresAt: jwt.NewNumericDate(exp),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    consts.JWTIssuerUnified,
+			Subject:   sub,
+			Audience:  jwt.ClaimStrings(params.Audience),
+		},
+	}
+
+	tokenString, err := signRS256(claims, priv, kid)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("failed to generate unified token: %v", err)
+	}
+	return tokenString, exp, nil
+}
+
+func unifiedSubject(p UnifiedTokenParams) string {
+	switch p.Typ {
+	case "human", "refresh":
+		return strconv.Itoa(p.UserID)
+	case "task":
+		return p.TaskID
+	case "service", "service_account":
+		return p.Service
+	default:
+		return ""
+	}
+}
+
+func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedClaims, error) {
+	if tokenString == "" {
+		return nil, errors.New("token is required")
+	}
+	if resolve == nil {
+		return nil, errors.New("public key resolver is nil")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &UnifiedClaims{}, keyFunc(resolve))
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+		}
+		return nil, fmt.Errorf("failed to parse unified token: %v", err)
+	}
+
+	claims, ok := token.Claims.(*UnifiedClaims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+	if claims.Issuer != consts.JWTIssuerUnified {
+		return nil, ErrInvalidToken
+	}
+	if !validUnifiedTypes[claims.Typ] {
+		return nil, fmt.Errorf("%w: unknown typ %q", ErrInvalidToken, claims.Typ)
+	}
+	if claims.Typ == "human" && !claims.IsActive {
+		return nil, errors.New("user account is inactive")
+	}
+	return claims, nil
+}
