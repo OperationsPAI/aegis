@@ -54,10 +54,17 @@ func OptionalUnifiedAuth(authenticator *auth.Authenticator) gin.HandlerFunc {
 }
 
 func hasCredentials(c *gin.Context) bool {
-	return c.GetHeader("Authorization") != "" || c.GetHeader(auth.HeaderSignature) != ""
+	return c.GetHeader("Authorization") != "" || c.GetHeader(auth.HeaderSignature) != "" || c.GetHeader(auth.HeaderInternalToken) != ""
 }
 
 func extractCredential(c *gin.Context) auth.Credential {
+	if it := c.GetHeader(auth.HeaderInternalToken); it != "" {
+		return auth.Credential{
+			Type:          auth.CredInternalToken,
+			InternalToken: it,
+		}
+	}
+
 	if sig := c.GetHeader(auth.HeaderSignature); sig != "" {
 		key := []byte(strings.TrimSpace(viper.GetString("gateway.trusted_header_key")))
 		return auth.Credential{

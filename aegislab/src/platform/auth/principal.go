@@ -183,6 +183,39 @@ func PrincipalFromUnifiedClaims(c *crypto.UnifiedClaims) Principal {
 	return p
 }
 
+func PrincipalFromInternalClaims(c *InternalClaims) Principal {
+	var exp time.Time
+	if c.ExpiresAt != nil {
+		exp = c.ExpiresAt.Time
+	}
+	isService := c.UserID == 0 && len(c.Roles) > 0 && strings.HasPrefix(c.Roles[0], consts.ClaimSubjectServicePrefix)
+	typ := PrincipalHuman
+	if isService {
+		if c.TaskID != "" {
+			typ = PrincipalTask
+		} else {
+			typ = PrincipalService
+		}
+	}
+	return Principal{
+		Sub:          strconv.Itoa(c.UserID),
+		Typ:          typ,
+		JTI:          c.ID,
+		Idp:          "internal",
+		UserID:       c.UserID,
+		Username:     c.Username,
+		Email:        c.Email,
+		IsActive:     c.IsActive,
+		IsAdmin:      c.IsAdmin,
+		Roles:        append([]string(nil), c.Roles...),
+		AuthType:     c.AuthType,
+		APIKeyID:     c.APIKeyID,
+		APIKeyScopes: append([]string(nil), c.APIKeyScopes...),
+		TaskID:       c.TaskID,
+		ExpiresAt:    exp,
+	}
+}
+
 // TrustedHeaderSet holds the header values the gateway injects after JWT
 // validation. Field names match the gateway header names minus the "X-Aegis-"
 // prefix. This struct decouples Principal construction from gin/http so the

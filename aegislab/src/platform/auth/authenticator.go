@@ -19,13 +19,15 @@ type CredentialType int
 const (
 	CredBearer        CredentialType = iota
 	CredTrustedHeader
+	CredInternalToken
 )
 
 type Credential struct {
-	Type        CredentialType
-	BearerToken string
-	Headers     TrustedHeaderSet
-	HMACKey     []byte
+	Type          CredentialType
+	BearerToken   string
+	Headers       TrustedHeaderSet
+	HMACKey       []byte
+	InternalToken string
 }
 
 // Verifier is the narrow interface the Authenticator needs from SSO.
@@ -57,6 +59,8 @@ func (a *Authenticator) Verify(ctx context.Context, cred Credential) (Principal,
 		return a.verifyBearer(ctx, cred.BearerToken)
 	case CredTrustedHeader:
 		return a.verifyTrustedHeader(cred)
+	case CredInternalToken:
+		return a.verifyInternalToken(cred.InternalToken)
 	default:
 		return Principal{}, ErrUnauthenticated
 	}
@@ -148,4 +152,15 @@ func (a *Authenticator) verifyTrustedHeader(cred Credential) (Principal, error) 
 	}
 
 	return PrincipalFromTrustedHeaders(h), nil
+}
+
+func (a *Authenticator) verifyInternalToken(token string) (Principal, error) {
+	if token == "" || a.resolve == nil {
+		return Principal{}, ErrUnauthenticated
+	}
+	ic, err := ParseInternalToken(token, a.resolve)
+	if err != nil {
+		return Principal{}, fmt.Errorf("%w: %v", ErrUnauthenticated, err)
+	}
+	return PrincipalFromInternalClaims(ic), nil
 }
