@@ -116,31 +116,37 @@ func escapeKey(key string) string {
 	return strings.Join(parts, "/")
 }
 
-// listAllObjects exhausts the paginated driver-list endpoint and returns
-// every BlobObjectMeta in the bucket below prefix. The caller is in charge
-// of capping if needed.
-func listAllObjects(bucket, prefix string, maxItems int) ([]apiclient.BlobObjectMeta, error) {
+type listResult struct {
+	Items          []apiclient.BlobObjectMeta
+	CommonPrefixes []string
+}
+
+func listObjects(bucket, prefix, delimiter string, maxItems int) (*listResult, error) {
 	cli, ctx := newAPIClient()
-	var (
-		out    []apiclient.BlobObjectMeta
-		cursor string
-	)
+	var result listResult
+	var cursor string
 	for {
 		req := cli.BlobAPI.BlobListObjects(ctx, bucket).MaxKeys(1000)
 		if prefix != "" {
 			req = req.Prefix(prefix)
+		}
+		if delimiter != "" {
+			req = req.Delimiter(delimiter)
 		}
 		if cursor != "" {
 			req = req.ContinuationToken(cursor)
 		}
 		resp, _, err := req.Execute()
 		if err != nil {
-			return out, err
+			return &result, err
 		}
 		if resp.Data != nil {
-			out = append(out, resp.Data.GetItems()...)
-			if maxItems > 0 && len(out) >= maxItems {
-				return out[:maxItems], nil
+			result.Items = append(result.Items, resp.Data.GetItems()...)
+			for _, cp := range resp.Data.GetCommonPrefixes() {
+				result.CommonPrefixes = append(result.CommonPrefixes, cp)
+			}
+			if maxItems > 0 && len(result.Items)+len(result.CommonPrefixes) >= maxItems {
+				break
 			}
 			cursor = resp.Data.GetNextContinuationToken()
 			if cursor == "" {
@@ -150,7 +156,15 @@ func listAllObjects(bucket, prefix string, maxItems int) ([]apiclient.BlobObject
 			break
 		}
 	}
-	return out, nil
+	return &result, nil
+}
+
+func listAllObjects(bucket, prefix string, maxItems int) ([]apiclient.BlobObjectMeta, error) {
+	r, err := listObjects(bucket, prefix, "", maxItems)
+	if err != nil {
+		return nil, err
+	}
+	return r.Items, nil
 }
 
 // confirmPrompt is a generic [y/N] prompt; mirrors confirmDeletion's gating
@@ -227,20 +241,30 @@ See also: aegisctl bucket ls, aegisctl blob find.`,
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		items, err := listAllObjects(ref.Bucket, ref.Key, blobLsMax)
+
+		recursive, _ := cmd.Flags().GetBool("recursive")
+		delimiter := "/"
+		if recursive {
+			delimiter = ""
+		}
+
+		result, err := listObjects(ref.Bucket, ref.Key, delimiter, blobLsMax)
 		if err != nil {
 			return err
 		}
 
 		switch output.OutputFormat(flagOutput) {
 		case output.FormatJSON:
-			output.PrintJSON(items)
+			output.PrintJSON(result.Items)
 			return nil
 		case output.FormatNDJSON:
-			return output.PrintNDJSON(items)
+			return output.PrintNDJSON(result.Items)
 		}
-		rows := make([][]string, 0, len(items))
-		for _, it := range items {
+		rows := make([][]string, 0, len(result.CommonPrefixes)+len(result.Items))
+		for _, cp := range result.CommonPrefixes {
+			rows = append(rows, []string{cp, "PRE", "", ""})
+		}
+		for _, it := range result.Items {
 			rows = append(rows, []string{
 				it.GetKey(),
 				strconv.FormatInt(int64(it.GetSizeBytes()), 10),
@@ -1335,6 +1359,7 @@ var _ = json.Marshal
 func init() {
 	blobLsCmd.Flags().IntVar(&blobLsMax, "max", 0, "Cap total objects returned (0 = no cap)")
 	blobLsCmd.Flags().IntVar(&blobLsPageSz, "page-size", 1000, "Server-side page size hint")
+	blobLsCmd.Flags().BoolP("recursive", "r", false, "List all objects recursively (skip directory grouping)")
 
 	blobCatCmd.Flags().BoolVar(&blobCatForce, "force", false, "Allow streaming binary content to a TTY")
 
