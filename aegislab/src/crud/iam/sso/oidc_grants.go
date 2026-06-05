@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 )
 
 // grantAuthCode handles the `authorization_code` grant on /token.
@@ -128,8 +129,8 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 
 // grantPassword handles the `password` grant on /token.
 //
-//	@Summary		OIDC token: password grant
-//	@Description	Internal dispatch path of /token for `grant_type=password`. Verifies the resource owner's username/password and issues an access token. Intended for trusted first-party CLI/test clients only.
+//	@Summary		OIDC token: password grant (deprecated)
+//	@Description	Internal dispatch path of /token for `grant_type=password`. Verifies the resource owner's username/password and issues an access token. Intended for trusted first-party CLI/test clients only. **Deprecated**: use federated login or /api/v2/auth/login instead.
 //	@Tags			OIDC
 //	@ID				oidc_token_password
 //	@Accept			x-www-form-urlencoded
@@ -138,7 +139,10 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 //	@Param			password	formData	string	true	"Password"
 //	@Success		200	{object}	tokenResp			"Token response"
 //	@Failure		401	{object}	map[string]string	"Invalid credentials"
+//
+// Deprecated: Use federated login (/auth/federated/:provider) or /api/v2/auth/login.
 func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
+	logrus.Warn("DEPRECATED: password grant is deprecated; use /auth/federated/:provider or /api/v2/auth/login instead")
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	u, err := s.users.GetByUsername(c.Request.Context(), username)
