@@ -82,8 +82,13 @@ data:
         # SSO public OIDC endpoints live at the SSO service root (not under
         # /api/v2). Route them directly so the browser's OAuth2 code-flow
         # redirect lands on the real handler instead of the SPA shell.
+        # /auth/federated/*, /auth/providers and /auth/callback/<provider> are
+        # SSO federation endpoints (Google/GitHub). They share the /auth/*
+        # prefix with the SPA's own client-side routes, but the SPA only uses
+        # the bare /auth/callback (no provider segment), so /auth/callback/*
+        # with a segment routes to SSO without shadowing it.
         @sso {
-            path /authorize /token /userinfo /login /v1/logout /.well-known/openid-configuration /.well-known/jwks.json
+            path /authorize /token /userinfo /login /v1/logout /.well-known/openid-configuration /.well-known/jwks.json /auth/providers /auth/federated/* /auth/callback/*
         }
         handle @sso {
             reverse_proxy {{ .Release.Name }}-sso:{{ .Values.sso.service.port | default 8083 }}

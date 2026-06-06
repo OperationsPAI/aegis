@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
 	"aegis/platform/dto"
@@ -253,11 +254,27 @@ func (h *FederationHandler) buildOAuth2Config(idp *IdentityProvider, r *http.Req
 		}
 	}
 
-	scheme := "https"
-	if r.TLS == nil {
-		scheme = "http"
+	// Behind a TLS-terminating reverse proxy r.TLS is nil and r.Host is the
+	// internal upstream address, so an inferred callback would not match the
+	// public redirect_uri registered with the IdP. Prefer an explicitly
+	// configured public base (required when the proxy rewrites the port, e.g.
+	// CLB NAT), then the X-Forwarded-* hints, then the raw request.
+	base := strings.TrimRight(config.GetString("sso.federation.callback_base_url"), "/")
+	if base == "" {
+		scheme := r.Header.Get("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+			if r.TLS != nil {
+				scheme = "https"
+			}
+		}
+		host := r.Header.Get("X-Forwarded-Host")
+		if host == "" {
+			host = r.Host
+		}
+		base = scheme + "://" + host
 	}
-	redirectURL := fmt.Sprintf("%s://%s/auth/callback/%s", scheme, r.Host, idp.Name)
+	redirectURL := fmt.Sprintf("%s/auth/callback/%s", base, idp.Name)
 
 	return &oauth2.Config{
 		ClientID:     idp.ClientID,
