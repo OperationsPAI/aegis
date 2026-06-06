@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -354,7 +355,18 @@ func (h *FederationHandler) extractFromUserinfo(ctx context.Context, idp *Identi
 	if s, ok := info["sub"].(string); ok && s != "" {
 		sub = s
 	} else if id, ok := info["id"]; ok {
-		sub = fmt.Sprint(id)
+		// GitHub returns a numeric id; JSON-decoded into any it is a float64,
+		// so fmt.Sprint would yield scientific notation ("5.3e+07").
+		switch v := id.(type) {
+		case float64:
+			sub = strconv.FormatInt(int64(v), 10)
+		case json.Number:
+			sub = v.String()
+		case string:
+			sub = v
+		default:
+			sub = fmt.Sprint(v)
+		}
 	}
 	if e, ok := info["email"].(string); ok {
 		email = e
@@ -416,6 +428,12 @@ func (h *FederationHandler) provisionUser(ctx context.Context, idp *IdentityProv
 	if username == "" {
 		username = providerName + "_" + sub
 	}
+	// Email is NOT NULL + UNIQUE, but IdPs hide it (GitHub private email):
+	// synthesize a deterministic per-identity placeholder so provisioning
+	// never fails and stays unique across federated users.
+	if email == "" {
+		email = username + "@" + providerName + ".noreply"
+	}
 
 	password, err := randomToken(16)
 	if err != nil {
@@ -431,8 +449,9 @@ func (h *FederationHandler) provisionUser(ctx context.Context, idp *IdentityProv
 		IsActive: true,
 	}
 
+	// active_username is a generated column; Omit it so the INSERT is valid.
 	// User.BeforeCreate hook hashes the password.
-	if err := h.repo.db.WithContext(ctx).Create(u).Error; err != nil {
+	if err := h.repo.db.WithContext(ctx).Omit("active_username").Create(u).Error; err != nil {
 		// Username/email collision: try to find the existing user by email
 		// and link instead of failing.
 		existing, findErr := h.oidc.users.GetByEmail(ctx, email)
