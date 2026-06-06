@@ -33,11 +33,13 @@ type authRequest struct {
 	Scope               string `json:"scope,omitempty"`
 	CodeChallenge       string `json:"code_challenge,omitempty"`
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
+	Idp                 string `json:"idp,omitempty"`
 }
 
 type refreshRecord struct {
 	UserID   int    `json:"user_id"`
 	ClientID string `json:"client_id"`
+	Idp      string `json:"idp,omitempty"`
 }
 
 type tokenResp struct {

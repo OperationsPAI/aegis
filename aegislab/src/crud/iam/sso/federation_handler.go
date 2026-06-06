@@ -201,6 +201,7 @@ func (h *FederationHandler) Callback(c *gin.Context) {
 			Scope:               fs.Scope,
 			CodeChallenge:       fs.CodeChallenge,
 			CodeChallengeMethod: fs.CodeChallengeMethod,
+			Idp:                 providerName,
 		}
 		if err := h.oidc.storeAuthRequest(c.Request.Context(), authCode, ar); err != nil {
 			dto.ErrorResponse(c, http.StatusInternalServerError, "failed to store auth request")
