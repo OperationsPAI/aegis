@@ -31,17 +31,20 @@ var Module = fx.Module("sso",
 		NewServiceAccountHandler,
 		NewFederationRepository,
 		NewFederationHandler,
+		NewIdentityProviderRepository,
+		NewFederationAdminHandler,
 		newRevocationStore,
 	),
 	fx.Provide(
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
-	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, fed *FederationHandler, rbacRepo *rbac.Repository) {
+	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, fed *FederationHandler, fedAdmin *FederationAdminHandler, rbacRepo *rbac.Repository) {
 		SetAdminScopeResolver(rbacRepo)
 		RegisterAdminRoutes(engine, admin)
 		RegisterClientRoutes(engine, client)
 		RegisterOIDCRoutes(engine, oidc)
 		RegisterServiceAccountRoutes(engine, sa)
 		RegisterFederationRoutes(engine, fed)
+		RegisterFederationAdminRoutes(engine, fedAdmin)
 	}),
 )
