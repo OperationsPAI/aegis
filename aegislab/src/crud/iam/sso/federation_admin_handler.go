@@ -121,9 +121,8 @@ type updateProviderReq struct {
 	Enabled       *bool   `json:"enabled"`
 }
 
-// applyProviderPreset fills well-known endpoint fields for google/github when
-// the admin left them empty, so only client_id/client_secret are required.
-// Explicitly supplied values are never overridden.
+// applyProviderPreset lets an admin register google/github with only
+// client_id/client_secret; explicit values are never overridden.
 func applyProviderPreset(req *createProviderReq) {
 	type preset struct {
 		typ          string

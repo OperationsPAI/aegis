@@ -111,6 +111,10 @@ func (h *FederationHandler) Authorize(c *gin.Context) {
 			dto.ErrorResponse(c, http.StatusBadRequest, "redirect_uri not allowed for client")
 			return
 		}
+		if !cli.IsConfidential && c.Query("code_challenge") == "" {
+			dto.ErrorResponse(c, http.StatusBadRequest, "code_challenge required for public client")
+			return
+		}
 	}
 
 	oc := h.buildOAuth2Config(idp, c.Request)
