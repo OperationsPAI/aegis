@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/crud/iam/rbac"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
@@ -19,16 +20,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
 type FederationHandler struct {
-	repo *FederationRepository
-	oidc *OIDCService
+	repo  *FederationRepository
+	oidc  *OIDCService
+	roles *rbac.Repository
 }
 
-func NewFederationHandler(repo *FederationRepository, oidc *OIDCService) *FederationHandler {
-	return &FederationHandler{repo: repo, oidc: oidc}
+func NewFederationHandler(repo *FederationRepository, oidc *OIDCService, roles *rbac.Repository) *FederationHandler {
+	return &FederationHandler{repo: repo, oidc: oidc, roles: roles}
 }
 
 func RegisterFederationRoutes(engine *gin.Engine, h *FederationHandler) {
@@ -451,6 +454,7 @@ func (h *FederationHandler) provisionUser(ctx context.Context, idp *IdentityProv
 
 	// active_username is a generated column; Omit it so the INSERT is valid.
 	// User.BeforeCreate hook hashes the password.
+	created := true
 	if err := h.repo.db.WithContext(ctx).Omit("active_username").Create(u).Error; err != nil {
 		// Username/email collision: try to find the existing user by email
 		// and link instead of failing.
@@ -459,6 +463,7 @@ func (h *FederationHandler) provisionUser(ctx context.Context, idp *IdentityProv
 			return nil, fmt.Errorf("create user: %w (also failed to find existing: %v)", err, findErr)
 		}
 		u = existing
+		created = false
 	}
 
 	now := time.Now()
@@ -474,5 +479,29 @@ func (h *FederationHandler) provisionUser(ctx context.Context, idp *IdentityProv
 		return nil, fmt.Errorf("link identity: %w", err)
 	}
 
+	if created {
+		h.assignDefaultRoles(ctx, u.ID, idp.DefaultRoles)
+	}
+
 	return u, nil
+}
+
+// assignDefaultRoles grants the provider's configured default global roles to a
+// freshly provisioned federated user. Best-effort: a missing/misconfigured role
+// is logged and skipped rather than failing the login.
+func (h *FederationHandler) assignDefaultRoles(ctx context.Context, userID int, defaultRoles string) {
+	for _, name := range strings.Split(defaultRoles, ",") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		role, err := h.roles.FindRoleByName(name)
+		if err != nil {
+			logrus.WithError(err).Warnf("federation: default role %q not found, skipping", name)
+			continue
+		}
+		if err := h.oidc.users.AssignRole(ctx, userID, role.ID); err != nil {
+			logrus.WithError(err).Warnf("federation: failed to assign default role %q to user %d", name, userID)
+		}
+	}
 }
