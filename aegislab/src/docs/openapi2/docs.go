@@ -17375,6 +17375,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/federated/{provider}": {
+            "get": {
+                "description": "Starts a federated login by redirecting to the external IdP. When ` + "`" + `client_id` + "`" + ` is supplied, the original console OIDC authorization-code params are carried across the IdP round-trip so the callback can mint an auth code and 302 back to the console ` + "`" + `redirect_uri?code\u0026state` + "`" + ` (PKCE exchange follows). Without ` + "`" + `client_id` + "`" + `, the callback returns the token as JSON (direct API/CLI use).",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "SSO Federation"
+                ],
+                "summary": "Federated login: redirect to IdP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider name (e.g. google, github)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Console OIDC client_id (enables the auth-code bridge)",
+                        "name": "client_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Console OIDC redirect_uri (where the auth code is delivered)",
+                        "name": "redirect_uri",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Console OIDC state echoed back to redirect_uri",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Console OIDC requested scope",
+                        "name": "scope",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PKCE code challenge",
+                        "name": "code_challenge",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PKCE method (` + "`" + `S256` + "`" + ` or ` + "`" + `plain` + "`" + `)",
+                        "name": "code_challenge_method",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to external IdP",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid console OIDC request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Provider not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
         "/authorize": {
             "get": {
                 "description": "Standard OIDC authorize endpoint. Validates ` + "`" + `client_id` + "`" + `, ` + "`" + `redirect_uri` + "`" + `, ` + "`" + `response_type=code` + "`" + `, and (for public clients) PKCE; either renders the inline login form or 302-redirects to the configured ` + "`" + `sso.login_redirect` + "`" + ` console URL with the OIDC params preserved.",
@@ -33174,8 +33251,7 @@ const docTemplate = `{
                 "client_id",
                 "client_secret",
                 "display_name",
-                "name",
-                "type"
+                "name"
             ],
             "properties": {
                 "authorize_url": {

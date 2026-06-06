@@ -63,6 +63,22 @@ func (h *FederationHandler) ListProviders(c *gin.Context) {
 }
 
 // Authorize redirects the user to the external IdP.
+//
+//	@Summary		Federated login: redirect to IdP
+//	@Description	Starts a federated login by redirecting to the external IdP. When `client_id` is supplied, the original console OIDC authorization-code params are carried across the IdP round-trip so the callback can mint an auth code and 302 back to the console `redirect_uri?code&state` (PKCE exchange follows). Without `client_id`, the callback returns the token as JSON (direct API/CLI use).
+//	@Tags			SSO Federation
+//	@Produce		html
+//	@Param			provider				path		string	true	"Provider name (e.g. google, github)"
+//	@Param			client_id				query		string	false	"Console OIDC client_id (enables the auth-code bridge)"
+//	@Param			redirect_uri			query		string	false	"Console OIDC redirect_uri (where the auth code is delivered)"
+//	@Param			state					query		string	false	"Console OIDC state echoed back to redirect_uri"
+//	@Param			scope					query		string	false	"Console OIDC requested scope"
+//	@Param			code_challenge			query		string	false	"PKCE code challenge"
+//	@Param			code_challenge_method	query		string	false	"PKCE method (`S256` or `plain`)"
+//	@Success		302	{string}	string	"Redirect to external IdP"
+//	@Failure		400	{object}	object	"Invalid console OIDC request"
+//	@Failure		404	{object}	object	"Provider not found"
+//	@Router			/auth/federated/{provider} [get]
 func (h *FederationHandler) Authorize(c *gin.Context) {
 	providerName := c.Param("provider")
 	idp, err := h.repo.FindProviderByName(c.Request.Context(), providerName)
@@ -79,6 +95,28 @@ func (h *FederationHandler) Authorize(c *gin.Context) {
 		return
 	}
 
+	clientID := c.Query("client_id")
+	redirectURI := c.Query("redirect_uri")
+	if clientID != "" {
+		cli, err := h.oidc.clients.GetByClientID(c.Request.Context(), clientID)
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusBadRequest, "unknown client_id")
+			return
+		}
+		if !grantAllowed(cli, consts.OIDCGrantAuthorizationCode) {
+			dto.ErrorResponse(c, http.StatusBadRequest, "authorization_code grant not allowed for client")
+			return
+		}
+		if !redirectAllowed(cli, redirectURI) {
+			dto.ErrorResponse(c, http.StatusBadRequest, "redirect_uri not allowed for client")
+			return
+		}
+		if !cli.IsConfidential && c.Query("code_challenge") == "" {
+			dto.ErrorResponse(c, http.StatusBadRequest, "code_challenge required for public client")
+			return
+		}
+	}
+
 	oc := h.buildOAuth2Config(idp, c.Request)
 	state, err := randomToken(16)
 	if err != nil {
@@ -86,10 +124,14 @@ func (h *FederationHandler) Authorize(c *gin.Context) {
 		return
 	}
 
-	redirectURI := c.Query("redirect_uri")
 	if err := h.oidc.StoreFederationState(c.Request.Context(), state, FederationState{
-		Provider:    providerName,
-		RedirectURI: redirectURI,
+		Provider:            providerName,
+		ClientID:            clientID,
+		RedirectURI:         redirectURI,
+		State:               c.Query("state"),
+		Scope:               c.Query("scope"),
+		CodeChallenge:       c.Query("code_challenge"),
+		CodeChallengeMethod: c.Query("code_challenge_method"),
 	}); err != nil {
 		dto.ErrorResponse(c, http.StatusInternalServerError, "failed to store state")
 		return
@@ -139,13 +181,48 @@ func (h *FederationHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	accessToken, expiresIn, err := h.findOrProvisionUser(c.Request.Context(), idp, providerName, sub, email)
+	u, err := h.resolveUser(c.Request.Context(), idp, providerName, sub, email)
 	if err != nil {
 		if errors.Is(err, consts.ErrPermissionDenied) {
 			dto.ErrorResponse(c, http.StatusForbidden, "auto-provisioning is disabled for this provider")
 			return
 		}
 		dto.ErrorResponse(c, http.StatusInternalServerError, "failed to provision user")
+		return
+	}
+
+	if fs.ClientID != "" {
+		authCode, err := randomToken(24)
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusInternalServerError, "failed to generate code")
+			return
+		}
+		ar := authRequest{
+			ClientID:            fs.ClientID,
+			UserID:              u.ID,
+			RedirectURI:         fs.RedirectURI,
+			State:               fs.State,
+			Scope:               fs.Scope,
+			CodeChallenge:       fs.CodeChallenge,
+			CodeChallengeMethod: fs.CodeChallengeMethod,
+			Idp:                 providerName,
+		}
+		if err := h.oidc.storeAuthRequest(c.Request.Context(), authCode, ar); err != nil {
+			dto.ErrorResponse(c, http.StatusInternalServerError, "failed to store auth request")
+			return
+		}
+		dest, err := buildRedirect(fs.RedirectURI, authCode, fs.State)
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusBadRequest, "invalid redirect_uri")
+			return
+		}
+		c.Redirect(http.StatusFound, dest)
+		return
+	}
+
+	accessToken, expiresIn, err := h.mintUserToken(c.Request.Context(), u, providerName)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusInternalServerError, "failed to mint token")
 		return
 	}
 
@@ -271,30 +348,28 @@ func (h *FederationHandler) extractFromUserinfo(ctx context.Context, idp *Identi
 	return sub, email, nil
 }
 
-func (h *FederationHandler) findOrProvisionUser(ctx context.Context, idp *IdentityProvider, providerName, sub, email string) (accessToken string, expiresIn int64, err error) {
+func (h *FederationHandler) resolveUser(ctx context.Context, idp *IdentityProvider, providerName, sub, email string) (*model.User, error) {
 	identity, err := h.repo.FindIdentity(ctx, providerName, sub)
 	if err != nil && !errors.Is(err, consts.ErrNotFound) {
-		return "", 0, err
+		return nil, err
 	}
-
-	var u *model.User
 
 	if identity != nil {
-		u, err = h.oidc.users.GetByID(ctx, identity.UserID)
+		u, err := h.oidc.users.GetByID(ctx, identity.UserID)
 		if err != nil {
-			return "", 0, fmt.Errorf("load linked user: %w", err)
+			return nil, fmt.Errorf("load linked user: %w", err)
 		}
 		_ = h.repo.UpdateLastUsed(ctx, identity.ID)
-	} else {
-		if !idp.AutoProvision {
-			return "", 0, consts.ErrPermissionDenied
-		}
-		u, err = h.provisionUser(ctx, idp, providerName, sub, email)
-		if err != nil {
-			return "", 0, err
-		}
+		return u, nil
 	}
 
+	if !idp.AutoProvision {
+		return nil, consts.ErrPermissionDenied
+	}
+	return h.provisionUser(ctx, idp, providerName, sub, email)
+}
+
+func (h *FederationHandler) mintUserToken(ctx context.Context, u *model.User, providerName string) (accessToken string, expiresIn int64, err error) {
 	roles, _ := h.oidc.users.ListRoleNames(ctx, u.ID)
 	isAdmin := false
 	for _, r := range roles {

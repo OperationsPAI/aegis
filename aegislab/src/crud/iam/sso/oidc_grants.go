@@ -55,7 +55,7 @@ func (s *OIDCService) grantAuthCode(c *gin.Context, cli *model.OIDCClient) {
 		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "user gone")
 		return
 	}
-	s.respondUserToken(c, cli, u, true)
+	s.respondUserToken(c, cli, u, true, ar.Idp)
 }
 
 // grantRefresh handles the `refresh_token` grant on /token.
@@ -87,7 +87,7 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 	}
 	// Rotate the refresh token to invalidate the replayed one.
 	_, _ = s.redis.DeleteKey(c.Request.Context(), refreshRedisPrefix+rt)
-	s.respondUserToken(c, cli, u, true)
+	s.respondUserToken(c, cli, u, true, rec.Idp)
 }
 
 // grantClientCredentials handles the `client_credentials` grant on /token.
@@ -120,7 +120,10 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 	})
 }
 
-func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u *model.User, withRefresh bool) {
+func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u *model.User, withRefresh bool, idp string) {
+	if idp == "" {
+		idp = "local"
+	}
 	roles, _ := s.users.ListRoleNames(c.Request.Context(), u.ID)
 	isAdmin := false
 	for _, r := range roles {
@@ -132,7 +135,7 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 	access, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
 		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
 		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,
-		AuthType: "user", Idp: "local",
+		AuthType: "user", Idp: idp,
 		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
 	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
@@ -150,7 +153,7 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 			tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 			return
 		}
-		if err := s.storeRefresh(c.Request.Context(), rt, refreshRecord{UserID: u.ID, ClientID: cli.ClientID}); err != nil {
+		if err := s.storeRefresh(c.Request.Context(), rt, refreshRecord{UserID: u.ID, ClientID: cli.ClientID, Idp: idp}); err != nil {
 			tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 			return
 		}
