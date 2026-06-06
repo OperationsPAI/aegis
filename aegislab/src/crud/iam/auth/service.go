@@ -560,7 +560,7 @@ func (s *Service) generateTokenWithRoles(roleRepo *RoleRepository, user *model.U
 		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
 		IsActive: user.IsActive, IsAdmin: isAdmin, Roles: roleNames,
 		AuthType: "user", Idp: "local",
-		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+		Lifetime: crypto.TokenExpiration, Audience: crypto.AudienceForHuman(isAdmin),
 	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %w", err)
@@ -588,7 +588,7 @@ func (s *Service) generateAPIKeyTokenWithRoles(roleRepo *RoleRepository, user *m
 		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
 		IsActive: user.IsActive, IsAdmin: isAdmin, Roles: roleNames,
 		AuthType: "api_key", APIKeyID: apiKeyID, APIKeyScopes: apiKeyScopes,
-		Idp: "local", Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+		Idp: "local", Lifetime: crypto.TokenExpiration, Audience: crypto.AudienceForHuman(isAdmin),
 	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate api key token: %w", err)

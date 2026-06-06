@@ -116,6 +116,17 @@ func signRS256(claims jwt.Claims, priv *rsa.PrivateKey, kid string) (string, err
 	return token.SignedString(priv)
 }
 
+// AudienceForHuman returns the JWT audiences a human token carries. Everyone
+// gets "portal"; admins additionally get "admin" so the same console can reach
+// admin-scoped routes (the gateway matches a route's required audience against
+// any of the token's audiences).
+func AudienceForHuman(isAdmin bool) []string {
+	if isAdmin {
+		return []string{"portal", "admin"}
+	}
+	return []string{"portal"}
+}
+
 func GenerateUnifiedToken(p UnifiedTokenParams, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
 	now := time.Now()
 	lifetime := p.Lifetime

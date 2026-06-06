@@ -136,7 +136,7 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
 		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,
 		AuthType: "user", Idp: idp,
-		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+		Lifetime: crypto.TokenExpiration, Audience: crypto.AudienceForHuman(isAdmin),
 	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())

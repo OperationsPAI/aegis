@@ -415,7 +415,7 @@ func (h *FederationHandler) mintUserToken(ctx context.Context, u *model.User, pr
 		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
 		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,
 		AuthType: "user", Idp: providerName,
-		Lifetime: crypto.TokenExpiration, Audience: []string{"portal"},
+		Lifetime: crypto.TokenExpiration, Audience: crypto.AudienceForHuman(isAdmin),
 	}, h.oidc.signer.PrivateKey, h.oidc.signer.Kid)
 	if err != nil {
 		return "", 0, fmt.Errorf("mint token: %w", err)
