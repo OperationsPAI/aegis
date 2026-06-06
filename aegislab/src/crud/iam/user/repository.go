@@ -38,6 +38,30 @@ func (r *Repository) ListRoleNames(userID int) ([]string, error) {
 	return names, nil
 }
 
+// RolesByUserIDs returns the active global roles for each user id in one query.
+func (r *Repository) RolesByUserIDs(userIDs []int) (map[int][]UserRoleBrief, error) {
+	out := map[int][]UserRoleBrief{}
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		UserID int
+		RoleID int
+		Name   string
+	}
+	if err := r.db.Table("user_roles ur").
+		Select("ur.user_id AS user_id, roles.id AS role_id, roles.name AS name").
+		Joins("JOIN roles ON roles.id = ur.role_id").
+		Where("ur.user_id IN ? AND roles.status = ?", userIDs, consts.CommonEnabled).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to list roles for users: %w", err)
+	}
+	for _, x := range rows {
+		out[x.UserID] = append(out[x.UserID], UserRoleBrief{ID: x.RoleID, Name: x.Name})
+	}
+	return out, nil
+}
+
 // GetByIDs loads users by id, skipping soft-deleted rows. Order not guaranteed.
 func (r *Repository) GetByIDs(ids []int) ([]*model.User, error) {
 	if len(ids) == 0 {

@@ -112,18 +112,24 @@ func (req *UpdateUserReq) PatchUserModel(target *model.User) {
 }
 
 // UserResp represents basic user response.
+type UserRoleBrief struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type UserResp struct {
-	ID          int        `json:"id"`
-	Username    string     `json:"username"`
-	Email       string     `json:"email"`
-	FullName    string     `json:"full_name"`
-	Avatar      string     `json:"avatar,omitempty"`
-	Phone       string     `json:"phone,omitempty"`
-	IsActive    bool       `json:"is_active"`
-	Status      string     `json:"status"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          int             `json:"id"`
+	Username    string          `json:"username"`
+	Email       string          `json:"email"`
+	FullName    string          `json:"full_name"`
+	Avatar      string          `json:"avatar,omitempty"`
+	Phone       string          `json:"phone,omitempty"`
+	IsActive    bool            `json:"is_active"`
+	Status      string          `json:"status"`
+	Roles       []UserRoleBrief `json:"roles"`
+	LastLoginAt *time.Time      `json:"last_login_at,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 func NewUserResp(user *model.User) *UserResp {

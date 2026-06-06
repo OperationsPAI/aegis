@@ -177,9 +177,20 @@ func (s *Service) ListUsersScoped(ctx context.Context, req *ListUserReq, viewSco
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 
+	ids := make([]int, len(users))
+	for i, user := range users {
+		ids[i] = user.ID
+	}
+	rolesByUser, err := s.repo.RolesByUserIDs(ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load user roles: %w", err)
+	}
+
 	items := make([]UserResp, len(users))
 	for i, user := range users {
-		items[i] = *NewUserResp(&user)
+		resp := NewUserResp(&user)
+		resp.Roles = rolesByUser[user.ID]
+		items[i] = *resp
 	}
 
 	return &dto.ListResp[UserResp]{
