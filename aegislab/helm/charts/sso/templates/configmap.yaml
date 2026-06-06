@@ -56,4 +56,16 @@ data:
     {{- end }}
     console_redirect_uris = "{{ $consoleURIs }}"
     login_redirect = "{{ $loginRedir }}"
+    {{- /* Federated-login callback base; derive from publicBaseURL when unset. */}}
+    {{- $cbBase := .Values.config.sso.federationCallbackBaseURL | default $pub -}}
+    {{- if $cbBase }}
+    [sso.federation]
+    callback_base_url = "{{ $cbBase }}"
+    {{- end }}
+
+    {{- /* TrustedHeaderAuth shares the gateway HMAC key via `global` (the only
+      value subcharts can see). Without it every gateway-forwarded admin
+      request to SSO 401s. */}}
+    [gateway]
+    trusted_header_key = "{{ (.Values.global).gatewayTrustedHeaderKey | default "" }}"
 {{- end }}

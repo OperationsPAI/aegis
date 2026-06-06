@@ -16,6 +16,12 @@ global:
   # other "where does the browser reach us" value from it. Leave empty for
   # in-cluster / dev installs (subcharts fall back to localhost defaults).
   publicBaseURL: ""
+  # HMAC key the gateway uses to sign trusted-header identity forwarded to
+  # upstreams. MUST be shared with every upstream running TrustedHeaderAuth
+  # (aegis-api AND the sso subchart) — `global` is the only value visible to
+  # subcharts. Parent-chart consumers fall back to gateway.trustedHeaderKey
+  # when this is empty; the sso subchart reads ONLY this global.
+  gatewayTrustedHeaderKey: ""
   # Extra `host:port` site addresses to attach to the edge-proxy Caddy
   # site block alongside the one derived from publicBaseURL. Use when a
   # second EIP / NAT CLB fronts the same backend (clients reach edge-proxy
