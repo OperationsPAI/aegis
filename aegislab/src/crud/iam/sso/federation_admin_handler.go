@@ -95,7 +95,7 @@ func toResp(p *IdentityProvider) identityProviderResp {
 type createProviderReq struct {
 	Name          string `json:"name" binding:"required"`
 	DisplayName   string `json:"display_name" binding:"required"`
-	Type          string `json:"type" binding:"required,oneof=oidc oauth2"`
+	Type          string `json:"type" binding:"omitempty,oneof=oidc oauth2"`
 	ClientID      string `json:"client_id" binding:"required"`
 	ClientSecret  string `json:"client_secret" binding:"required"`
 	DiscoveryURL  string `json:"discovery_url"`
@@ -121,6 +121,58 @@ type updateProviderReq struct {
 	Enabled       *bool   `json:"enabled"`
 }
 
+// applyProviderPreset fills well-known endpoint fields for google/github when
+// the admin left them empty, so only client_id/client_secret are required.
+// Explicitly supplied values are never overridden.
+func applyProviderPreset(req *createProviderReq) {
+	type preset struct {
+		typ          string
+		discoveryURL string
+		authorizeURL string
+		tokenURL     string
+		userinfoURL  string
+		scopes       string
+	}
+	presets := map[string]preset{
+		"google": {
+			typ:          "oidc",
+			discoveryURL: "https://accounts.google.com/.well-known/openid-configuration",
+			authorizeURL: "https://accounts.google.com/o/oauth2/v2/auth",
+			tokenURL:     "https://oauth2.googleapis.com/token",
+			scopes:       "openid,email,profile",
+		},
+		"github": {
+			typ:          "oauth2",
+			authorizeURL: "https://github.com/login/oauth/authorize",
+			tokenURL:     "https://github.com/login/oauth/access_token",
+			userinfoURL:  "https://api.github.com/user",
+			scopes:       "read:user,user:email",
+		},
+	}
+	p, ok := presets[strings.ToLower(req.Name)]
+	if !ok {
+		return
+	}
+	if req.Type == "" {
+		req.Type = p.typ
+	}
+	if req.DiscoveryURL == "" {
+		req.DiscoveryURL = p.discoveryURL
+	}
+	if req.AuthorizeURL == "" {
+		req.AuthorizeURL = p.authorizeURL
+	}
+	if req.TokenURL == "" {
+		req.TokenURL = p.tokenURL
+	}
+	if req.UserinfoURL == "" {
+		req.UserinfoURL = p.userinfoURL
+	}
+	if req.Scopes == "" {
+		req.Scopes = p.scopes
+	}
+}
+
 //	@Summary		Create identity provider
 //	@Tags			SSO Admin
 //	@Accept			json
@@ -133,6 +185,11 @@ func (h *FederationAdminHandler) CreateProvider(c *gin.Context) {
 	var req createProviderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	applyProviderPreset(&req)
+	if req.Type == "" {
+		dto.ErrorResponse(c, http.StatusBadRequest, "type is required (no preset for this provider name)")
 		return
 	}
 	ap := true

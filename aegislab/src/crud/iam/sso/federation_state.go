@@ -12,9 +12,17 @@ const (
 	federationStateTTL    = 10 * time.Minute
 )
 
+// FederationState bridges a console-initiated OIDC authorization-code flow
+// across the IdP round-trip. When ClientID is set, Callback mints an auth code
+// for the console's redirect_uri instead of returning a token as JSON.
 type FederationState struct {
-	Provider    string `json:"provider"`
-	RedirectURI string `json:"redirect_uri"`
+	Provider            string `json:"provider"`
+	ClientID            string `json:"client_id,omitempty"`
+	RedirectURI         string `json:"redirect_uri,omitempty"`
+	State               string `json:"state,omitempty"`
+	Scope               string `json:"scope,omitempty"`
+	CodeChallenge       string `json:"code_challenge,omitempty"`
+	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 }
 
 func (s *OIDCService) StoreFederationState(ctx context.Context, state string, fs FederationState) error {
