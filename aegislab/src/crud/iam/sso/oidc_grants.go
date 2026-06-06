@@ -125,13 +125,7 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 		idp = "local"
 	}
 	roles, _ := s.users.ListRoleNames(c.Request.Context(), u.ID)
-	isAdmin := false
-	for _, r := range roles {
-		if r == string(consts.RoleSuperAdmin) || r == string(consts.RoleAdmin) {
-			isAdmin = true
-			break
-		}
-	}
+	isAdmin := crypto.IsAdminRole(roles)
 	access, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
 		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,
 		IsActive: u.IsActive, IsAdmin: isAdmin, Roles: roles,

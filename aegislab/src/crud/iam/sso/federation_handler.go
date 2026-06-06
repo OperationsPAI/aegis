@@ -403,13 +403,7 @@ func (h *FederationHandler) resolveUser(ctx context.Context, idp *IdentityProvid
 
 func (h *FederationHandler) mintUserToken(ctx context.Context, u *model.User, providerName string) (accessToken string, expiresIn int64, err error) {
 	roles, _ := h.oidc.users.ListRoleNames(ctx, u.ID)
-	isAdmin := false
-	for _, r := range roles {
-		if r == string(consts.RoleSuperAdmin) || r == string(consts.RoleAdmin) {
-			isAdmin = true
-			break
-		}
-	}
+	isAdmin := crypto.IsAdminRole(roles)
 
 	signed, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
 		Typ: "human", UserID: u.ID, Username: u.Username, Email: u.Email,

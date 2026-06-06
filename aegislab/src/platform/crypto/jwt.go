@@ -116,6 +116,17 @@ func signRS256(claims jwt.Claims, priv *rsa.PrivateKey, kid string) (string, err
 	return token.SignedString(priv)
 }
 
+// IsAdminRole reports whether any role name grants admin (super_admin or
+// admin). Centralizes the admin-detection rule shared by the token mint sites.
+func IsAdminRole(roles []string) bool {
+	for _, r := range roles {
+		if r == string(consts.RoleSuperAdmin) || r == string(consts.RoleAdmin) {
+			return true
+		}
+	}
+	return false
+}
+
 // AudienceForHuman returns the JWT audiences a human token carries. Everyone
 // gets "portal"; admins additionally get "admin" so the same console can reach
 // admin-scoped routes (the gateway matches a route's required audience against

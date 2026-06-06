@@ -547,14 +547,11 @@ func (s *Service) generateTokenWithRoles(roleRepo *RoleRepository, user *model.U
 		return "", time.Time{}, fmt.Errorf("failed to get user roles: %w", err)
 	}
 
-	isAdmin := false
 	roleNames := make([]string, 0, len(roles))
 	for _, role := range roles {
 		roleNames = append(roleNames, role.Name)
-		if role.Name == string(consts.RoleSuperAdmin) || role.Name == string(consts.RoleAdmin) {
-			isAdmin = true
-		}
 	}
+	isAdmin := crypto.IsAdminRole(roleNames)
 
 	token, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
 		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
@@ -575,14 +572,11 @@ func (s *Service) generateAPIKeyTokenWithRoles(roleRepo *RoleRepository, user *m
 		return "", time.Time{}, fmt.Errorf("failed to get user roles: %w", err)
 	}
 
-	isAdmin := false
 	roleNames := make([]string, 0, len(roles))
 	for _, role := range roles {
 		roleNames = append(roleNames, role.Name)
-		if role.Name == string(consts.RoleSuperAdmin) || role.Name == string(consts.RoleAdmin) {
-			isAdmin = true
-		}
 	}
+	isAdmin := crypto.IsAdminRole(roleNames)
 
 	token, expiresAt, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
 		Typ: "human", UserID: user.ID, Username: user.Username, Email: user.Email,
