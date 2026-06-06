@@ -122,7 +122,8 @@ func NewAPIKeyRepository(db *gorm.DB) *APIKeyRepository {
 }
 
 func (r *APIKeyRepository) Create(key *model.APIKey) error {
-	if err := r.db.Create(key).Error; err != nil {
+	// active_key_id is a generated column; Omit it so the INSERT is valid.
+	if err := r.db.Omit("active_key_id").Create(key).Error; err != nil {
 		return fmt.Errorf("failed to create api key: %w", err)
 	}
 	return nil
@@ -161,7 +162,7 @@ func (r *APIKeyRepository) GetByKeyID(keyID string) (*model.APIKey, error) {
 }
 
 func (r *APIKeyRepository) Update(key *model.APIKey) error {
-	if err := r.db.Save(key).Error; err != nil {
+	if err := r.db.Omit("active_key_id").Save(key).Error; err != nil {
 		return fmt.Errorf("failed to update api key: %w", err)
 	}
 	return nil
