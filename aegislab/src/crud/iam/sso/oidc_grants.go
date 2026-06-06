@@ -9,7 +9,6 @@ import (
 	"aegis/platform/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // grantAuthCode handles the `authorization_code` grant on /token.
@@ -102,18 +101,14 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 //	@Success		200	{object}	tokenResp			"Service token response"
 //	@Failure		500	{object}	map[string]string	"Token signing failed"
 func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClient) {
-	exp := time.Now().Add(crypto.ServiceTokenExpiration)
-	claims := jwt.MapClaims{
-		"iss":                     s.issuer,
-		consts.OIDCClaimSubject:   consts.ClaimSubjectServicePrefix + cli.Service,
-		consts.OIDCClaimAudience:  []string{consts.AudienceSSOInternal},
-		"exp":                     exp.Unix(),
-		"iat":                     time.Now().Unix(),
-		"service":                 cli.Service,
-		"scopes":                  cli.Scopes,
-		consts.OIDCClaimTokenType: consts.TokenTypeService,
-	}
-	signed, err := signWithKid(claims, s.signer)
+	signed, exp, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{
+		Typ:      "service_account",
+		Service:  cli.Service,
+		Scopes:   cli.Scopes,
+		AuthType: consts.AuthTypeServiceAccount,
+		Audience: []string{consts.AudienceSSOInternal},
+		Lifetime: crypto.ServiceTokenExpiration,
+	}, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 		return

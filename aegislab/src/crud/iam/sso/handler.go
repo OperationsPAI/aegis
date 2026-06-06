@@ -8,6 +8,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -97,13 +98,11 @@ func SetAdminScopeResolver(r AdminScopeResolver) { scopeResolver = r }
 // context for handlers to consult when filtering responses.
 func requireAdminOrService(c *gin.Context) bool {
 	ctx := &AdminContext{}
-	if v, ok := c.Get(consts.CtxKeyTokenType); ok {
-		if t, _ := v.(string); t == "service" {
-			ctx.ServiceTokenFor = "service"
-			if sv, ok := c.Get("service"); ok {
-				if s, _ := sv.(string); s != "" {
-					ctx.ServiceTokenFor = s
-				}
+	if middleware.IsServiceToken(c) {
+		ctx.ServiceTokenFor = "service"
+		if sv, ok := c.Get(consts.CtxKeyUsername); ok {
+			if s, _ := sv.(string); s != "" {
+				ctx.ServiceTokenFor = s
 			}
 		}
 	}
