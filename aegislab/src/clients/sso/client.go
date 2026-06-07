@@ -265,6 +265,15 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body, out any)
 	return json.Unmarshal(env.Data, out)
 }
 
+// ServiceToken returns the cached client_credentials bearer for this client's
+// ClientID, refreshing it via /token when missing or near expiry. Callers that
+// need to authenticate their own request to a downstream SSO endpoint (rather
+// than go through doJSON) use this — e.g. the chaos webhook provisioner minting
+// a chaos-service token off the aegis-backend identity.
+func (c *Client) ServiceToken(ctx context.Context) (string, error) {
+	return c.getServiceToken(ctx)
+}
+
 // getServiceToken returns a cached service token, refreshing it via the SSO
 // /token endpoint when missing or within `serviceTokenSkew` of expiry. Callers
 // always go through this so the background refresher is purely optional.

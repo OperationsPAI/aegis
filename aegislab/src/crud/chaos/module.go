@@ -31,10 +31,14 @@ var Module = fx.Module("chaos",
 	fx.Invoke(func(db *gorm.DB) { RegisterChaosPointStore(db) }),
 )
 
-// Read directly from the process env rather than via config.GetString:
-// the chart wires these as bare env vars (helm/charts/chaos/templates/
-// deployment.yaml + chaosAuth secret refs) so operators can rotate the
-// bearer with kubectl-restart alone, without re-rendering the ConfigMap.
+// NewWebhookSenderFromEnv wires the static CHAOS_SA_TOKEN (legacy
+// CHAOS_WEBHOOK_BEARER) env as the FALLBACK bearer. The standalone chaos boot
+// additionally wires WebhookTokenModule, whose SSO-minted token takes
+// precedence per request (see SetTokenProvider); the env value is only sent
+// while that provisioner's first mint is in flight or after an SSO-at-boot
+// failure. Read directly from the process env rather than via
+// config.GetString: the chart wires these as bare env vars so operators can
+// rotate without re-rendering the ConfigMap.
 func NewWebhookSenderFromEnv(db *gorm.DB) *WebhookSender {
 	logger := logrus.StandardLogger()
 	w := NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logger)
