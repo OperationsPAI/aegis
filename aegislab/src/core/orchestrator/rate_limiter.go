@@ -257,11 +257,31 @@ func newTokenBucketRateLimiter(gateway *redis.Gateway, cfg RateLimiterConfig) *T
 		waitTimeout = cfg.DefaultTimeout
 	}
 
-	return &TokenBucketRateLimiter{
+	return newTokenBucketRateLimiterWithBucket(gateway, rateLimiterInstance{
 		bucketKey:   cfg.TokenBucketKey,
-		store:       state.NewTokenBucketStore(gateway, cfg.TokenBucketKey),
 		maxTokens:   maxTokens,
 		waitTimeout: time.Duration(waitTimeout) * time.Second,
 		serviceName: cfg.ServiceName,
+	})
+}
+
+// rateLimiterInstance carries the already-resolved parameters for a single
+// token bucket. Used when the caller has computed the bucket key / max /
+// timeout itself (e.g. the per-system restart limiter registry) rather than
+// resolving them from a fixed config key.
+type rateLimiterInstance struct {
+	bucketKey   string
+	maxTokens   int
+	waitTimeout time.Duration
+	serviceName string
+}
+
+func newTokenBucketRateLimiterWithBucket(gateway *redis.Gateway, inst rateLimiterInstance) *TokenBucketRateLimiter {
+	return &TokenBucketRateLimiter{
+		bucketKey:   inst.bucketKey,
+		store:       state.NewTokenBucketStore(gateway, inst.bucketKey),
+		maxTokens:   inst.maxTokens,
+		waitTimeout: inst.waitTimeout,
+		serviceName: inst.serviceName,
 	}
 }

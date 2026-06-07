@@ -2429,6 +2429,15 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 50
+  - key: rate_limiting.max_concurrent_restarts_pedestal_per_system.ts
+    default_value: '5'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Per-system override of max_concurrent_restarts_pedestal for ts; ts restarts slowly, so its own bucket is capped lower to stop it starving restart slots for other systems. Systems without a per-system override inherit the global default.
+    is_secret: false
+    min_value: 1
+    max_value: 50
   - key: rate_limiting.max_concurrent_ns_warming
     default_value: '30'
     value_type: 2

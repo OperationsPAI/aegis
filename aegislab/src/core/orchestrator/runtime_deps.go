@@ -10,9 +10,15 @@ import (
 )
 
 type RuntimeDeps struct {
-	DB                 *gorm.DB
-	Monitor            NamespaceMonitor
-	RestartRateLimiter *TokenBucketRateLimiter
+	DB      *gorm.DB
+	Monitor NamespaceMonitor
+	// RestartRateLimiter is the global fallback restart bucket (system
+	// unknown/empty). RestartLimiterRegistry resolves the per-system bucket
+	// at acquire time; the executor keys off the pedestal's system so one
+	// slow system can't starve restart slots for the rest. When the registry
+	// is nil (older test wiring) the executor falls back to this limiter.
+	RestartRateLimiter     *TokenBucketRateLimiter
+	RestartLimiterRegistry *RestartLimiterRegistry
 	// NsWarmingRateLimiter gates the post-helm-apply workload-readiness
 	// probe in RestartPedestal. Decoupled from RestartRateLimiter so the
 	// "API server hammer" bound stays small (default 5) while the

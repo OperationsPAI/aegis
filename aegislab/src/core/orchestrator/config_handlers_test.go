@@ -40,7 +40,7 @@ func setIntConfig(t *testing.T, key string, value int) {
 // on that key must change the live limiter's max tokens.
 func TestRestartLimiterReloadsOnConsistentKey(t *testing.T) {
 	restart := newTestLimiter(consts.RestartPedestalServiceName, consts.MaxConcurrentRestartPedestal)
-	h := newRateLimitingConfigHandler(nil, restart, nil, nil, nil, nil)
+	h := newRateLimitingConfigHandler(nil, restart, nil, nil, nil, nil, nil)
 
 	setIntConfig(t, consts.MaxTokensKeyRestartPedestal, 30)
 
@@ -61,7 +61,7 @@ func TestRestartLimiterReloadsOnConsistentKey(t *testing.T) {
 // fails, surfacing the mismatch instead of shipping a dead apply path.
 func TestRestartLimiterIgnoresLegacyKey(t *testing.T) {
 	restart := newTestLimiter(consts.RestartPedestalServiceName, consts.MaxConcurrentRestartPedestal)
-	h := newRateLimitingConfigHandler(nil, restart, nil, nil, nil, nil)
+	h := newRateLimitingConfigHandler(nil, restart, nil, nil, nil, nil, nil)
 
 	if err := h.Handle(context.Background(), "rate_limiting.max_concurrent_restarts", "2", "30"); err != nil {
 		t.Fatalf("Handle: %v", err)
@@ -80,7 +80,7 @@ func TestRestartLimiterIgnoresLegacyKey(t *testing.T) {
 // when the key fires.
 func TestNamespaceWarmingLimiterReloads(t *testing.T) {
 	warming := newTestLimiter(consts.NamespaceWarmingServiceName, consts.MaxConcurrentNamespaceWarming)
-	h := newRateLimitingConfigHandler(nil, nil, warming, nil, nil, nil)
+	h := newRateLimitingConfigHandler(nil, nil, nil, warming, nil, nil, nil)
 
 	setIntConfig(t, consts.MaxTokensKeyNamespaceWarming, 75)
 
@@ -108,7 +108,7 @@ func TestReconcileRateLimitersFromConfig(t *testing.T) {
 	// a watch event.
 	setIntConfig(t, consts.MaxTokensKeyRestartPedestal, 10)
 
-	ReconcileRateLimitersFromConfig(restart, nil, nil, nil, nil)
+	ReconcileRateLimitersFromConfig(restart, nil, nil, nil, nil, nil)
 
 	got, _ := restart.GetConfig()
 	if got != 10 {
