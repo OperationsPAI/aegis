@@ -382,13 +382,29 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			return handleExecutionError(span, logEntry, "redis gateway not initialized", fmt.Errorf("redis gateway not initialized"))
 		}
 
-		restartLimiter := deps.RestartRateLimiter
-		if restartLimiter == nil {
-			return handleExecutionError(span, logEntry, "restart pedestal rate limiter not initialized", errors.New("restart pedestal rate limiter not initialized"))
-		}
 		warmingLimiter := deps.NsWarmingRateLimiter
 		if warmingLimiter == nil {
 			return handleExecutionError(span, logEntry, "namespace warming rate limiter not initialized", errors.New("namespace warming rate limiter not initialized"))
+		}
+
+		// Parse the payload BEFORE acquiring the restart token: the restart
+		// token bucket is per-system (one slow system, e.g. ts, must not
+		// starve restart slots for the rest), and the system is only known
+		// from the pedestal payload. The parse has no dependency on a token,
+		// so doing it first is free.
+		payload, err := parseRestartPayload(task.Payload)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to parse restart payload", err)
+		}
+
+		system := chaos.SystemType(payload.pedestal.ContainerName)
+		if !system.IsValid() {
+			return handleExecutionError(span, logEntry, fmt.Sprintf("invalid pedestal system type: %s", payload.pedestal.Name), fmt.Errorf("invalid pedestal system type: %s", payload.pedestal.Name))
+		}
+
+		restartLimiter := resolveRestartLimiter(deps, system.String())
+		if restartLimiter == nil {
+			return handleExecutionError(span, logEntry, "restart pedestal rate limiter not initialized", errors.New("restart pedestal rate limiter not initialized"))
 		}
 
 		// tokens tracks which of the two rate-limit tokens (restart-pedestal,
@@ -424,16 +440,6 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			}
 		}
 		tokens.restart = true
-
-		payload, err := parseRestartPayload(task.Payload)
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to parse restart payload", err)
-		}
-
-		system := chaos.SystemType(payload.pedestal.ContainerName)
-		if !system.IsValid() {
-			return handleExecutionError(span, logEntry, fmt.Sprintf("invalid pedestal system type: %s", payload.pedestal.Name), fmt.Errorf("invalid pedestal system type: %s", payload.pedestal.Name))
-		}
 
 		cfg, exists := config.GetChaosSystemConfigManager().Get(system)
 		if !exists {

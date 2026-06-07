@@ -445,6 +445,16 @@ const (
 	MaxConcurrentRestartPedestal = 2
 	RestartPedestalServiceName   = "restart_pedestal"
 
+	// MaxTokensKeyRestartPedestalPerSystemPrefix is the dotted prefix for a
+	// per-system override of the restart-pedestal concurrency cap. The full
+	// key is `<prefix>.<system>` (e.g.
+	// rate_limiting.max_concurrent_restarts_pedestal_per_system.ts). A
+	// SEPARATE parent ("..._per_system") is required because viper merges
+	// dotted keys into a nested map: writing `<global-key>.ts` would clobber
+	// the scalar at the global key. Systems without an override fall back to
+	// MaxTokensKeyRestartPedestal (the global default).
+	MaxTokensKeyRestartPedestalPerSystemPrefix = "rate_limiting.max_concurrent_restarts_pedestal_per_system"
+
 	BuildContainerTokenBucket = "token_bucket:build_container"
 	// MaxTokensKeyBuildContainer reads the same etcd key that the
 	// rate_limiting config handler watches (rate_limiting.max_concurrent_builds).

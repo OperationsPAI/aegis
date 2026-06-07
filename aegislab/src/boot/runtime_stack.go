@@ -39,6 +39,10 @@ func RuntimeWorkerStackOptions() fx.Option {
 		fx.Provide(
 			consumer.NewMonitor,
 			fx.Annotate(consumer.NewRestartPedestalRateLimiter, fx.ResultTags(`name:"restart_limiter"`)),
+			fx.Annotate(
+				consumer.NewRestartLimiterRegistry,
+				fx.ParamTags(``, `name:"restart_limiter"`),
+			),
 			fx.Annotate(consumer.NewNamespaceWarmingRateLimiter, fx.ResultTags(`name:"warming_limiter"`)),
 			fx.Annotate(consumer.NewBuildContainerRateLimiter, fx.ResultTags(`name:"build_limiter"`)),
 			fx.Annotate(consumer.NewBuildDatapackRateLimiter, fx.ResultTags(`name:"build_datapack_limiter"`)),

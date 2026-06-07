@@ -33,6 +33,7 @@ func InitializeConsumer(
 	etcdGw *etcd.Gateway,
 	listener *common.ConfigUpdateListener,
 	restartLimiter *consumer.TokenBucketRateLimiter,
+	restartRegistry *consumer.RestartLimiterRegistry,
 	warmingLimiter *consumer.TokenBucketRateLimiter,
 	buildLimiter *consumer.TokenBucketRateLimiter,
 	buildDatapackLimiter *consumer.TokenBucketRateLimiter,
@@ -51,11 +52,11 @@ func InitializeConsumer(
 	}
 
 	common.RegisterGlobalHandlers(publisher)
-	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
+	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, restartRegistry, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
 	if err := activateConfigScope(consumerData.scope, listener); err != nil {
 		return err
 	}
-	consumer.ReconcileRateLimitersFromConfig(restartLimiter, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
+	consumer.ReconcileRateLimitersFromConfig(restartLimiter, restartRegistry, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
 
 	wireChaosSystemValidation()
 

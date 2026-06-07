@@ -21,6 +21,7 @@ func RegisterConsumerHandlers(
 	monitor NamespaceMonitor,
 	publisher common.ConfigPublisher,
 	restartLimiter *TokenBucketRateLimiter,
+	restartRegistry *RestartLimiterRegistry,
 	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
 	buildDatapackLimiter *TokenBucketRateLimiter,
@@ -33,6 +34,7 @@ func RegisterConsumerHandlers(
 	common.RegisterHandler(newRateLimitingConfigHandler(
 		publisher,
 		restartLimiter,
+		restartRegistry,
 		warmingLimiter,
 		buildLimiter,
 		buildDatapackLimiter,
@@ -53,6 +55,7 @@ func RegisterConsumerHandlers(
 // this once after the config scopes are activated.
 func ReconcileRateLimitersFromConfig(
 	restartLimiter *TokenBucketRateLimiter,
+	restartRegistry *RestartLimiterRegistry,
 	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
 	buildDatapackLimiter *TokenBucketRateLimiter,
@@ -71,6 +74,11 @@ func ReconcileRateLimitersFromConfig(
 	}
 
 	apply(restartLimiter, consts.MaxTokensKeyRestartPedestal)
+	if restartRegistry != nil {
+		// Re-resolve the global fallback (and any per-system buckets already
+		// created) against the freshly-loaded config.
+		restartRegistry.Reconcile()
+	}
 	apply(warmingLimiter, consts.MaxTokensKeyNamespaceWarming)
 	apply(buildLimiter, consts.MaxTokensKeyBuildContainer)
 	apply(buildDatapackLimiter, consts.MaxTokensKeyBuildDatapack)
@@ -106,6 +114,7 @@ func UpdateK8sController(controller *k8s.Controller, toAdd, toRemove []string) e
 type rateLimitingConfigHandler struct {
 	publisher            common.ConfigPublisher
 	restartLimiter       *TokenBucketRateLimiter
+	restartRegistry      *RestartLimiterRegistry
 	warmingLimiter       *TokenBucketRateLimiter
 	buildLimiter         *TokenBucketRateLimiter
 	buildDatapackLimiter *TokenBucketRateLimiter
@@ -115,6 +124,7 @@ type rateLimitingConfigHandler struct {
 func newRateLimitingConfigHandler(
 	publisher common.ConfigPublisher,
 	restartLimiter *TokenBucketRateLimiter,
+	restartRegistry *RestartLimiterRegistry,
 	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
 	buildDatapackLimiter *TokenBucketRateLimiter,
@@ -123,6 +133,7 @@ func newRateLimitingConfigHandler(
 	return &rateLimitingConfigHandler{
 		publisher:            publisher,
 		restartLimiter:       restartLimiter,
+		restartRegistry:      restartRegistry,
 		warmingLimiter:       warmingLimiter,
 		buildLimiter:         buildLimiter,
 		buildDatapackLimiter: buildDatapackLimiter,
@@ -140,6 +151,18 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 			"old_value": oldValue,
 			"new_value": newValue,
 		}).Info("Rate limiting configuration updated, applying changes...")
+
+		// Per-system restart override (rate_limiting.max_concurrent_restarts_
+		// pedestal_per_system.<system>) is matched by PREFIX, not by an exact
+		// switch case, because the system suffix is open-ended. Reapply only
+		// that system's bucket; other systems are unaffected.
+		if sys := restartSystemFromPerSystemKey(key); sys != "" {
+			if h.restartRegistry != nil {
+				h.restartRegistry.ReconcileSystem(sys)
+			}
+			logrus.Info("Rate limiting configuration applied successfully")
+			return nil
+		}
 
 		// The watched key, consts.MaxTokensKey*, and the config.GetInt read
 		// must be the identical string for the reload to apply — a divergence
@@ -167,6 +190,11 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 				_, currentTimeout := h.restartLimiter.GetConfig()
 				h.restartLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
+			// The global default also drives every per-system bucket that has
+			// no override of its own, so push the new value into the registry.
+			if h.restartRegistry != nil {
+				h.restartRegistry.Reconcile()
+			}
 
 		case consts.MaxTokensKeyNamespaceWarming:
 			if h.warmingLimiter != nil {
@@ -189,6 +217,9 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 			if h.restartLimiter != nil {
 				maxTokens, _ := h.restartLimiter.GetConfig()
 				h.restartLimiter.UpdateConfig(maxTokens, timeout)
+			}
+			if h.restartRegistry != nil {
+				h.restartRegistry.UpdateTimeout(timeout)
 			}
 			if h.warmingLimiter != nil {
 				maxTokens, _ := h.warmingLimiter.GetConfig()

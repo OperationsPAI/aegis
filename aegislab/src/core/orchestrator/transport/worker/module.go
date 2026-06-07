@@ -31,9 +31,10 @@ type Params struct {
 	K8sGateway           *k8s.Gateway
 	Controller           *k8s.Controller
 	Etcd                 *etcd.Gateway
-	Monitor              consumer.NamespaceMonitor
-	RestartLimiter       *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
-	WarmingLimiter       *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
+	Monitor                consumer.NamespaceMonitor
+	RestartLimiter         *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
+	RestartLimiterRegistry *consumer.RestartLimiterRegistry
+	WarmingLimiter         *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
 	BuildLimiter         *consumer.TokenBucketRateLimiter `name:"build_limiter"`
 	BuildDatapackLimiter *consumer.TokenBucketRateLimiter `name:"build_datapack_limiter"`
 	AlgoLimiter          *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
@@ -68,6 +69,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		params.Etcd,
 		commonservice.NewConfigUpdateListener(ctx, params.DB, params.Etcd),
 		params.RestartLimiter,
+		params.RestartLimiterRegistry,
 		params.WarmingLimiter,
 		params.BuildLimiter,
 		params.BuildDatapackLimiter,
@@ -89,6 +91,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		DB:                       params.DB,
 		Monitor:                  params.Monitor,
 		RestartRateLimiter:       params.RestartLimiter,
+		RestartLimiterRegistry:   params.RestartLimiterRegistry,
 		NsWarmingRateLimiter:     params.WarmingLimiter,
 		BuildRateLimiter:         params.BuildLimiter,
 		BuildDatapackRateLimiter: params.BuildDatapackLimiter,
