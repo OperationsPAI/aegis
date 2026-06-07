@@ -35,6 +35,15 @@ func Options(confPath, port string) fx.Option {
 
 		chaos.Module,
 
+		// The reconciler's completion webhook authenticates with a
+		// chaos-service token. chaos has no signer (WithRemoteVerifier), so it
+		// fetches + refreshes that token from SSO at runtime rather than
+		// relying on the static (stale-format) CHAOS_SA_TOKEN env. Only the
+		// standalone chaos service fires the webhook, so this lives here and
+		// not in chaos.Module — the api/runtime boots wire chaos.Module without
+		// ssoclient and would fail fx resolution on *ssoclient.Client.
+		chaos.WebhookTokenModule,
+
 		// CHAOS_INBOUND_BEARER (see crud/chaos/inbound_bearer.go) is the
 		// canonical auth for /v1beta — the trusted-header path is only
 		// used as a fall-through, so we don't gate boot on the gateway

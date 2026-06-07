@@ -147,3 +147,48 @@ func TestReconciler_FreshPendingNotForceFailed(t *testing.T) {
 		t.Fatalf("expected no webhook for fresh pending, got %d", hits)
 	}
 }
+
+// Guard: CreateInjection persists the row as `pending` before Apply creates
+// the CR. A reconciler tick landing in that in-request window reads the
+// not-yet-applied CR as Orphaned (cr_absent). A fresh row in that window must
+// NOT be force-failed as cr_vanished_mid_flight and must NOT fire a spurious
+// failed webhook — that poisons the receiver's claim-once gate so the real
+// `succeeded` webhook later no-ops and BuildDatapack never runs.
+func TestReconciler_FreshOrphanedNotForceFailed(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	start := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	inj := Injection{
+		ID:             "inj-fresh-orphan",
+		PointID:        "p1",
+		Params:         JSONMap{"duration_s": float64(60)},
+		IdempotencyKey: "idem-fresh-orphan",
+		ExecutorName:   "fake",
+		Status:         StatusPending,
+		ExecutorHandle: `{"name":"x","namespace":"ns","gvr":"fake"}`,
+		Ts:             start,
+	}
+	if err := db.Create(&inj).Error; err != nil {
+		t.Fatalf("create inj: %v", err)
+	}
+
+	cw := newCaptureWebhook(t)
+	exec := &statusFakeExecutor{statusState: ExecStateOrphaned, statusDiag: map[string]any{"reason": "cr_absent"}}
+	// 5s after create — inside the apply grace, so the CR is presumed not yet
+	// Applied rather than vanished.
+	r := newStuckReconciler(db, exec, cw.sender(db), start.Add(5*time.Second))
+	r.reconcileOne(context.Background(), &inj)
+
+	var got Injection
+	if err := db.Where("id = ?", inj.ID).Take(&got).Error; err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if got.Status != StatusPending {
+		t.Fatalf("fresh orphaned row should stay pending, got %s", got.Status)
+	}
+	if got.FinishedAt != nil {
+		t.Fatalf("fresh orphaned row should not be finalized")
+	}
+	if _, hits := cw.snapshot(); hits != 0 {
+		t.Fatalf("expected no webhook for fresh orphaned, got %d", hits)
+	}
+}

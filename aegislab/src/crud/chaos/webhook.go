@@ -29,9 +29,15 @@ var webhookBackoff = []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.
 type WebhookSender struct {
 	httpClient *http.Client
 	backendURL string
-	bearer     string
-	db         *gorm.DB
-	logger     *logrus.Logger
+	// staticBearer is the legacy CHAOS_SA_TOKEN / CHAOS_WEBHOOK_BEARER env
+	// token, used only when tokenProvider yields nothing yet.
+	staticBearer string
+	// tokenProvider returns the dynamically-provisioned chaos-service token
+	// (minted + refreshed from SSO at runtime). When set and non-empty it
+	// takes precedence over staticBearer per request.
+	tokenProvider func() string
+	db            *gorm.DB
+	logger        *logrus.Logger
 }
 
 func NewWebhookSender(httpClient *http.Client, backendURL string, db *gorm.DB, logger *logrus.Logger) *WebhookSender {
@@ -47,12 +53,31 @@ func NewWebhookSender(httpClient *http.Client, backendURL string, db *gorm.DB, l
 	return &WebhookSender{httpClient: httpClient, backendURL: backendURL, db: db, logger: logger}
 }
 
-// SetBearer wires a static Bearer token for the receiver's
-// TrustedHeaderAuth fallthrough path. The aegis-chaos pod reads
-// CHAOS_WEBHOOK_BEARER at boot; production deployments stamp a
-// service-token JWT, dev installs can stamp an admin token.
+// SetBearer wires the static fallback Bearer token. The aegis-chaos pod reads
+// CHAOS_SA_TOKEN (legacy CHAOS_WEBHOOK_BEARER) at boot; it is only sent when
+// SetTokenProvider's dynamic token is not yet available.
 func (w *WebhookSender) SetBearer(token string) {
-	w.bearer = token
+	w.staticBearer = token
+}
+
+// SetTokenProvider wires the runtime token source. The provisioner mints a
+// fresh chaos-service token from SSO and refreshes it on a timer; each webhook
+// attempt reads the current value so a rotated token takes effect without a
+// restart. A nil or empty return falls back to the static env bearer.
+func (w *WebhookSender) SetTokenProvider(p func() string) {
+	w.tokenProvider = p
+}
+
+// currentBearer prefers the dynamically-provisioned token, falling back to the
+// static env bearer while the provisioner's first mint is still in flight (or
+// when SSO was unreachable at boot).
+func (w *WebhookSender) currentBearer() string {
+	if w.tokenProvider != nil {
+		if tok := w.tokenProvider(); tok != "" {
+			return tok
+		}
+	}
+	return w.staticBearer
 }
 
 // webhookPayload uses json.RawMessage so the JSON columns (Groundtruth /
@@ -125,8 +150,8 @@ func (w *WebhookSender) attempt(ctx context.Context, url string, body []byte) er
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if w.bearer != "" {
-		req.Header.Set("Authorization", "Bearer "+w.bearer)
+	if bearer := w.currentBearer(); bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
 	}
 	otel.GetTextMapPropagator().Inject(attemptCtx, propagation.HeaderCarrier(req.Header))
 

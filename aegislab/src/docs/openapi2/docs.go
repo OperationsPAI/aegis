@@ -34420,6 +34420,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/user.UserProjectInfo"
                     }
                 },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.UserRoleBrief"
+                    }
+                },
                 "status": {
                     "type": "string"
                 },
@@ -34475,6 +34481,12 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.UserRoleBrief"
+                    }
+                },
                 "status": {
                     "type": "string"
                 },
@@ -34482,6 +34494,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.UserRoleBrief": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }
