@@ -223,11 +223,15 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
               overridable: true
+            # loadgenerator.image.tag is system-scoped — one parameter_config row
+            # shared by every ts version — so 1.0.6 and 1.0.9 cannot carry
+            # different tags. Aligned to the session-aware-rca build introduced by
+            # 1.0.9; 1.0.6 is unused (usage_count=0) so the change is cosmetic here.
             - key: loadgenerator.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: "024"
+              default_value: "pre-20260601-session-aware-rca-ed7e71a"
               overridable: true
             # Pin mysql Service to ClusterIP. trainticket@0.2.0 chart default
             # is `NodePort` with no `nodePort` value, so kubernetes auto-assigns
@@ -330,6 +334,110 @@ containers:
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
+      # Bumped 1.0.8 → 1.0.9 to pin a new loadgen image
+      # (loadgenerator.image.tag=pre-20260601-session-aware-rca-ed7e71a, the
+      # "session-aware-rca" build) for a new injection project; the older 1.0.8
+      # used loadgen 024. Same trainticket chart 0.3.2 as 1.0.7/1.0.8.
+      #
+      # 1.0.8's DB overlay was only the 3-key thin set (mysql/tsUiDashboard
+      # ClusterIP + otelCollector sidecar mirror), which is NOT enough to
+      # install on byte-cluster: chart 0.3.2 defaults every other image at
+      # docker.io (global.image.repository=docker.io/opspai,
+      # mysql=docker.io/library/mysql, rabbitmq=docker.io/bitnamilegacy/rabbitmq,
+      # loadgen=docker.io/opspai/loadgenerator, netshoot init container=
+      # docker.io/nicolaka/netshoot), and byte-cluster nodes cannot egress to
+      # docker.io. So 1.0.9 carries the FULL volces image-mirror override set
+      # (the 1.0.6 working set) plus the chart-0.3.2 per-ns collector sidecar
+      # mirror, with the new loadgen tag.
+      #
+      # rabbitmq is pinned via BOTH image.registry and image.repository so the
+      # rendered ref is fully pair-cn-shanghai.cr.volces.com/opspai/rabbitmq
+      # (registry-only mirror of docker.io/opspai relies on the auto-mirror;
+      # the explicit registry makes it unambiguous).
+      #
+      # global.otelcollector and loadgenerator.opentelemetry.endpoint are
+      # intentionally NOT overridden: chart 0.3.2 already defaults both to the
+      # in-namespace sidecar (http://otel-collector:4317 / otel-collector:4317),
+      # which is exactly what we want here. 1.0.6 carried the OLD cross-ns
+      # shared-collector values for these keys; reusing them would point 1.0.9
+      # at the dead shared collector, so they are dropped in favor of the chart
+      # default.
+      - name: 1.0.9
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.3.2
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: global.security.allowInsecureImages
+              type: 0
+              category: 1
+              value_type: 2
+              default_value: "true"
+              overridable: true
+            - key: global.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: mysql.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
+              overridable: true
+            - key: rabbitmq.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com
+              overridable: true
+            - key: rabbitmq.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opspai/rabbitmq
+              overridable: true
+            - key: loadgenerator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
+              overridable: true
+            - key: loadgenerator.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+              overridable: true
+            - key: loadgenerator.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pre-20260601-session-aware-rca-ed7e71a
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
   - type: 2
     name: otel-demo
     is_public: true
@@ -360,7 +468,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-otel-demo-collector.monitoring.svc.cluster.local
+              default_value: dns:///opentelemetry-kube-stack-deployment-collector-headless.monitoring.svc.cluster.local
               overridable: true
             - key: opentelemetry-demo.default.image.repository
               type: 0
@@ -868,7 +976,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: otel-collector:4318
+              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
               overridable: true
             # Pin sidecar collector image to volces mirror (chart default
             # is docker.io/opspai/... which still forces a docker.io HEAD
@@ -1155,6 +1263,12 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/python
               overridable: true
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
             - key: load-generator.container.imageVersion
               type: 0
               category: 2
@@ -1415,6 +1529,12 @@ containers:
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
             - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.initContainer.image
               type: 0
               category: 1
               value_type: 0
