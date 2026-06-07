@@ -205,7 +205,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 			"started_at":  &applyAt,
 			"finished_at": &fin,
 		}
-		if uerr := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error; uerr != nil {
+		if uerr := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ? AND status = ?", id, StatusPending).Updates(updates).Error; uerr != nil {
 			logrus.Warnf("chaos: failed to record Apply failure for %s: %v", id, uerr)
 		}
 		row.Status = StatusFailed
@@ -217,7 +217,12 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 
 	row.Status = StatusRunning
 	row.StartedAt = &applyAt
-	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(map[string]any{
+	// Guard the flip on the prior status: if a reconciler tick already
+	// terminalized this row (e.g. force-failed an Orphaned read in the
+	// in-request window), the unconditional `WHERE id=?` UPDATE would
+	// silently resurrect a terminal row back to `running`. Scope it to
+	// status=pending so a terminal row is left alone.
+	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ? AND status = ?", id, StatusPending).Updates(map[string]any{
 		"status":     StatusRunning,
 		"started_at": &applyAt,
 	}).Error; err != nil {

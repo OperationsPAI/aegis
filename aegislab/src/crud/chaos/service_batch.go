@@ -215,7 +215,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 			"started_at":  &applyAt,
 			"finished_at": &fin,
 		}
-		_ = s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", row.ID).Updates(updates).Error
+		_ = s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ? AND status = ?", row.ID, StatusPending).Updates(updates).Error
 		row.Status = StatusFailed
 		row.Diagnostics = JSONMap{"error": applyErr.Error()}
 		row.StartedAt = &applyAt
@@ -223,7 +223,10 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		return &row, applyErr
 	}
 
-	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", row.ID).Updates(map[string]any{
+	// Guard the flip on status=pending so a reconciler tick that already
+	// terminalized this row (Orphaned read in the in-request window) is not
+	// silently resurrected to `running`.
+	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ? AND status = ?", row.ID, StatusPending).Updates(map[string]any{
 		"status":     StatusRunning,
 		"started_at": &applyAt,
 	}).Error; err != nil {
