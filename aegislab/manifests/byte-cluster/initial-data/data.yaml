@@ -939,7 +939,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              default_value: otel-collector:4318
               overridable: true
           status: 1
       # Bumped 0.1.5 → 0.1.6 to pick up hotel-reservation chart 0.2.0
@@ -976,11 +976,53 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              default_value: otel-collector:4318
               overridable: true
             # Pin sidecar collector image to volces mirror (chart default
             # is docker.io/opspai/... which still forces a docker.io HEAD
             # request from byte-cluster kubelet).
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+      # Bumped 0.1.6 → 0.1.7 to pick up hotel-reservation chart 0.2.2
+      # (LGU-SE-Internal/DeathStarBench#66) and repoint global.otel.endpoint
+      # from the shared monitoring collector back to the per-namespace sidecar
+      # short DNS `otel-collector:4318` — completing the per-ns OTel migration
+      # for hs (mirrors media/sn, which already use the in-ns collector). The
+      # 0.2.2 chart content is identical to 0.2.1's collector; the bump just
+      # republishes a fresh index entry (lgu-dsb drops superseded versions on
+      # republish, so leaving hs pinned at 0.2.1 risks a stale-index 404).
+      - name: 0.1.7
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.2
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
             - key: otelCollector.image.repository
               type: 0
               category: 1
