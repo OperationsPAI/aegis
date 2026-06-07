@@ -34413,6 +34413,12 @@
                         "$ref": "#/definitions/user.UserProjectInfo"
                     }
                 },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.UserRoleBrief"
+                    }
+                },
                 "status": {
                     "type": "string"
                 },
@@ -34468,6 +34474,12 @@
                 "phone": {
                     "type": "string"
                 },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.UserRoleBrief"
+                    }
+                },
                 "status": {
                     "type": "string"
                 },
@@ -34475,6 +34487,17 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.UserRoleBrief": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }

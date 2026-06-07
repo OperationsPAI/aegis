@@ -9489,6 +9489,10 @@ definitions:
         items:
           $ref: '#/definitions/user.UserProjectInfo'
         type: array
+      roles:
+        items:
+          $ref: '#/definitions/user.UserRoleBrief'
+        type: array
       status:
         type: string
       updated_at:
@@ -9525,11 +9529,22 @@ definitions:
         type: string
       phone:
         type: string
+      roles:
+        items:
+          $ref: '#/definitions/user.UserRoleBrief'
+        type: array
       status:
         type: string
       updated_at:
         type: string
       username:
+        type: string
+    type: object
+  user.UserRoleBrief:
+    properties:
+      id:
+        type: integer
+      name:
         type: string
     type: object
   widget.PingResp:
