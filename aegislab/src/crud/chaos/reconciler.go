@@ -32,6 +32,14 @@ const stuckPendingGrace = 10 * time.Minute
 // injection started.
 const stuckPendingFlatTimeout = 15 * time.Minute
 
+// orphanApplyGrace is how long a freshly-created row may read as Orphaned
+// (CR-404) before the reconciler treats it as a genuine vanished CR.
+// CreateInjection INSERTs the row as `pending` before Apply creates the
+// chaos-mesh CR; a tick landing in that in-request window must not force-fail
+// a CR that hasn't been Applied yet. The window only needs to cover the Apply
+// round-trip, so the grace is short.
+const orphanApplyGrace = 30 * time.Second
+
 // Reconciler closes ADR-0006's stickiness loop. The CreateInjection path
 // flips the row to `running` after Apply but cannot observe the
 // chaos-mesh CR moving to AllRecovered; without this polling loop the
@@ -108,6 +116,14 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 	// case, leave it alone (the stickiness gate below would no-op anyway).
 	if state == ExecStateOrphaned {
 		if inj.Status != StatusPending && inj.Status != StatusRunning {
+			return
+		}
+		// CreateInjection persists the row as `pending` BEFORE Apply creates
+		// the CR. A reconciler tick landing in that in-request window 404s on
+		// a CR that simply doesn't exist yet — that is not a vanished CR.
+		// Skip until the row is older than the apply grace; a genuine
+		// long-orphaned CR still force-fails on a later tick.
+		if r.isFreshlyApplying(inj) {
 			return
 		}
 		now := time.Now().UTC()
@@ -209,6 +225,21 @@ func (r *Reconciler) isStuckPending(inj *Injection) bool {
 		return r.now().After(start.Add(d + stuckPendingGrace))
 	}
 	return r.now().After(start.Add(stuckPendingFlatTimeout))
+}
+
+// isFreshlyApplying reports whether the row was created so recently that its
+// CR may not have been Applied yet, so an Orphaned (CR-404) read is the
+// in-request window — not a vanished CR. A row with no usable timestamp is
+// treated as not-fresh so a genuinely orphaned legacy row still force-fails.
+func (r *Reconciler) isFreshlyApplying(inj *Injection) bool {
+	start := inj.Ts
+	if inj.StartedAt != nil {
+		start = *inj.StartedAt
+	}
+	if start.IsZero() {
+		return false
+	}
+	return r.now().Before(start.Add(orphanApplyGrace))
 }
 
 // injectDuration reads the `duration_s` knob the params payload carries and
