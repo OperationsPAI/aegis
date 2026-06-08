@@ -486,7 +486,7 @@ class EvalReportGenerator:
         ax.set_xlabel("F1 Score")
         ax.set_ylabel("Frequency")
         ax.set_title("F1 Score Distribution")
-        ax.axvline(np.mean(f1_values), color="#e74c3c", linestyle="--", label=f"Mean={np.mean(f1_values):.3f}")
+        ax.axvline(float(np.mean(f1_values)), color="#e74c3c", linestyle="--", label=f"Mean={np.mean(f1_values):.3f}")
         ax.legend()
 
         chart_path = self.output_dir / "f1_distribution.png"
