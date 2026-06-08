@@ -330,6 +330,10 @@ type systemData struct {
 	mutators map[string][]mutatorEntry
 	// client-side gRPC operations across all services (DNS gRPC-only filter)
 	grpcClientOps []grpcOp
+	// services that host a gRPC SERVER (a self-addressed SpanKind=Server row in
+	// grpcoperations). Used by servesHTTP to suppress HTTPChaos points on a
+	// gRPC-only server whose only http rows are client-side calls it makes.
+	grpcServers map[string]struct{}
 	// union of every service name observed anywhere in this system
 	services map[string]struct{}
 	// presentFamilies records which capability-family source files existed
@@ -674,15 +678,49 @@ func dedupStrings(in []string) []string {
 	return out
 }
 
-// hasHTTPEligibleEndpoint reports whether any loaded endpoint is a real
-// HTTP/1.x route (not a gRPC pseudo-route) — i.e. one that the http_request_*
-// builders would actually emit a point for.
+// hasHTTPEligibleEndpoint reports whether any service would emit an
+// http_request_* point — a real HTTP/1.x route (not a gRPC pseudo-route) under
+// a service that actually serves http. Used by the capability-family floor.
 func hasHTTPEligibleEndpoint(d *systemData) bool {
-	for _, eps := range d.endpoints {
+	for svc, eps := range d.endpoints {
+		if !d.servesHTTP(svc) {
+			continue
+		}
 		for _, e := range eps {
 			if !isGRPCRoute(e) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// servesHTTP reports whether a service's selected pod actually serves inbound
+// http, so HTTPChaos (which only perturbs the pod's inbound http) can bite it.
+//
+// serviceendpoints rows are caller-keyed CLIENT edges with no SpanKind, so a
+// pure gRPC server that merely makes http client calls (otel-demo's checkout:
+// gRPC server, but its rows are all outbound http to shipping/email/...) would
+// otherwise get http points on a pod that serves no http — a silent no-op that
+// the detector reads as no_anomaly. clickhouseanalyzer also emits spurious
+// reverse edges (shipping->checkout) that make checkout look like an http
+// callee, so callee/ServerAddress evidence alone can't clear it.
+//
+// The reliable disambiguator is the gRPC SpanKind=Server data: a service is
+// suppressed only when it hosts a gRPC server AND has no self-served http route
+// (a non-grpc row keyed under itself whose ServerAddress is empty or itself —
+// the server-side shape). Every non-gRPC-server (shipping/quote/email/frontend,
+// all DSB Thrift backends, every REST service) is unaffected.
+func (d *systemData) servesHTTP(service string) bool {
+	if _, isGRPCServer := d.grpcServers[service]; !isGRPCServer {
+		return true
+	}
+	for _, e := range d.endpoints[service] {
+		if isGRPCRoute(e) {
+			continue
+		}
+		if e.ServerAddress == "" || e.ServerAddress == service {
+			return true
 		}
 	}
 	return false
@@ -712,8 +750,9 @@ func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []
 	}
 
 	httpSeen := map[string]struct{}{}
+	servesHTTP := d.servesHTTP(service)
 	for _, e := range d.endpoints[service] {
-		if isGRPCRoute(e) {
+		if !servesHTTP || isGRPCRoute(e) {
 			continue
 		}
 		target, ok := httpTarget(ns, app, e)
@@ -744,6 +783,9 @@ func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []
 // (app, port, method, path). gRPC pseudo-routes are excluded — chaos-mesh
 // HTTPChaos operates on HTTP/1.x and never matches them.
 func buildHTTPA1bPoints(service string, d *systemData) []point {
+	if !d.servesHTTP(service) {
+		return nil
+	}
 	app := appLabel(d.sysKey, service)
 	var pts []point
 	seen := map[string]struct{}{}
@@ -1113,6 +1155,7 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 		methods:         map[string][]classMethod{},
 		dbOps:           map[string][]dbOp{},
 		mutators:        map[string][]mutatorEntry{},
+		grpcServers:     map[string]struct{}{},
 		services:        map[string]struct{}{},
 		presentFamilies: map[string]bool{},
 	}
@@ -1336,6 +1379,12 @@ func loadGRPCOperations(path string, d *systemData) error {
 					Service:       svc,
 					ServerAddress: fields["ServerAddress"],
 				})
+			}
+			// A self-addressed Server span marks svc as a gRPC server. Used by
+			// servesHTTP to drop HTTPChaos points on gRPC-only servers.
+			if strings.EqualFold(fields["SpanKind"], "server") &&
+				(fields["ServerAddress"] == "" || fields["ServerAddress"] == svc) {
+				d.grpcServers[svc] = struct{}{}
 			}
 		}
 	}

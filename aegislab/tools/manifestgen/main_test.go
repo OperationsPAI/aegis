@@ -156,6 +156,77 @@ func TestTargetSchemasMatch(t *testing.T) {
 	t.Logf("validated %d points across all manifests", pointCount)
 }
 
+func TestServesHTTP(t *testing.T) {
+	d := &systemData{
+		endpoints: map[string][]httpEndpoint{
+			// gRPC server whose only http rows are outbound CLIENT calls to
+			// other services — must NOT serve http (like otel-demo checkout).
+			"grpc-client": {
+				{Method: "POST", Route: "/get-quote", Port: "8080", ServerAddress: "shipping"},
+			},
+			// gRPC server that ALSO self-serves an http route (ServerAddress==self)
+			// — must serve http.
+			"grpc-and-http": {
+				{Method: "POST", Route: "/own", Port: "8080", ServerAddress: "grpc-and-http"},
+				{Method: "POST", Route: "/call", Port: "8080", ServerAddress: "other"},
+			},
+			// plain http server, not a gRPC server — must serve http even though
+			// its row addresses a downstream peer.
+			"http-only": {
+				{Method: "GET", Route: "/", Port: "8080", ServerAddress: "peer"},
+			},
+		},
+		grpcServers: map[string]struct{}{
+			"grpc-client":   {},
+			"grpc-and-http": {},
+		},
+	}
+	cases := []struct {
+		service string
+		want    bool
+	}{
+		{"grpc-client", false},
+		{"grpc-and-http", true},
+		{"http-only", true},
+	}
+	for _, c := range cases {
+		if got := d.servesHTTP(c.service); got != c.want {
+			t.Errorf("servesHTTP(%q) = %v, want %v", c.service, got, c.want)
+		}
+	}
+}
+
+// TestCheckoutHTTPSuppressed pins the otel-demo regression this gate fixes: a
+// gRPC-only server (checkout) makes http CLIENT calls and so used to get HTTP
+// points whose selected pod serves no http (silent no-op). Its http points must
+// be gone while real http servers (shipping/quote) keep theirs.
+func TestCheckoutHTTPSuppressed(t *testing.T) {
+	dir := ensureGenerated(t)
+	httpApps := map[string]int{}
+	walkManifests(t, filepath.Join(dir, "otel-demo"), func(path string, doc map[string]any) {
+		spec, _ := doc["spec"].(map[string]any)
+		points, _ := spec["points"].([]any)
+		for _, raw := range points {
+			pt, _ := raw.(map[string]any)
+			cap, _ := pt["capability"].(string)
+			if len(cap) < 5 || cap[:5] != "http_" {
+				continue
+			}
+			tgt, _ := pt["target"].(map[string]any)
+			app, _ := tgt["app"].(string)
+			httpApps[app]++
+		}
+	})
+	if httpApps["checkout"] != 0 {
+		t.Errorf("checkout (gRPC-only server) still has %d http points; expected 0", httpApps["checkout"])
+	}
+	for _, app := range []string{"shipping", "quote"} {
+		if httpApps[app] == 0 {
+			t.Errorf("%s serves http but lost all its http points", app)
+		}
+	}
+}
+
 func TestFuzzyResolveLabel(t *testing.T) {
 	labels := clusterAppLabels["sockshop"]
 	cases := []struct {
