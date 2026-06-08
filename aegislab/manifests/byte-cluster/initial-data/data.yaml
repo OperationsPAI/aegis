@@ -30,6 +30,17 @@ containers:
       - name: 1.0.3
         image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260601-bf7b21a2-converted-blob
         command: bash /entrypoint.sh
+      # Bumped 1.0.3 -> 1.0.4 (PR #557): otel-demo's load generator is named
+      # `load-generator` (hyphen), which the detector's exact `loadgenerator`
+      # entrance filter missed -> it fell back to the sparse `frontend-proxy`
+      # ingress (~1 root span/min) -> the success-rate (min 5/10) + latency
+      # gates never reached significance -> ~97% no_anomaly even though faults
+      # took effect (e.g. shipping p95 1.9->7.7ms). 1.0.4 matches both loadgen
+      # names + points OtelDemoPedestal entrance at load-generator (the ~60x/min
+      # user-journey roots), so leaf-service faults become observable.
+      - name: 1.0.4
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260608-otel-entrance
+        command: bash /entrypoint.sh
   - type: 0
     name: random
     is_public: true

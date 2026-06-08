@@ -101,7 +101,14 @@ class HotelReservationPedestal(GenericPedestal):
 @register_pedestal("otel-demo")
 class OtelDemoPedestal(GenericPedestal):
     _NAME = "otel-demo"
-    _ENTRANCE = "frontend-proxy"
+    # otel-demo's load generator emits the high-volume user-journey roots
+    # (user_browse_product / user_add_to_cart / user_checkout_*) at ~60/min,
+    # whereas the frontend-proxy ingress root sees ~1/min. The detector's
+    # primary entrance filter already matches the load-generator service, so the
+    # fallback / GT-normalization entrance must point at it too — using the
+    # sparse frontend-proxy here leaves the SLI under-sampled and faults
+    # unobserved.
+    _ENTRANCE = "load-generator"
 
     @property
     def success_codes(self) -> set[str]:

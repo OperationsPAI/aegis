@@ -261,7 +261,8 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
     df = pl.scan_parquet(file)
 
     entry_df = df.filter(
-        (pl.col("ServiceName") == "loadgenerator") & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
+        pl.col("ServiceName").is_in(["loadgenerator", "load-generator"])
+        & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
     )
 
     entry_count = entry_df.select(pl.len()).collect().item()
