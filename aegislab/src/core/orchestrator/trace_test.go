@@ -226,3 +226,98 @@ func TestTryUpdateTraceStateCore_StaleRescheduleDoesNotOverwriteTerminal(t *test
 	require.NotEqual(t, consts.EventNoTokenAvailable, got.LastEvent,
 		"stale reschedule event must not overwrite a trace whose BD task already persisted as TaskCompleted")
 }
+
+// seedFaultInjectionTraceTree builds a TraceTypeFaultInjection task tree
+// (L1 FaultInjection, L2 BuildDatapack, L3 RunAlgorithm, L4 CollectResult)
+// with every downstream leaf completed and the FaultInjection task pinned to
+// fiState. It returns the trace ID and the CollectResult task ID so a test can
+// drive the leaf's completion event through tryUpdateTraceStateCore.
+func seedFaultInjectionTraceTree(t *testing.T, db *gorm.DB, fiState consts.TaskState) (traceID, collectTaskID string) {
+	t.Helper()
+	traceID = uuid.NewString()
+	collectTaskID = uuid.NewString()
+	now := time.Now()
+
+	require.NoError(t, db.Create(&model.Trace{
+		ID:        traceID,
+		Type:      consts.TraceTypeFaultInjection,
+		LastEvent: consts.EventFaultInjectionStarted,
+		State:     consts.TraceRunning,
+		Status:    consts.CommonEnabled,
+		LeafNum:   1,
+		StartTime: now.Add(-10 * time.Minute),
+		UpdatedAt: now.Add(-5 * time.Minute),
+	}).Error)
+
+	tasks := []struct {
+		typ   consts.TaskType
+		state consts.TaskState
+		level int
+		id    string
+	}{
+		{consts.TaskTypeFaultInjection, fiState, 1, uuid.NewString()},
+		{consts.TaskTypeBuildDatapack, consts.TaskCompleted, 2, uuid.NewString()},
+		{consts.TaskTypeRunAlgorithm, consts.TaskCompleted, 3, uuid.NewString()},
+		{consts.TaskTypeCollectResult, consts.TaskCompleted, 4, collectTaskID},
+	}
+	for _, tk := range tasks {
+		require.NoError(t, db.Create(&model.Task{
+			ID:       tk.id,
+			Type:     tk.typ,
+			TraceID:  traceID,
+			Payload:  "{}",
+			State:    tk.state,
+			Status:   consts.CommonEnabled,
+			Level:    tk.level,
+			Sequence: 0,
+		}).Error)
+	}
+	return traceID, collectTaskID
+}
+
+// TestInferTraceState_FaultInjectionStuckWhileFIRunning reproduces the bug
+// this fix targets: with the FaultInjection task left TaskRunning by the
+// dispatcher, a TraceTypeFaultInjection trace whose every downstream leaf
+// completed still infers TraceRunning — hasActiveOrPendingTasks stays true
+// because the FI task never terminalises, so Priority 2 never fires and the
+// trace sits Running until the inject loop force-cancels it.
+func TestInferTraceState_FaultInjectionStuckWhileFIRunning(t *testing.T) {
+	db := newTraceStateTestDB(t)
+	traceID, collectTaskID := seedFaultInjectionTraceTree(t, db, consts.TaskRunning)
+
+	streamEvent := &dto.TraceStreamEvent{
+		TaskID:    collectTaskID,
+		TaskType:  consts.TaskTypeCollectResult,
+		EventName: consts.EventDatapackResultCollection,
+	}
+	require.NoError(t, tryUpdateTraceStateCore(nil, context.Background(), db, traceID, collectTaskID,
+		consts.TaskCompleted, streamEvent))
+
+	var got model.Trace
+	require.NoError(t, db.First(&got, "id = ?", traceID).Error)
+	require.Equal(t, consts.TraceRunning, got.State,
+		"FI task stuck Running must keep the trace from completing (the bug)")
+}
+
+// TestInferTraceState_FaultInjectionCompletesWhenFITaskDone is the fix's
+// regression guard: once the chaos webhook advances the FaultInjection task to
+// TaskCompleted, the same fully-collected trace infers TraceCompleted instead
+// of hanging Running.
+func TestInferTraceState_FaultInjectionCompletesWhenFITaskDone(t *testing.T) {
+	db := newTraceStateTestDB(t)
+	traceID, collectTaskID := seedFaultInjectionTraceTree(t, db, consts.TaskCompleted)
+
+	streamEvent := &dto.TraceStreamEvent{
+		TaskID:    collectTaskID,
+		TaskType:  consts.TaskTypeCollectResult,
+		EventName: consts.EventDatapackResultCollection,
+	}
+	require.NoError(t, tryUpdateTraceStateCore(nil, context.Background(), db, traceID, collectTaskID,
+		consts.TaskCompleted, streamEvent))
+
+	var got model.Trace
+	require.NoError(t, db.First(&got, "id = ?", traceID).Error)
+	require.Equal(t, consts.TraceCompleted, got.State,
+		"completing the FI task must let the FaultInjection trace finalize")
+	require.NotNil(t, got.EndTime, "completed trace must stamp end_time")
+}

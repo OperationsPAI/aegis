@@ -109,6 +109,26 @@ func (h *Handler) releaseNamespaceLock(ctx context.Context, meta *CallerMetadata
 	}
 }
 
+// completeFaultInjectionTask advances the dispatcher-owned FaultInjection
+// task from TaskRunning to TaskCompleted so a TraceTypeFaultInjection trace
+// can finalize. Guarded on state=TaskRunning, so it is idempotent (a replay
+// or a backend path that already terminalised the task is a no-op) and a
+// no-op on the aegisctl --via-chaos path that never persisted a task row.
+// Best-effort: a failure leaves the task Running for the stuck reconciler to
+// recover, so it must not abort the BuildDatapack submission.
+func (h *Handler) completeFaultInjectionTask(ctx context.Context, taskID string) {
+	if taskID == "" {
+		return
+	}
+	res := h.db.WithContext(ctx).Model(&model.Task{}).
+		Where("id = ? AND state = ?", taskID, consts.TaskRunning).
+		Update("state", consts.TaskCompleted)
+	if res.Error != nil {
+		logrus.WithError(res.Error).WithField("task_id", taskID).
+			Warn("chaos hook: failed to complete fault-injection task (stuck reconciler is the backstop)")
+	}
+}
+
 // Singleton handles `POST /api/v1/hooks/chaos`. Mirrors today's
 // HandleCRDSucceeded post-processing (k8s_handler.go) for the singleton path.
 func (h *Handler) Singleton(c *gin.Context) {
@@ -218,6 +238,17 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 	if !claimed {
 		return false, nil
 	}
+
+	// The dispatcher leaves the FaultInjection task TaskRunning by design and
+	// hands trace bookkeeping to this webhook (fault_injection.go). Nothing
+	// downstream advances it, so a TraceTypeFaultInjection trace's
+	// inferTraceState never observes hasActiveOrPendingTasks==false and the
+	// trace sits Running until the inject loop force-cancels the namespace.
+	// Advance it here, mirroring stuck_trace_reconciler.go's pre-BuildDatapack
+	// transition. Independent of the submit below: a completion failure must
+	// not abort BuildDatapack (the stuck reconciler is the backstop), and a
+	// submit failure must not leave the task Running.
+	h.completeFaultInjectionTask(parentCtx, meta.TaskID)
 
 	// Synthesise the InjectionItem timestamps from the webhook so
 	// BuildDatapack picks them up the same way HandleCRDSucceeded does
