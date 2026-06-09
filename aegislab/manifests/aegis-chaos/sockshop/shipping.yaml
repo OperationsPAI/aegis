@@ -18,24 +18,6 @@ spec:
         app: "shipping"
         container: "shipping"
         namespace: "sockshop"
-    - capability: "http_request_abort"
-      target:
-        app: "shipping"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
-    - capability: "http_request_delay"
-      target:
-        app: "shipping"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
     - capability: "jvm_method_latency"
       target:
         app: "shipping"

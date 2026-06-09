@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -192,6 +193,64 @@ func TestServesHTTP(t *testing.T) {
 	for _, c := range cases {
 		if got := d.servesHTTP(c.service); got != c.want {
 			t.Errorf("servesHTTP(%q) = %v, want %v", c.service, got, c.want)
+		}
+	}
+}
+
+// TestSuppressCallerEdge pins the route-level caller-edge suppression: a
+// cross-service HTTP point whose selected pod is the CALLER of a route that the
+// callee serves itself must be dropped (it parks Pending / cr_never_injected),
+// while the callee's own server-side point and the caller's genuinely-served
+// routes survive. Mirrors otel-demo shipping->quote /getquote vs shipping's own
+// /get-quote, and a same-path caller-edge to a callee that does NOT serve it.
+func TestSuppressCallerEdge(t *testing.T) {
+	d := &systemData{
+		namespace: "demo",
+		endpoints: map[string][]httpEndpoint{
+			"caller": {
+				// caller-edge to a callee that self-serves /served — DROP.
+				{Method: "POST", Route: "/served", Port: "8080", ServerAddress: "callee"},
+				// inbound route the caller itself serves (upstream caller in
+				// ServerAddress) — KEEP.
+				{Method: "POST", Route: "/own", Port: "8080", ServerAddress: "upstream"},
+				// caller-edge whose callee does NOT serve /unserved — KEEP
+				// (no redundant server-side point exists to cover it).
+				{Method: "GET", Route: "/unserved", Port: "8080", ServerAddress: "leaf"},
+			},
+			"callee": {
+				{Method: "POST", Route: "/served", Port: "8080", ServerAddress: "callee"},
+			},
+		},
+		services: map[string]struct{}{"caller": {}, "callee": {}, "upstream": {}, "leaf": {}},
+	}
+
+	pathsFor := func(svc string, pts []point) map[string]bool {
+		out := map[string]bool{}
+		for _, p := range pts {
+			if !strings.HasPrefix(p.Capability, "http_") {
+				continue
+			}
+			path, _ := p.Target["path"].(string)
+			out[svc+" "+path] = true
+		}
+		return out
+	}
+
+	st := &stats{httpReqBySystem: map[string]int{}}
+	got := pathsFor("caller", buildBasePoints("caller", d, st, "demo"))
+	for k, v := range pathsFor("caller", buildHTTPA1bPoints("caller", d)) {
+		got[k] = got[k] || v
+	}
+	for k, v := range pathsFor("callee", buildBasePoints("callee", d, st, "demo")) {
+		got[k] = got[k] || v
+	}
+
+	if got["caller /served"] {
+		t.Errorf("caller-edge caller->callee /served should be suppressed (callee serves it)")
+	}
+	for _, want := range []string{"caller /own", "caller /unserved", "callee /served"} {
+		if !got[want] {
+			t.Errorf("%q should survive suppression but was dropped", want)
 		}
 	}
 }
