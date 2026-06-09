@@ -41,6 +41,20 @@ containers:
       - name: 1.0.4
         image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260608-otel-entrance
         command: bash /entrypoint.sh
+      # Bumped 1.0.4 -> 1.0.5 (PR #559): system-agnostic tier-3 entrance fallback.
+      # The real regression (#282, 2026-04-28) DELETED the "highest-volume root"
+      # fallback, so a benchmark whose declared entrance is a low-volume proxy
+      # (otel-demo frontend-proxy ~1 root/min, while the user-journey roots land
+      # on load-generator ~60/min) silently measured the sparse proxy -> ~97%
+      # no_anomaly. 1.0.5 restores it smartly: when the loadgen filter +
+      # entrance_service both miss OR have fewer than min_normal_count(=10) root
+      # spans, select the service with the MOST root spans (deterministic
+      # tie-break, WARNING logged); truly-empty traces still fail loud. 1.0.4's
+      # load-generator hard-codes are kept so otel-demo resolves via tier 1 and
+      # tier 3 stays a dormant safety net for the next split-topology benchmark.
+      - name: 1.0.5
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260609-tier3-entrance
+        command: bash /entrypoint.sh
   - type: 0
     name: random
     is_public: true
