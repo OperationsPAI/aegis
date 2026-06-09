@@ -253,6 +253,15 @@ def is_success_rate_significant(
     return return_result
 
 
+# A service needs at least this many root spans across the trace window to be a
+# usable entrance: success-rate significance needs `min_normal_count` normal
+# samples, and one root span per user request is the realistic ceiling. Below
+# this, the configured entrance is too sparse for the SLO gates to ever fire, so
+# tier 3 looks for a higher-volume root elsewhere. Tied to the same constant the
+# downstream gate uses (see `is_success_rate_significant`).
+_MIN_USABLE_ROOT_SPANS = SuccessRateConfig().min_normal_count
+
+
 def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
     """Preprocess trace data from a Parquet file and extract endpoint statistics."""
     if not file.exists():
@@ -260,10 +269,9 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
 
     df = pl.scan_parquet(file)
 
-    entry_df = df.filter(
-        pl.col("ServiceName").is_in(["loadgenerator", "load-generator"])
-        & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
-    )
+    is_root = pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == "")
+
+    entry_df = df.filter(pl.col("ServiceName").is_in(["loadgenerator", "load-generator"]) & is_root)
 
     entry_count = entry_df.select(pl.len()).collect().item()
     if entry_count == 0:
@@ -272,31 +280,57 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
         # namespace prefix (e.g. tea0-teastore-jmeter, tea24-teastore-jmeter,
         # ...). The pedestal declares the stable suffix and we tolerate any
         # leading prefix the orchestrator added.
-        entry_df = df.filter(
-            pl.col("ServiceName").str.contains(pedestal.entrance_service, literal=True)
-            & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
-        )
+        entry_df = df.filter(pl.col("ServiceName").str.contains(pedestal.entrance_service, literal=True) & is_root)
         entry_count = entry_df.select(pl.len()).collect().item()
 
-    if entry_count == 0:
-        # Fail loud rather than silently iterating through services until one
-        # matches. The previous behaviour picked an arbitrary internal service
-        # as the entrance, which produced plausible-looking but completely wrong
-        # SLO numbers — tea/sn ran on an internal service for months before
-        # this was caught. Return empty stat so the caller can interpret this
-        # as "entrance unreachable" — a legitimate 100% SLO-violation case
-        # when the configured entrance pod is the one being chaos-killed.
-        # `run()` cross-references with the normal-window stat and surfaces
-        # any disappeared endpoints via detect_disappeared_endpoints.
-        available_services = sorted(df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list())
-        logger.warning(
-            f"No entrance traffic found in {file}. "
-            f"Pedestal '{pedestal.name}' declared entrance_service='{pedestal.entrance_service}' "
-            f"but it has no root spans, and 'loadgenerator' is also absent. "
-            f"Available services: {available_services}. "
-            f"Returning empty stat — caller will treat as entrance-unreachable."
+    if entry_count < _MIN_USABLE_ROOT_SPANS:
+        # Tier 3: the configured entrance is empty or too sparse for the SLO
+        # gates to ever reach significance. Pick the highest-volume root-span
+        # service generically instead of trusting a low-volume proxy entrance.
+        # This self-corrects topologies where the configured entrance is a
+        # rarely-hit ingress proxy while the real user-journey roots sit on a
+        # separate high-volume load generator (otel-demo: frontend-proxy ~1/min
+        # vs load-generator ~60/min). We pick by *max root spans*, never the
+        # "first arbitrary service" — that earlier behaviour silently measured
+        # an internal service and produced plausible-looking but wrong SLO
+        # numbers for months.
+        root_counts = (
+            df.filter(is_root)
+            .group_by("ServiceName")
+            .agg(pl.len().alias("root_count"))
+            .sort(["root_count", "ServiceName"], descending=[True, False])
+            .collect()
         )
-        return {}
+
+        if root_counts.height == 0 or root_counts["root_count"][0] < _MIN_USABLE_ROOT_SPANS:
+            # No service anywhere has a usable number of root spans — a truly
+            # empty / near-dark trace. Fail loud and return empty stat so the
+            # caller treats it as entrance-unreachable (a legitimate 100%
+            # SLO-violation when the entrance pod is the one being chaos-killed).
+            # `run()` cross-references the normal-window stat and surfaces any
+            # disappeared endpoints via detect_disappeared_endpoints.
+            available_services = sorted(df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list())
+            logger.warning(
+                f"No usable entrance traffic found in {file}. "
+                f"Pedestal '{pedestal.name}' declared entrance_service='{pedestal.entrance_service}' "
+                f"(matched {entry_count} root span(s)), 'loadgenerator' is absent, and no other "
+                f"service has at least {_MIN_USABLE_ROOT_SPANS} root spans. "
+                f"Available services: {available_services}. "
+                f"Returning empty stat — caller will treat as entrance-unreachable."
+            )
+            return {}
+
+        high_volume_service = root_counts["ServiceName"][0]
+        high_volume_count = root_counts["root_count"][0]
+        # Loud signal so a genuinely-misconfigured pedestal stays visible in logs
+        # even though tier 3 stops it being a hard failure.
+        logger.warning(
+            f"Entrance '{pedestal.entrance_service}' for pedestal '{pedestal.name}' is too sparse in {file} "
+            f"({entry_count} root span(s), below the {_MIN_USABLE_ROOT_SPANS} needed for SLO significance). "
+            f"Falling back to highest-volume root-span service '{high_volume_service}' "
+            f"({high_volume_count} root spans). Check the pedestal entrance_service if this is unexpected."
+        )
+        entry_df = df.filter((pl.col("ServiceName") == high_volume_service) & is_root)
 
     entry_df_collected = entry_df.with_columns(pl.col("Timestamp").alias(pedestal.name)).sort(pedestal.name).collect()
 
