@@ -62,6 +62,9 @@ func setupRig(t *testing.T) (*gorm.DB, *recorder, *gin.Engine) {
 	if err := db.AutoMigrate(&HookSubmission{}, &model.FaultInjection{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
+	if err := db.AutoMigrate(&model.Task{}); err != nil {
+		t.Fatalf("migrate tasks: %v", err)
+	}
 	rec := &recorder{}
 	h := NewHandlerWithSubmitter(db, rec.submit())
 	r := gin.New()
@@ -138,6 +141,97 @@ func TestSingletonSucceededFiresOnce(t *testing.T) {
 	}
 	if sub.task.TraceID != "trace-A" {
 		t.Fatalf("TraceID mismatch: %s", sub.task.TraceID)
+	}
+}
+
+// seedRunningFITask persists a TaskRunning FaultInjection task keyed by the
+// webhook's caller_metadata.TaskID — the row the dispatcher leaves Running and
+// the chaos webhook is now responsible for completing.
+func seedRunningFITask(t *testing.T, db *gorm.DB, taskID string) {
+	t.Helper()
+	if err := db.Create(&model.Task{
+		ID:      taskID,
+		Type:    consts.TaskTypeFaultInjection,
+		Payload: "{}",
+		State:   consts.TaskRunning,
+		Status:  consts.CommonEnabled,
+		Level:   1,
+	}).Error; err != nil {
+		t.Fatalf("seed FI task: %v", err)
+	}
+}
+
+func fiTaskState(t *testing.T, db *gorm.DB, taskID string) consts.TaskState {
+	t.Helper()
+	var task model.Task
+	if err := db.First(&task, "id = ?", taskID).Error; err != nil {
+		t.Fatalf("load FI task: %v", err)
+	}
+	return task.State
+}
+
+// TestSingletonSucceededCompletesFaultInjectionTask pins the core fix: on the
+// success path the chaos webhook advances the dispatcher-owned FaultInjection
+// task from TaskRunning to TaskCompleted (so its TraceTypeFaultInjection trace
+// can finalize) while still firing BuildDatapack exactly once. A replay must
+// remain a no-op on both the submission gate and the now-terminal FI task.
+func TestSingletonSucceededCompletesFaultInjectionTask(t *testing.T) {
+	db, rec, r := setupRig(t)
+	meta := sampleMeta()
+	seedRunningFITask(t, db, meta.TaskID)
+
+	body := SingletonWebhook{
+		InjectionID:    "inj-complete",
+		IdempotencyKey: "k-complete",
+		Status:         statusSucceeded,
+		StartedAt:      time.Now().Add(-time.Minute),
+		FinishedAt:     time.Now(),
+		CallerMetadata: meta,
+	}
+
+	w := postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d body=%s", w.Code, w.Body.String())
+	}
+	if got := rec.count(); got != 1 {
+		t.Fatalf("want 1 BuildDatapack submission got %d", got)
+	}
+	if got := fiTaskState(t, db, meta.TaskID); got != consts.TaskCompleted {
+		t.Fatalf("FI task: want TaskCompleted got %v", got)
+	}
+
+	// Replay: gate stays claimed (no second submit) and the FI task is left
+	// terminal (the state=TaskRunning guard makes the second complete a no-op).
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if got := rec.count(); got != 1 {
+		t.Fatalf("replay: want still 1 submission got %d", got)
+	}
+	if got := fiTaskState(t, db, meta.TaskID); got != consts.TaskCompleted {
+		t.Fatalf("replay FI task: want TaskCompleted got %v", got)
+	}
+}
+
+// TestSingletonFailedLeavesFaultInjectionTaskRunning guards the negative case:
+// a non-firing terminal must NOT complete the FI task. The terminal-failed
+// path is handled by abandon/stuck-reconciler logic, not this success-only
+// transition, so the FI task stays Running for that backstop to act on.
+func TestSingletonFailedLeavesFaultInjectionTaskRunning(t *testing.T) {
+	db, _, r := setupRig(t)
+	meta := sampleMeta()
+	seedRunningFITask(t, db, meta.TaskID)
+
+	body := SingletonWebhook{
+		InjectionID:    "inj-fail-keep-running",
+		IdempotencyKey: "k-fail-keep-running",
+		Status:         statusFailed,
+		CallerMetadata: meta,
+	}
+	w := postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d body=%s", w.Code, w.Body.String())
+	}
+	if got := fiTaskState(t, db, meta.TaskID); got != consts.TaskRunning {
+		t.Fatalf("failed terminal must not complete FI task: got %v", got)
 	}
 }
 
