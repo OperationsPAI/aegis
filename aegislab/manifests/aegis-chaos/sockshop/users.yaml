@@ -18,24 +18,6 @@ spec:
         app: "users"
         container: "users"
         namespace: "sockshop"
-    - capability: "http_request_abort"
-      target:
-        app: "users"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
-    - capability: "http_request_delay"
-      target:
-        app: "users"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
     - capability: "jvm_method_latency"
       target:
         app: "users"

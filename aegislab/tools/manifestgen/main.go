@@ -341,6 +341,11 @@ type systemData struct {
 	// truncated or the AST var name drifted — the run should fail loudly
 	// rather than emit silent zero-point manifests.
 	presentFamilies map[string]bool
+	// selfServedHTTP caches, per service, the set of normalized http routes the
+	// service serves INBOUND (a non-gRPC row keyed under itself whose
+	// ServerAddress is empty or itself — the server-side shape). Populated lazily
+	// by serverServesPath, which uses it to suppress redundant caller-edge points.
+	selfServedHTTP map[string]map[string]struct{}
 }
 
 type point struct {
@@ -726,6 +731,64 @@ func (d *systemData) servesHTTP(service string) bool {
 	return false
 }
 
+// serverServesPath reports whether `service` itself serves `normPath` inbound —
+// i.e. it has a non-gRPC row keyed under itself whose ServerAddress is empty or
+// itself (the server-side shape), whose normalized route equals normPath.
+//
+// This is the precise complement of a caller-edge: serviceendpoints rows are a
+// mix of client edges (keyed=caller, ServerAddress=callee, e.g. shipping
+// /getquote -> quote) and server edges (keyed=server, ServerAddress=upstream
+// caller, e.g. shipping /get-quote <- load-generator). A caller-edge HTTPChaos
+// point selects the CALLER's pod, which has no inbound route for that path, so
+// the chaos CR parks Pending and is force-failed. suppressCallerEdge uses this
+// to drop such a point only when the callee provably self-serves the route — so
+// a real server-side point (callee==app, or callee has no self-served row) is
+// never dropped.
+func (d *systemData) serverServesPath(service, normPath string) bool {
+	if d.selfServedHTTP == nil {
+		d.selfServedHTTP = map[string]map[string]struct{}{}
+		for svc, eps := range d.endpoints {
+			for _, e := range eps {
+				if isGRPCRoute(e) {
+					continue
+				}
+				if e.ServerAddress != "" && e.ServerAddress != svc {
+					continue
+				}
+				target, ok := httpTarget(d.namespace, svc, e)
+				if !ok {
+					continue
+				}
+				p, _ := target["path"].(string)
+				if d.selfServedHTTP[svc] == nil {
+					d.selfServedHTTP[svc] = map[string]struct{}{}
+				}
+				d.selfServedHTTP[svc][p] = struct{}{}
+			}
+		}
+	}
+	_, ok := d.selfServedHTTP[service][normPath]
+	return ok
+}
+
+// suppressCallerEdge reports whether an http target is a redundant caller-edge:
+// a cross-service edge whose selected pod (app) is the CALLER of the route
+// (server_address set and != app) while the callee (server_address) itself
+// serves that exact route. The callee's own server-side point already covers
+// the route, and the caller's pod never receives it inbound, so the point would
+// only ever park Pending and force-fail (cr_never_injected). A self-served
+// point (server_address empty or == app) or a callee that does not serve the
+// route is left untouched.
+func (d *systemData) suppressCallerEdge(target map[string]any) bool {
+	app, _ := target["app"].(string)
+	callee, _ := target["server_address"].(string)
+	if callee == "" || callee == app {
+		return false
+	}
+	path, _ := target["path"].(string)
+	return d.serverServesPath(callee, path)
+}
+
 // buildBasePoints emits the workload-agnostic baseline plus the canonical
 // http_request_delay/abort pair and jvm_method_latency. http request points
 // are emitted only for HTTP/1.x routes; gRPC pseudo-routes are skipped since
@@ -756,7 +819,7 @@ func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []
 			continue
 		}
 		target, ok := httpTarget(ns, app, e)
-		if !ok {
+		if !ok || d.suppressCallerEdge(target) {
 			continue
 		}
 		key := fmt.Sprintf("%v|%s|%s", target["port"], target["method"], target["path"])
@@ -794,7 +857,7 @@ func buildHTTPA1bPoints(service string, d *systemData) []point {
 			continue
 		}
 		target, ok := httpTarget(d.namespace, app, e)
-		if !ok {
+		if !ok || d.suppressCallerEdge(target) {
 			continue
 		}
 		key := fmt.Sprintf("%v|%s|%s", target["port"], target["method"], target["path"])

@@ -23,15 +23,6 @@ spec:
         app: "catalog"
         method: "GET"
         namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
-    - capability: "http_request_abort"
-      target:
-        app: "catalog"
-        method: "GET"
-        namespace: "sockshop"
         path: "/catalogue*"
         port: 80
         span_name: "GET /catalogue*"
@@ -59,15 +50,6 @@ spec:
         path: "/catalogue"
         port: 80
         span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "catalog"
-        method: "GET"
-        namespace: "sockshop"
-        path: "/"
-        port: 8079
-        server_address: "front-end"
-        span_name: "GET /"
     - capability: "http_request_delay"
       target:
         app: "catalog"
