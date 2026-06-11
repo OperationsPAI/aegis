@@ -18,11 +18,6 @@ spec:
         app: "flagd"
         container: "flagd"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "flagd"
-        container: "flagd"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "flagd"

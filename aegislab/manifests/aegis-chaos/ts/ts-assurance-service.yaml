@@ -144,11 +144,6 @@ spec:
         class: "assurance.service.AssuranceServiceImpl"
         method: "modify"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-assurance-service"
-        container: "ts-assurance-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-assurance-service"

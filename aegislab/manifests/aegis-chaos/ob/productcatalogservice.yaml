@@ -18,11 +18,6 @@ spec:
         app: "productcatalogservice"
         container: "productcatalogservice"
         namespace: "ob"
-    - capability: "memory_stress"
-      target:
-        app: "productcatalogservice"
-        container: "productcatalogservice"
-        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "productcatalogservice"

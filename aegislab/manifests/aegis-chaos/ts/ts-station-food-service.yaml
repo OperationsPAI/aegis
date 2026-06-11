@@ -102,11 +102,6 @@ spec:
         class: "food.service.StationFoodServiceImpl"
         method: "listFoodStoresByStationName"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-station-food-service"
-        container: "ts-station-food-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-station-food-service"

@@ -18,11 +18,6 @@ spec:
         app: "loadgenerator"
         container: "loadgenerator"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "loadgenerator"
-        container: "loadgenerator"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "loadgenerator"

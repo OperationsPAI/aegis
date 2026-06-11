@@ -150,11 +150,6 @@ spec:
         class: "fdse.microservice.service.StationServiceImpl"
         method: "update"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-station-service"
-        container: "ts-station-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-station-service"

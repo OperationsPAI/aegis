@@ -156,11 +156,6 @@ spec:
         class: "rebook.service.RebookServiceImpl"
         method: "updateOrder"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-rebook-service"
-        container: "ts-rebook-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-rebook-service"

@@ -18,11 +18,6 @@ spec:
         app: "user-timeline-service"
         container: "user-timeline-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "user-timeline-service"
-        container: "user-timeline-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "user-timeline-service"

@@ -18,11 +18,6 @@ spec:
         app: "search"
         container: "search"
         namespace: "hs"
-    - capability: "memory_stress"
-      target:
-        app: "search"
-        container: "search"
-        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "search"

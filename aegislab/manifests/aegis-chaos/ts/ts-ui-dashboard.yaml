@@ -1044,11 +1044,6 @@ spec:
         port: 8080
         server_address: "ts-consign-service"
         span_name: "PUT /api/v1/consignservice/consigns"
-    - capability: "memory_stress"
-      target:
-        app: "ts-ui-dashboard"
-        container: "ts-ui-dashboard"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-ui-dashboard"

@@ -18,11 +18,6 @@ spec:
         app: "social-graph-service"
         container: "social-graph-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "social-graph-service"
-        container: "social-graph-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "social-graph-service"

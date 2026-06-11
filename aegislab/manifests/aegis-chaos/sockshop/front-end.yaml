@@ -414,11 +414,6 @@ spec:
         port: 80
         server_address: "orders"
         span_name: "POST"
-    - capability: "memory_stress"
-      target:
-        app: "front-end"
-        container: "front-end"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "front-end"

@@ -108,11 +108,6 @@ spec:
         class: "price.service.PriceServiceImpl"
         method: "updatePriceConfig"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-price-service"
-        container: "ts-price-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-price-service"

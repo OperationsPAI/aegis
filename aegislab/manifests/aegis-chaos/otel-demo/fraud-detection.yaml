@@ -18,11 +18,6 @@ spec:
         app: "fraud-detection"
         container: "fraud-detection"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "fraud-detection"
-        container: "fraud-detection"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "fraud-detection"

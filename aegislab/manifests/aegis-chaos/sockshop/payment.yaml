@@ -306,11 +306,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory"
         method: "paymentRequest"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "payment"
-        container: "payment"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "payment"

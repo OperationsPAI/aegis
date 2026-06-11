@@ -18,11 +18,6 @@ spec:
         app: "attractions"
         container: "attractions"
         namespace: "hs"
-    - capability: "memory_stress"
-      target:
-        app: "attractions"
-        container: "attractions"
-        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "attractions"

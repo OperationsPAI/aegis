@@ -18,11 +18,6 @@ spec:
         app: "cast-info-service"
         container: "cast-info-service"
         namespace: "media"
-    - capability: "memory_stress"
-      target:
-        app: "cast-info-service"
-        container: "cast-info-service"
-        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "cast-info-service"

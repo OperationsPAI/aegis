@@ -174,11 +174,6 @@ spec:
         class: "notification.service.NotificationServiceImpl"
         method: "preserveSuccess"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-notification-service"
-        container: "ts-notification-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-notification-service"

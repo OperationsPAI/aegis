@@ -546,11 +546,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository"
         method: "updateItem"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "carts"
-        container: "carts"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "carts"

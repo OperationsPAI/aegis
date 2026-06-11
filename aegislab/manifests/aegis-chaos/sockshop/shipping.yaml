@@ -246,11 +246,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory"
         method: "shippingRequest"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "shipping"
-        container: "shipping"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "shipping"

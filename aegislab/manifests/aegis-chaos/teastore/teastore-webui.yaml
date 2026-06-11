@@ -492,11 +492,6 @@ spec:
         class: "tools.descartes.teastore.webui.startup.WebuiStartup"
         method: "contextInitialized"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-webui"
-        container: "webui"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-webui"

@@ -18,11 +18,6 @@ spec:
         app: "post-storage-service"
         container: "post-storage-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "post-storage-service"
-        container: "post-storage-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "post-storage-service"

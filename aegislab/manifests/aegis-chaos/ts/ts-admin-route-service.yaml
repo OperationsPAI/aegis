@@ -150,11 +150,6 @@ spec:
         class: "adminroute.service.AdminRouteServiceImpl"
         method: "getServiceUrl"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-admin-route-service"
-        container: "ts-admin-route-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-admin-route-service"

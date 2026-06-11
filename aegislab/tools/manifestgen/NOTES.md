@@ -27,7 +27,6 @@ constant `chart_version=seed-genesis`).
 | `pod_failure`         | `{namespace, app}`                                | every service           |
 | `container_kill`      | `{namespace, app, container}` *                   | every service           |
 | `cpu_stress`          | `{namespace, app, container}` *                   | every service           |
-| `memory_stress`       | `{namespace, app, container}` *                   | every service           |
 | `time_skew`           | `{namespace, app, container}` *                   | every service           |
 | `http_request_delay`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc |
 | `http_request_abort`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc |
@@ -47,7 +46,7 @@ other 7 systems the two coincide.
 | `http`       | `http_response_{abort,delay,replace_code,patch_body,replace_body}`, `http_request_{replace_method,replace_path}` | `{namespace, app, port, method, path}` | serviceendpoints (gRPC routes excluded) |
 | `dns`        | `dns_error`, `dns_random`                                                                             | `{namespace, app, domain_patterns:[domain]}`  | serviceendpoints ServerAddress (gRPC-only pairs excluded) |
 | `network`    | `network_{delay,loss,duplicate,corrupt,bandwidth,partition}`                                          | `{namespace, source_app, target_service}`     | serviceendpoints + grpc ServerAddress (forward, self-loops dropped) |
-| `jvm-method` | `jvm_method_{return,exception}`, `jvm_{cpu_stress,memory_stress}`                                      | `{namespace, app, class, method}`             | javaclassmethods             |
+| `jvm-method` | `jvm_method_{return,exception}`, `jvm_cpu_stress`                                                     | `{namespace, app, class, method}`             | javaclassmethods             |
 | `jvm-mysql`  | `jvm_mysql_{latency,exception}`                                                                       | `{namespace, app, db_name, table, sql_type}`  | databaseoperations (mysql only) |
 | `jvm-runtime-mutator` | `jvm_runtime_mutator`                                                                       | `{namespace, app, class, method, mutation_type_name, mutation_type, mutation_from?, mutation_to?, mutation_strategy?, description?}` | mutatorconfig (ob/oteldemo/sockshop/teastore/ts) |
 

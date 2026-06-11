@@ -18,11 +18,6 @@ spec:
         app: "compose-post-service"
         container: "compose-post-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "compose-post-service"
-        container: "compose-post-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "compose-post-service"

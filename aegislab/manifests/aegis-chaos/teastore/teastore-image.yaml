@@ -708,11 +708,6 @@ spec:
         class: "tools.descartes.teastore.image.storage.rules.StoreLargeImages"
         method: "test"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-image"
-        container: "image"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-image"

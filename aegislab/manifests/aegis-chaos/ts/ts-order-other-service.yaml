@@ -318,11 +318,6 @@ spec:
         class: "other.service.OrderOtherServiceImpl"
         method: "updateOrder"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-order-other-service"
-        container: "ts-order-other-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-order-other-service"

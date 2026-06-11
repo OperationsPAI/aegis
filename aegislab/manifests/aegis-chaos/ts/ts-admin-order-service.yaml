@@ -228,11 +228,6 @@ spec:
         class: "adminorder.service.AdminOrderServiceImpl"
         method: "updateOrder"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-admin-order-service"
-        container: "ts-admin-order-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-admin-order-service"

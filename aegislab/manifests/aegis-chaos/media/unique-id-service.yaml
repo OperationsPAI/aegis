@@ -18,11 +18,6 @@ spec:
         app: "unique-id-service"
         container: "unique-id-service"
         namespace: "media"
-    - capability: "memory_stress"
-      target:
-        app: "unique-id-service"
-        container: "unique-id-service"
-        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "unique-id-service"

@@ -90,11 +90,6 @@ spec:
         class: "consignprice.service.ConsignPriceServiceImpl"
         method: "queryPriceInformation"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-consign-price-service"
-        container: "ts-consign-price-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-consign-price-service"

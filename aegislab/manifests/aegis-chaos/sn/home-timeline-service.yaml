@@ -18,11 +18,6 @@ spec:
         app: "home-timeline-service"
         container: "home-timeline-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "home-timeline-service"
-        container: "home-timeline-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "home-timeline-service"

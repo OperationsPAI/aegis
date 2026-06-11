@@ -18,11 +18,6 @@ spec:
         app: "profile"
         container: "profile"
         namespace: "hs"
-    - capability: "memory_stress"
-      target:
-        app: "profile"
-        container: "profile"
-        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "profile"

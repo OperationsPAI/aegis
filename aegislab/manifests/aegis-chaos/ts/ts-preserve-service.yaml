@@ -288,11 +288,6 @@ spec:
         class: "preserve.service.PreserveServiceImpl"
         method: "sendEmail"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-preserve-service"
-        container: "ts-preserve-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-preserve-service"

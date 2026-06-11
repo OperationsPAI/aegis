@@ -18,11 +18,6 @@ spec:
         app: "compose-review-service"
         container: "compose-review-service"
         namespace: "media"
-    - capability: "memory_stress"
-      target:
-        app: "compose-review-service"
-        container: "compose-review-service"
-        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "compose-review-service"

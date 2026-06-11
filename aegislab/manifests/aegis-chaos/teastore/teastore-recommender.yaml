@@ -420,11 +420,6 @@ spec:
         class: "tools.descartes.teastore.recommender.servlet.TrainingSynchronizer"
         method: "waitForPersistence"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-recommender"
-        container: "recommender"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-recommender"
