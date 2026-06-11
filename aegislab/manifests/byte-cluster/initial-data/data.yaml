@@ -610,6 +610,26 @@ containers:
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
+      - name: 0.1.11
+        github_link: open-telemetry/opentelemetry-demo
+        status: 1
+        helm_config:
+          # Bumped 0.1.10 → 0.1.11 (benchmark-charts#17): adds a CPU limit +
+          # right-sizes memory on every service pod so cpu_stress/memory_stress
+          # chaos actually bite (every pod was CPU-uncapped → stress inert).
+          # See aegis#563. Chart-only.
+          version: 0.1.11
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values:
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
   - type: 2
     name: ob
     is_public: true
@@ -895,6 +915,64 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 1.1.6 → 1.1.7 for sockshop chart 1.2.2 → 1.3.0
+      # (benchmark-charts#563): adds CPU limits + right-sizes mem on the
+      # Helidon/Coherence Java backends so cpu_stress/memory_stress chaos bites
+      # (services were CPU-uncapped → inert). mem limit keeps the JVM heap above
+      # the Coherence cache working set. Chart-only; seed values unchanged.
+      # See aegis#563.
+      - name: 1.1.7
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        helm_config:
+          version: 1.3.0
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/otel-instr-sockshop
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
     # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
@@ -1026,6 +1104,45 @@ containers:
         status: 1
         helm_config:
           version: 0.2.2
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+      # Bumped 0.1.7 → 0.1.8 for hotel-reservation chart 0.2.3
+      # (benchmark-charts#563): adds CPU limits (global.resources) so cpu_stress
+      # /memory_stress chaos bites — Go services were CPU-uncapped → inert.
+      # Chart-only; limits live in the chart's global.resources, seed values
+      # unchanged. See aegis#563.
+      - name: 0.1.8
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.3
           chart_name: hotel-reservation
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -1296,6 +1413,69 @@ containers:
         status: 1
         helm_config:
           version: 0.2.2
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260531-9d7d2a1
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.9 → 0.1.10 for social-network chart 0.2.3
+      # (benchmark-charts#563): adds CPU limits (global.resources) so cpu_stress
+      # /memory_stress chaos bites — Thrift services were CPU-uncapped → inert.
+      # Chart-only; limits live in the chart's global.resources, seed values
+      # unchanged. See aegis#563.
+      - name: 0.1.10
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.3
           chart_name: social-network
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -1620,6 +1800,69 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 0.1.9 → 0.1.10 for media-microservices chart 0.2.3
+      # (benchmark-charts#563): adds CPU limits (global.resources) so cpu_stress
+      # /memory_stress chaos bites — Thrift services were CPU-uncapped → inert.
+      # Chart-only; limits live in the chart's global.resources, seed values
+      # unchanged. See aegis#563.
+      - name: 0.1.10
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.3
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
   - type: 2
     name: teastore
     is_public: true
@@ -1733,6 +1976,81 @@ containers:
             # webui Service is port 80 (-> targetPort 8080); jmeter must hit the
             # Service port. The chart default jmeter.targetPort=8080 is wrong
             # (hits the container port directly, connection refused). Override to 80.
+            - key: jmeter.targetPort
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "80"
+              overridable: true
+            - key: opentelemetry.monitoringNamespace
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring
+              overridable: true
+            - key: opentelemetry.instrumentationName
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-instr-teastore
+              overridable: true
+            - key: jmeter.waitForRegistryImage.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+            - key: jmeter.waitForRegistryImage.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "1.36"
+              overridable: true
+            - key: jmeter.waitForRegistryImage.pullPolicy
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: IfNotPresent
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.8 → 0.1.9 for teastore chart 0.1.9 (benchmark-charts#563):
+      # adds CPU limits + right-sizes JVM mem (limit ≥ 2× working set so the
+      # heap auto-resize doesn't OOM) so cpu_stress/memory_stress chaos bites —
+      # services were CPU-uncapped → inert. Chart-only; seed values unchanged.
+      # See aegis#563.
+      - name: 0.1.9
+        github_link: LGU-SE-Internal/TeaStore
+        status: 1
+        helm_config:
+          version: 0.1.9
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://lgu-se-internal.github.io/TeaStore
+          values:
+            - key: global.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260602-9758cbfe
+              overridable: true
             - key: jmeter.targetPort
               type: 0
               category: 1
