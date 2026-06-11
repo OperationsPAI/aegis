@@ -174,11 +174,6 @@ spec:
         class: "tools.descartes.teastore.registry.servlet.IndexServlet"
         method: "doPost"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-registry"
-        container: "registry"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-registry"

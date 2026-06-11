@@ -612,11 +612,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils"
         method: "keys"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "orders"
-        container: "orders"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "orders"

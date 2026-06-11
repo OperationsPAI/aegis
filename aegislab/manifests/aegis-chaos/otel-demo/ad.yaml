@@ -78,11 +78,6 @@ spec:
         class: "oteldemo.AdService"
         method: "stop"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "ad"
-        container: "ad"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "ad"

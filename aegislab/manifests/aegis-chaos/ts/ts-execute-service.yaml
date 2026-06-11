@@ -138,11 +138,6 @@ spec:
         class: "execute.serivce.ExecuteServiceImpl"
         method: "ticketExecute"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-execute-service"
-        container: "ts-execute-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-execute-service"

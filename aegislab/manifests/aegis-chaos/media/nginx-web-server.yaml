@@ -162,11 +162,6 @@ spec:
         port: 9090
         server_address: "user-service"
         span_name: "/wrk2-api/user/register"
-    - capability: "memory_stress"
-      target:
-        app: "nginx-web-server"
-        container: "nginx-web-server"
-        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "nginx-web-server"

@@ -210,11 +210,6 @@ spec:
         class: "foodsearch.service.FoodServiceImpl"
         method: "updateFoodOrder"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-food-service"
-        container: "ts-food-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-food-service"

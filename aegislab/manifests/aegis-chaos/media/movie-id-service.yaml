@@ -18,11 +18,6 @@ spec:
         app: "movie-id-service"
         container: "movie-id-service"
         namespace: "media"
-    - capability: "memory_stress"
-      target:
-        app: "movie-id-service"
-        container: "movie-id-service"
-        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "movie-id-service"

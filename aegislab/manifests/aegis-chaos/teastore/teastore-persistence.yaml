@@ -1392,11 +1392,6 @@ spec:
         class: "tools.descartes.teastore.persistence.servlet.IndexServlet"
         method: "doPost"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-persistence"
-        container: "persistence"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-persistence"

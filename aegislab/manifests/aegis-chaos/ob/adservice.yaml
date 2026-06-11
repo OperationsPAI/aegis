@@ -120,11 +120,6 @@ spec:
         class: "hipstershop.AdServiceClient"
         method: "shutdown"
         namespace: "ob"
-    - capability: "memory_stress"
-      target:
-        app: "adservice"
-        container: "adservice"
-        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "adservice"

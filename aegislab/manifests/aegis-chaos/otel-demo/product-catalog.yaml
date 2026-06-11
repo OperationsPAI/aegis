@@ -18,11 +18,6 @@ spec:
         app: "product-catalog"
         container: "product-catalog"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "product-catalog"
-        container: "product-catalog"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "product-catalog"

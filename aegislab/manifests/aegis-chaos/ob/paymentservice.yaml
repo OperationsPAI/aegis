@@ -18,11 +18,6 @@ spec:
         app: "paymentservice"
         container: "paymentservice"
         namespace: "ob"
-    - capability: "memory_stress"
-      target:
-        app: "paymentservice"
-        container: "paymentservice"
-        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "paymentservice"

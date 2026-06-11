@@ -78,11 +78,6 @@ spec:
         class: "verifycode.util.CookieUtil"
         method: "readCookieMap"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-verification-code-service"
-        container: "ts-verification-code-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-verification-code-service"

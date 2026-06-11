@@ -690,11 +690,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT"
         method: "testRegister"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "users"
-        container: "users"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "users"

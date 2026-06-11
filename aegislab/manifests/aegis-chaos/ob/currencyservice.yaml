@@ -18,11 +18,6 @@ spec:
         app: "currencyservice"
         container: "currencyservice"
         namespace: "ob"
-    - capability: "memory_stress"
-      target:
-        app: "currencyservice"
-        container: "currencyservice"
-        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "currencyservice"

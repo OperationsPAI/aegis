@@ -126,11 +126,6 @@ spec:
         port: 9090
         server_address: "social-graph-service"
         span_name: "/wrk2-api/user/unfollow"
-    - capability: "memory_stress"
-      target:
-        app: "nginx-thrift"
-        container: "nginx-thrift"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "nginx-thrift"

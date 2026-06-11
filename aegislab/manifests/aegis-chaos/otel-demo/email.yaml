@@ -18,11 +18,6 @@ spec:
         app: "email"
         container: "email"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "email"
-        container: "email"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "email"

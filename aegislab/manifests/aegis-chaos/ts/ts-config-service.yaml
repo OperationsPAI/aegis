@@ -96,11 +96,6 @@ spec:
         class: "config.service.ConfigServiceImpl"
         method: "update"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-config-service"
-        container: "ts-config-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-config-service"

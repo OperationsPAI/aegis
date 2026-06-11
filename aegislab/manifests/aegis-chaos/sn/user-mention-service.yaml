@@ -18,11 +18,6 @@ spec:
         app: "user-mention-service"
         container: "user-mention-service"
         namespace: "sn"
-    - capability: "memory_stress"
-      target:
-        app: "user-mention-service"
-        container: "user-mention-service"
-        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "user-mention-service"

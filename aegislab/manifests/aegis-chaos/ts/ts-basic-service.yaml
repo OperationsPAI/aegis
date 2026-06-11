@@ -372,11 +372,6 @@ spec:
         class: "fdse.microservice.service.BasicServiceImpl"
         method: "queryTrainTypeByNames"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-basic-service"
-        container: "ts-basic-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-basic-service"

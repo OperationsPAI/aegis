@@ -18,11 +18,6 @@ spec:
         app: "postgresql"
         container: "postgresql"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "postgresql"
-        container: "postgresql"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "postgresql"

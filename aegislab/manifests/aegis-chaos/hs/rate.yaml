@@ -18,11 +18,6 @@ spec:
         app: "rate"
         container: "rate"
         namespace: "hs"
-    - capability: "memory_stress"
-      target:
-        app: "rate"
-        container: "rate"
-        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "rate"

@@ -132,11 +132,6 @@ spec:
         class: "consign.service.ConsignServiceImpl"
         method: "updateConsignRecord"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-consign-service"
-        container: "ts-consign-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-consign-service"

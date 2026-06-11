@@ -246,11 +246,6 @@ spec:
         class: "tools.descartes.teastore.auth.startup.AuthStartup"
         method: "contextInitialized"
         namespace: "teastore"
-    - capability: "memory_stress"
-      target:
-        app: "teastore-auth"
-        container: "auth"
-        namespace: "teastore"
     - capability: "pod_failure"
       target:
         app: "teastore-auth"

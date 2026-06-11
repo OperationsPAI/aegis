@@ -334,11 +334,6 @@ spec:
         class: "com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource"
         method: "getTags"
         namespace: "sockshop"
-    - capability: "memory_stress"
-      target:
-        app: "catalog"
-        container: "catalog"
-        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "catalog"

@@ -270,11 +270,6 @@ spec:
         class: "inside_payment.util.CookieUtil"
         method: "readCookieMap"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-inside-payment-service"
-        container: "ts-inside-payment-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-inside-payment-service"

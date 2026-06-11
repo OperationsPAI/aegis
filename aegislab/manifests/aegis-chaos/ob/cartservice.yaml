@@ -18,11 +18,6 @@ spec:
         app: "cartservice"
         container: "cartservice"
         namespace: "ob"
-    - capability: "memory_stress"
-      target:
-        app: "cartservice"
-        container: "cartservice"
-        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "cartservice"

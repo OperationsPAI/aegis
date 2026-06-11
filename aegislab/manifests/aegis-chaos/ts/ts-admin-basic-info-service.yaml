@@ -510,11 +510,6 @@ spec:
         class: "adminbasic.service.AdminBasicInfoServiceImpl"
         method: "modifyTrain"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-admin-basic-info-service"
-        container: "ts-admin-basic-info-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-admin-basic-info-service"

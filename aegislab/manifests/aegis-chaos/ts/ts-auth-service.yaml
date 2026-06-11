@@ -210,11 +210,6 @@ spec:
         class: "auth.service.impl.UserServiceImpl"
         method: "saveUser"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-auth-service"
-        container: "ts-auth-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-auth-service"

@@ -18,11 +18,6 @@ spec:
         app: "image-provider"
         container: "image-provider"
         namespace: "otel-demo"
-    - capability: "memory_stress"
-      target:
-        app: "image-provider"
-        container: "image-provider"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "image-provider"

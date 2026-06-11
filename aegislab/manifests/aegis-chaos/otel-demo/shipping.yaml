@@ -54,11 +54,6 @@ spec:
         port: 8080
         server_address: "checkout"
         span_name: "/ship-order"
-    - capability: "memory_stress"
-      target:
-        app: "shipping"
-        container: "shipping"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "shipping"

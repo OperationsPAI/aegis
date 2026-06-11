@@ -330,11 +330,6 @@ spec:
         class: "travel2.service.TravelServiceImpl"
         method: "update"
         namespace: "ts"
-    - capability: "memory_stress"
-      target:
-        app: "ts-travel2-service"
-        container: "ts-travel2-service"
-        namespace: "ts"
     - capability: "pod_failure"
       target:
         app: "ts-travel2-service"

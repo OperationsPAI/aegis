@@ -230,7 +230,7 @@ func appLabel(sysKey, service string) string {
 // containerName maps a service-data key to the pod's container[0] name.
 // teastore is the one stack where app-label != container name: pods carry
 // app=teastore-webui but the container is named webui, so container-scoped
-// capabilities (container_kill / cpu_stress / memory_stress / time_skew)
+// capabilities (container_kill / cpu_stress / time_skew)
 // must strip the teastore- prefix. Every other system follows the
 // app==container convention.
 func containerName(sysKey, service string) string {
@@ -256,7 +256,7 @@ var (
 	}
 	dnsCaps       = []string{"dns_error", "dns_random"}
 	networkCaps   = []string{"network_delay", "network_loss", "network_duplicate", "network_corrupt", "network_bandwidth", "network_partition"}
-	jvmMethodCaps = []string{"jvm_method_return", "jvm_method_exception", "jvm_cpu_stress", "jvm_memory_stress"}
+	jvmMethodCaps = []string{"jvm_method_return", "jvm_method_exception", "jvm_cpu_stress"}
 	jvmMysqlCaps  = []string{"jvm_mysql_latency", "jvm_mysql_exception"}
 
 	mutationTypeNames = map[int]string{0: "constant", 1: "operator", 2: "string"}
@@ -806,7 +806,6 @@ func buildBasePoints(service string, d *systemData, st *stats, sysKey string) []
 	pts := []point{
 		{Capability: "container_kill", Target: cloneTarget(withContainer)},
 		{Capability: "cpu_stress", Target: cloneTarget(withContainer)},
-		{Capability: "memory_stress", Target: cloneTarget(withContainer)},
 		{Capability: "pod_failure", Target: cloneTarget(appOnly)},
 		{Capability: "pod_kill", Target: cloneTarget(appOnly)},
 		{Capability: "time_skew", Target: cloneTarget(withContainer)},

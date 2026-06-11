@@ -36,11 +36,6 @@ spec:
         port: 8080
         server_address: "quote"
         span_name: "POST /getquote"
-    - capability: "memory_stress"
-      target:
-        app: "quote"
-        container: "quote"
-        namespace: "otel-demo"
     - capability: "pod_failure"
       target:
         app: "quote"
