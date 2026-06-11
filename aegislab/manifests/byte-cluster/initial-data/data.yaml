@@ -256,7 +256,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: "pre-20260601-session-aware-rca-ed7e71a"
+              default_value: "024"
               overridable: true
             # Pin mysql Service to ClusterIP. trainticket@0.2.0 chart default
             # is `NodePort` with no `nodePort` value, so kubernetes auto-assigns
@@ -454,7 +454,105 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: pre-20260601-session-aware-rca-ed7e71a
+              default_value: "024"
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+      # Bumped 1.0.9 → 1.0.10 to pick up trainticket chart 0.4.4
+      # (OperationsPAI/train-ticket). 0.4.x adds MySQL component_telemetry
+      # (server-side spans/metrics/logs via native OTLP push), RabbitMQ metrics
+      # through the rabbitmq_prometheus plugin (collector prometheus receiver on
+      # :9419, replacing the contrib rabbitmqreceiver that poisoned the metrics
+      # batch with "metrics type is unset"), and client-side AMQP producer→
+      # consumer trace. Critically, 0.4.4 bumps the bundled OTel Java agent to
+      # autoinstrumentation-java:2.28.1 (was the stale elastic 1.4.1): only with
+      # 2.28.1 does Connector/J 9.7 find a usable opentelemetry-api at runtime
+      # and propagate the `traceparent` query attribute, so MySQL server spans
+      # link into the app trace (mysql↔app continuity verified on ts-val040
+      # 2026-06-12; under 1.4.1 every mysqld span was an orphan root).
+      # global.image.tag pinned to the 0.4.4 service images (rebuilt on
+      # com.mysql:mysql-connector-j 9.7). loadgenerator.image.tag reverted from
+      # the session-aware-rca pre-release back to the stable 024 build (the tag
+      # is system-scoped, so 1.0.6/1.0.9 are aligned to 024 too).
+      - name: 1.0.10
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.4.4
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: global.security.allowInsecureImages
+              type: 0
+              category: 1
+              value_type: 2
+              default_value: "true"
+              overridable: true
+            - key: global.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "0.4.4"
+              overridable: true
+            - key: mysql.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
+              overridable: true
+            - key: rabbitmq.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com
+              overridable: true
+            - key: rabbitmq.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opspai/rabbitmq
+              overridable: true
+            - key: loadgenerator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
+              overridable: true
+            - key: loadgenerator.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+              overridable: true
+            - key: loadgenerator.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "024"
               overridable: true
             - key: otelCollector.image.repository
               type: 0
