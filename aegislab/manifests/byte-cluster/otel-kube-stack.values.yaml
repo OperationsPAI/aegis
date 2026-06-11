@@ -215,12 +215,23 @@ collectors:
             k8s.pod.memory_limit_utilization:
               enabled: true
         filelog:
+          # The host root is mounted at /hostfs, so node pod logs live under
+          # /hostfs/var/log/pods/<ns>_<pod>_<uid>/<container>/<restart>.log
+          # (containerd writes real files there — no /var/log/containers
+          # symlink indirection to chase). The previous /var/log/pods/* path
+          # pointed at a directory that does not exist inside the collector
+          # container, so filelog matched zero files and silently collected
+          # nothing.
+          #
+          # Scoped to train-ticket's non-OTLP-instrumented pods only — mysql,
+          # rabbitmq, and the caddy ui-dashboard. Every other ts service ships
+          # logs over OTLP via the per-system collector, so a disk scrape would
+          # double-collect them. These three have no SDK/agent, so filelog is
+          # their only path into ClickHouse.
           include:
-            - /var/log/pods/*/*/*.log
-          exclude:
-            - /var/log/pods/kube-system_*/*/*.log
-            - /var/log/pods/otel_*/*/*.log
-            - /var/log/pods/local-path-storage_*/*/*.log
+            - /hostfs/var/log/pods/ts*_mysql-*_*/mysql/*.log
+            - /hostfs/var/log/pods/ts*_rabbitmq-*_*/rabbitmq/*.log
+            - /hostfs/var/log/pods/ts*_ts-ui-dashboard-*_*/ts-ui-dashboard/*.log
           start_at: end
           include_file_path: true
           include_file_name: false
