@@ -1,0 +1,47 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "user"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "user"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "user"
+        namespace: "hs"
+    - capability: "container_kill"
+      target:
+        app: "user"
+        container: "user"
+        namespace: "hs"
+    - capability: "cpu_stress"
+      target:
+        app: "user"
+        container: "user"
+        namespace: "hs"
+    - capability: "time_skew"
+      target:
+        app: "user"
+        container: "user"
+        namespace: "hs"
+    - capability: "http_request_delay"
+      target:
+        app: "user"
+        method: "POST"
+        namespace: "hs"
+        path: "/user.User/CheckUser"
+        server_address: "user"
+    - capability: "http_request_abort"
+      target:
+        app: "user"
+        method: "POST"
+        namespace: "hs"
+        path: "/user.User/CheckUser"
+        server_address: "user"
