@@ -26,6 +26,7 @@ Usage
 datapack is taken from the span's `k8s.namespace.name` (trailing digits
 stripped: `otel-demo1` -> `otel-demo`).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,12 +40,12 @@ import polars as pl
 
 # --- path / span-name normalization (kept in parity with manifestgen) --------
 _UUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
-_TRAIN = re.compile(r"^[A-Z]{1,3}\d+$")        # train codes: G1234 / D002 / K85
+_TRAIN = re.compile(r"^[A-Z]{1,3}\d+$")  # train codes: G1234 / D002 / K85
 _NUM = re.compile(r"^\d+$")
-_TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,}$")    # opaque session / cart tokens
+_TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,}$")  # opaque session / cart tokens
 _HASDIGIT = re.compile(r"\d")
-_DIGITRUN = re.compile(r"\d{2,}")               # any run of >=2 digits => an id
-_IP = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")    # bare IPv4 (no resolvable name)
+_DIGITRUN = re.compile(r"\d{2,}")  # any run of >=2 digits => an id
+_IP = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")  # bare IPv4 (no resolvable name)
 
 
 def _high_card(seg: str) -> bool:
@@ -136,8 +137,15 @@ def extract(parquet_paths: list[Path]) -> dict:
         try:
             df = pl.read_parquet(
                 pth,
-                columns=["SpanId", "ParentSpanId", "SpanName", "SpanKind",
-                         "ServiceName", "ResourceAttributes", "SpanAttributes"],
+                columns=[
+                    "SpanId",
+                    "ParentSpanId",
+                    "SpanName",
+                    "SpanKind",
+                    "ServiceName",
+                    "ResourceAttributes",
+                    "SpanAttributes",
+                ],
             )
         except Exception as e:  # corrupt / partial download
             print(f"skip {pth}: {e}", file=sys.stderr)
@@ -227,47 +235,59 @@ def dump(sysd: dict, out_dir: Path, min_count: int) -> dict:
             "min_count": min_count,
             "services": sorted(S["services"]),
             "http_endpoints": [
-                {"service": s, "method": m, "path": p, "port": port,
-                 "count": e["count"], "status": sorted(e["status"]),
-                 "span_names": _spans(e["span_names"])}
-                for (s, m, p, port), e in sorted(http_keep, key=lambda x: -x[1]["count"])],
+                {
+                    "service": s,
+                    "method": m,
+                    "path": p,
+                    "port": port,
+                    "count": e["count"],
+                    "status": sorted(e["status"]),
+                    "span_names": _spans(e["span_names"]),
+                }
+                for (s, m, p, port), e in sorted(http_keep, key=lambda x: -x[1]["count"])
+            ],
             "grpc_operations": [
-                {"service": s, "rpc_service": rs, "rpc_method": rm,
-                 "count": e["count"], "status": sorted(e["status"])}
+                {"service": s, "rpc_service": rs, "rpc_method": rm, "count": e["count"], "status": sorted(e["status"])}
                 for (s, rs, rm), e in sorted(S["grpc"].items(), key=lambda x: -x[1]["count"])
-                if e["count"] >= min_count],
+                if e["count"] >= min_count
+            ],
             "db_operations": [
-                {"service": s, "db_system": d, "db_name": dn, "table": tb,
-                 "sql_type": st, "count": e["count"]}
+                {"service": s, "db_system": d, "db_name": dn, "table": tb, "sql_type": st, "count": e["count"]}
                 for (s, d, dn, tb, st), e in sorted(S["db"].items(), key=lambda x: -x[1]["count"])
-                if e["count"] >= min_count],
+                if e["count"] >= min_count
+            ],
             "infra_deps": [
                 {"service": s, "target": t, "kind": k, "system": sysm, "count": e["count"]}
                 for (s, t, k, sysm), e in sorted(S["infra"].items(), key=lambda x: -x[1]["count"])
-                if e["count"] >= min_count],
+                if e["count"] >= min_count
+            ],
             "edges": [
-                {"source": s, "target": t, "count": e["count"],
-                 "span_names": _spans(e["span_names"])}
+                {"source": s, "target": t, "count": e["count"], "span_names": _spans(e["span_names"])}
                 for (s, t), e in sorted(S["edges"].items(), key=lambda x: -x[1]["count"])
-                if e["count"] >= min_count],
+                if e["count"] >= min_count
+            ],
         }
         (out_dir / f"{system}.json").write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
         summary[system] = {
-            "datapacks": obj["datapack_count"], "services": len(obj["services"]),
+            "datapacks": obj["datapack_count"],
+            "services": len(obj["services"]),
             "http": len(obj["http_endpoints"]),
             "http_dropped_longtail": len(http_all) - len(http_keep),
-            "grpc": len(obj["grpc_operations"]), "db": len(obj["db_operations"]),
-            "infra": len(obj["infra_deps"]), "edges": len(obj["edges"])}
+            "grpc": len(obj["grpc_operations"]),
+            "db": len(obj["db_operations"]),
+            "infra": len(obj["infra_deps"]),
+            "edges": len(obj["edges"]),
+        }
     return summary
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--datapack-root", required=True, type=Path,
-                    help="dir walked for */normal_traces.parquet")
+    ap.add_argument("--datapack-root", required=True, type=Path, help="dir walked for */normal_traces.parquet")
     ap.add_argument("--out", required=True, type=Path, help="output dir for <system>.json")
-    ap.add_argument("--min-count", type=int, default=2,
-                    help="drop endpoints/edges observed fewer than N times (default 2)")
+    ap.add_argument(
+        "--min-count", type=int, default=2, help="drop endpoints/edges observed fewer than N times (default 2)"
+    )
     args = ap.parse_args()
 
     paths = sorted(args.datapack_root.glob("*/normal_traces.parquet"))

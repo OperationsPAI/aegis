@@ -13,6 +13,7 @@ Only the raw top-level `normal_traces.parquet` is fetched (not the `-r` full
 datapack), so this stays light. Systems come from the env NAMESPACE with
 trailing digits stripped (otel-demo1 -> otel-demo).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -36,8 +37,11 @@ def aeg(args: list[str], binary: str, insecure: bool) -> str:
 def enumerate_names(binary: str, insecure: bool, projects: list[str]) -> list[str]:
     names: set[str] = set()
     for proj in projects:
-        out = aeg(["inject", "list", "--project", proj, "--state", "detector_success",
-                   "--all", "-o", "ndjson"], binary, insecure)
+        out = aeg(
+            ["inject", "list", "--project", proj, "--state", "detector_success", "--all", "-o", "ndjson"],
+            binary,
+            insecure,
+        )
         for line in out.splitlines():
             try:
                 names.add(json.loads(line)["name"])
@@ -48,6 +52,7 @@ def enumerate_names(binary: str, insecure: bool, projects: list[str]) -> list[st
 
 def classify(binary: str, insecure: bool, names: list[str], workers: int) -> dict[str, tuple[str, int]]:
     """name -> (system, normal_start_epoch)"""
+
     def one(name: str):
         out = aeg(["blob", "cat", f"datapack:{name}/env.json"], binary, insecure)
         try:
@@ -56,6 +61,7 @@ def classify(binary: str, insecure: bool, names: list[str], workers: int) -> dic
             return name, re.sub(r"\d+$", "", ns), int(d.get("NORMAL_START", 0) or 0)
         except Exception:
             return name, "", 0
+
     res = {}
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for name, system, start in ex.map(one, names):
@@ -77,6 +83,7 @@ def download(binary: str, insecure: bool, names: list[str], dp_dir: Path, worker
             return True
         aeg(["blob", "cp", f"datapack:{name}/normal_traces.parquet", str(f)], binary, insecure)
         return f.exists() and f.stat().st_size > 0
+
     with ThreadPoolExecutor(max_workers=workers) as ex:
         return sum(ex.map(one, names))
 
@@ -90,8 +97,9 @@ def main() -> None:
     ap.add_argument("--insecure", action="store_true", help="pass --insecure-skip-tls-verify")
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--ts-before-epoch", type=int, default=0,
-                    help="if set, keep only ts datapacks with NORMAL_START < this epoch")
+    ap.add_argument(
+        "--ts-before-epoch", type=int, default=0, help="if set, keep only ts datapacks with NORMAL_START < this epoch"
+    )
     args = ap.parse_args()
 
     names = enumerate_names(args.aegisctl, args.insecure, args.projects)
