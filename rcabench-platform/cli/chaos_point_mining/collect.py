@@ -68,6 +68,10 @@ def download(binary: str, insecure: bool, names: list[str], dp_dir: Path, worker
     def one(name: str) -> bool:
         dst = dp_dir / name
         dst.mkdir(parents=True, exist_ok=True)
+        # k8s.json resolves message-broker peer IPs to workload names (mine.py)
+        kj = dst / "k8s.json"
+        if not (kj.exists() and kj.stat().st_size > 0):
+            aeg(["blob", "cp", f"datapack:{name}/k8s.json", str(kj)], binary, insecure)
         f = dst / "normal_traces.parquet"
         if f.exists() and f.stat().st_size > 0:
             return True

@@ -381,3 +381,91 @@ spec:
         span_names:
           - "POST /api/v1/stationfoodservice/stationfoodstores"
         target_service: "ts-station-food-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "food_order"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "food_order"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "food_order"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "food_order"

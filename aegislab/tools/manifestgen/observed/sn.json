@@ -135,6 +135,7 @@
     }
   ],
   "db_operations": [],
+  "infra_deps": [],
   "edges": [
     {
       "source": "nginx-thrift",

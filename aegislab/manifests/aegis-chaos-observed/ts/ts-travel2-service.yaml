@@ -588,3 +588,47 @@ spec:
         span_names:
           - "GET /api/v1/trainservice/trains/byName/{name}"
         target_service: "ts-train-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-travel2-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "trip2"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-travel2-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "trip2"

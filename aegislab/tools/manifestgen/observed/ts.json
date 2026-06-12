@@ -2648,111 +2648,620 @@
     {
       "service": "ts-route-service",
       "db_system": "mysql",
-      "count": 1003248
+      "db_name": "ts",
+      "table": "route_stations",
+      "sql_type": "select",
+      "count": 479616
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route_distances",
+      "sql_type": "select",
+      "count": 434123
     },
     {
       "service": "ts-auth-service",
       "db_system": "mysql",
-      "count": 159672
+      "db_name": "ts",
+      "table": "auth_user",
+      "sql_type": "select",
+      "count": 104898
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route",
+      "sql_type": "select",
+      "count": 78199
     },
     {
       "service": "ts-train-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "train_type",
+      "sql_type": "select",
       "count": 61828
-    },
-    {
-      "service": "ts-order-service",
-      "db_system": "mysql",
-      "count": 58106
     },
     {
       "service": "ts-user-service",
       "db_system": "mysql",
-      "count": 57794
+      "db_name": "ts",
+      "table": "user",
+      "sql_type": "select",
+      "count": 53138
+    },
+    {
+      "service": "ts-order-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders",
+      "sql_type": "select",
+      "count": 52740
+    },
+    {
+      "service": "ts-auth-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "user_roles",
+      "sql_type": "select",
+      "count": 51666
     },
     {
       "service": "ts-order-other-service",
       "db_system": "mysql",
-      "count": 40804
+      "db_name": "ts",
+      "table": "orders_other",
+      "sql_type": "select",
+      "count": 39520
     },
     {
       "service": "ts-station-service",
       "db_system": "mysql",
-      "count": 38249
+      "db_name": "ts",
+      "table": "station",
+      "sql_type": "select",
+      "count": 38014
     },
     {
       "service": "ts-config-service",
       "db_system": "mysql",
-      "count": 32835
+      "db_name": "ts",
+      "table": "config",
+      "sql_type": "select",
+      "count": 32164
     },
     {
       "service": "ts-travel-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "trip",
+      "sql_type": "select",
       "count": 27958
     },
     {
       "service": "ts-travel2-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "trip2",
+      "sql_type": "select",
       "count": 21977
     },
     {
       "service": "ts-price-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "price_config",
+      "sql_type": "select",
       "count": 11657
-    },
-    {
-      "service": "ts-station-food-service",
-      "db_system": "mysql",
-      "count": 11203
     },
     {
       "service": "ts-contacts-service",
       "db_system": "mysql",
-      "count": 11157
+      "db_name": "ts",
+      "table": "contacts",
+      "sql_type": "select",
+      "count": 10260
+    },
+    {
+      "service": "ts-station-food-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "station_food_list",
+      "sql_type": "select",
+      "count": 8990
     },
     {
       "service": "ts-train-food-service",
       "db_system": "mysql",
-      "count": 7651
+      "db_name": "ts",
+      "table": "train_food",
+      "sql_type": "select",
+      "count": 5439
     },
     {
       "service": "ts-consign-service",
       "db_system": "mysql",
-      "count": 5134
+      "db_name": "ts",
+      "table": "consign_record",
+      "sql_type": "select",
+      "count": 4683
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route_distances",
+      "sql_type": "insert",
+      "count": 4260
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route_stations",
+      "sql_type": "insert",
+      "count": 4260
     },
     {
       "service": "ts-security-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "security_config",
+      "sql_type": "select",
       "count": 3882
+    },
+    {
+      "service": "ts-user-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "user",
+      "sql_type": "insert",
+      "count": 3104
     },
     {
       "service": "ts-food-service",
       "db_system": "mysql",
-      "count": 3878
+      "db_name": "ts",
+      "table": "food_order",
+      "sql_type": "select",
+      "count": 2585
     },
     {
       "service": "ts-assurance-service",
       "db_system": "mysql",
-      "count": 3873
+      "db_name": "ts",
+      "table": "assurance",
+      "sql_type": "select",
+      "count": 2582
+    },
+    {
+      "service": "ts-station-food-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "station_food_store",
+      "sql_type": "select",
+      "count": 2213
+    },
+    {
+      "service": "ts-train-food-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "train_food_list",
+      "sql_type": "select",
+      "count": 2212
+    },
+    {
+      "service": "ts-order-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders",
+      "sql_type": "update",
+      "count": 1656
+    },
+    {
+      "service": "ts-order-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders",
+      "sql_type": "insert",
+      "count": 1619
+    },
+    {
+      "service": "ts-order-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "",
+      "sql_type": "select",
+      "count": 1599
+    },
+    {
+      "service": "ts-auth-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "auth_user",
+      "sql_type": "insert",
+      "count": 1554
+    },
+    {
+      "service": "ts-auth-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "user_roles",
+      "sql_type": "insert",
+      "count": 1554
+    },
+    {
+      "service": "ts-user-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "user",
+      "sql_type": "delete",
+      "count": 1552
     },
     {
       "service": "ts-inside-payment-service",
       "db_system": "mysql",
-      "count": 3832
+      "db_name": "ts",
+      "table": "inside_money",
+      "sql_type": "select",
+      "count": 1336
     },
     {
       "service": "ts-delivery-service",
       "db_system": "mysql",
-      "count": 2586
+      "db_name": "ts",
+      "table": "delivery",
+      "sql_type": "insert",
+      "count": 1293
+    },
+    {
+      "service": "ts-delivery-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "delivery",
+      "sql_type": "select",
+      "count": 1293
+    },
+    {
+      "service": "ts-food-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "food_order",
+      "sql_type": "insert",
+      "count": 1293
+    },
+    {
+      "service": "ts-assurance-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "assurance",
+      "sql_type": "insert",
+      "count": 1291
+    },
+    {
+      "service": "ts-inside-payment-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "inside_payment",
+      "sql_type": "select",
+      "count": 1161
+    },
+    {
+      "service": "ts-inside-payment-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "inside_payment",
+      "sql_type": "insert",
+      "count": 1160
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route",
+      "sql_type": "insert",
+      "count": 948
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route",
+      "sql_type": "delete",
+      "count": 614
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route_distances",
+      "sql_type": "delete",
+      "count": 614
+    },
+    {
+      "service": "ts-route-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "route_stations",
+      "sql_type": "delete",
+      "count": 614
+    },
+    {
+      "service": "ts-order-other-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders_other",
+      "sql_type": "update",
+      "count": 505
+    },
+    {
+      "service": "ts-order-other-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders_other",
+      "sql_type": "insert",
+      "count": 501
+    },
+    {
+      "service": "ts-order-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders",
+      "sql_type": "delete",
+      "count": 492
     },
     {
       "service": "ts-consign-price-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "consign_price",
+      "sql_type": "select",
       "count": 451
+    },
+    {
+      "service": "ts-consign-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "consign_record",
+      "sql_type": "insert",
+      "count": 451
+    },
+    {
+      "service": "ts-contacts-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "contacts",
+      "sql_type": "update",
+      "count": 449
+    },
+    {
+      "service": "ts-contacts-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "contacts",
+      "sql_type": "insert",
+      "count": 448
+    },
+    {
+      "service": "ts-config-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "config",
+      "sql_type": "insert",
+      "count": 336
+    },
+    {
+      "service": "ts-config-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "config",
+      "sql_type": "update",
+      "count": 335
+    },
+    {
+      "service": "ts-order-other-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "orders_other",
+      "sql_type": "delete",
+      "count": 278
+    },
+    {
+      "service": "ts-station-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "station",
+      "sql_type": "insert",
+      "count": 235
+    },
+    {
+      "service": "ts-inside-payment-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "inside_money",
+      "sql_type": "insert",
+      "count": 175
     },
     {
       "service": "ts-payment-service",
       "db_system": "mysql",
+      "db_name": "ts",
+      "table": "payment",
+      "sql_type": "select",
+      "count": 141
+    },
+    {
+      "service": "ts-payment-service",
+      "db_system": "mysql",
+      "db_name": "ts",
+      "table": "payment",
+      "sql_type": "insert",
+      "count": 70
+    }
+  ],
+  "infra_deps": [
+    {
+      "service": "ts-route-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 1003248
+    },
+    {
+      "service": "ts-auth-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 159672
+    },
+    {
+      "service": "ts-train-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 61828
+    },
+    {
+      "service": "ts-order-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 58106
+    },
+    {
+      "service": "ts-user-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 57794
+    },
+    {
+      "service": "ts-order-other-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 40804
+    },
+    {
+      "service": "ts-station-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 38249
+    },
+    {
+      "service": "ts-config-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 32835
+    },
+    {
+      "service": "ts-travel-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 27958
+    },
+    {
+      "service": "ts-travel2-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 21977
+    },
+    {
+      "service": "ts-price-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 11657
+    },
+    {
+      "service": "ts-station-food-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 11203
+    },
+    {
+      "service": "ts-contacts-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 11157
+    },
+    {
+      "service": "ts-train-food-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 7651
+    },
+    {
+      "service": "ts-consign-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 5134
+    },
+    {
+      "service": "ts-security-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 3882
+    },
+    {
+      "service": "ts-food-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 3878
+    },
+    {
+      "service": "ts-assurance-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 3873
+    },
+    {
+      "service": "ts-inside-payment-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 3832
+    },
+    {
+      "service": "ts-delivery-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 2586
+    },
+    {
+      "service": "ts-food-service",
+      "target": "rabbitmq",
+      "kind": "mq",
+      "system": "rabbitmq",
+      "count": 1293
+    },
+    {
+      "service": "ts-consign-price-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
+      "count": 451
+    },
+    {
+      "service": "ts-payment-service",
+      "target": "mysql",
+      "kind": "db",
+      "system": "mysql",
       "count": 211
     }
   ],

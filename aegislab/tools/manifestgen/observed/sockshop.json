@@ -709,6 +709,7 @@
   ],
   "grpc_operations": [],
   "db_operations": [],
+  "infra_deps": [],
   "edges": [
     {
       "source": "front-end",

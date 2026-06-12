@@ -381,3 +381,33 @@ spec:
         span_names:
           - "grpc.oteldemo.PaymentService/Charge"
         target_service: "payment"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "checkout"
+        target_service: "kafka"

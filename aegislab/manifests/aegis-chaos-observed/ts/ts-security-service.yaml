@@ -206,3 +206,47 @@ spec:
         span_names:
           - "GET /api/v1/orderservice/order/security/{checkDate}/{accountId}"
         target_service: "ts-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-security-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-security-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "security_config"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-security-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "security_config"
