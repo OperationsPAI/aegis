@@ -1,0 +1,33 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "media-service"
+  system: "sn"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "media-service"
+        namespace: "sn"
+    - capability: "pod_failure"
+      target:
+        app: "media-service"
+        namespace: "sn"
+    - capability: "container_kill"
+      target:
+        app: "media-service"
+        container: "media-service"
+        namespace: "sn"
+    - capability: "cpu_stress"
+      target:
+        app: "media-service"
+        container: "media-service"
+        namespace: "sn"
+    - capability: "time_skew"
+      target:
+        app: "media-service"
+        container: "media-service"
+        namespace: "sn"

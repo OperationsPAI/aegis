@@ -1,0 +1,1222 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-admin-basic-info-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-admin-basic-info-service"
+        container: "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-admin-basic-info-service"
+        container: "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-admin-basic-info-service"
+        container: "ts-admin-basic-info-service"
+        namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/prices"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/prices"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/prices"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "GET /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/contacts"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/contacts"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/configs"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "POST /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/trains"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/trains"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+        server_address: "ts-admin-basic-info-service"
+        span_name: "PUT /api/v1/adminbasicservice/adminbasic/stations"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-basic-info-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/adminbasicservice/adminbasic/stations"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts"
+          - "POST /api/v1/contactservice/contacts/admin"
+          - "PUT /api/v1/contactservice/contacts"
+        target_service: "ts-contacts-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-config-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-config-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/configservice/configs"
+          - "POST /api/v1/configservice/configs"
+          - "PUT /api/v1/configservice/configs"
+        target_service: "ts-config-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/stationservice/stations"
+          - "POST /api/v1/stationservice/stations"
+          - "PUT /api/v1/stationservice/stations"
+        target_service: "ts-station-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains"
+          - "POST /api/v1/trainservice/trains"
+          - "PUT /api/v1/trainservice/trains"
+        target_service: "ts-train-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-price-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-basic-info-service"
+        domain_patterns:
+          - "ts-price-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-basic-info-service"
+        span_names:
+          - "GET /api/v1/priceservice/prices"
+        target_service: "ts-price-service"

@@ -1,0 +1,61 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "review-storage-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "review-storage-service"
+        namespace: "media"
+    - capability: "pod_failure"
+      target:
+        app: "review-storage-service"
+        namespace: "media"
+    - capability: "container_kill"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media"
+    - capability: "cpu_stress"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media"
+    - capability: "time_skew"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media"
+    - capability: "http_request_delay"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media"
+        path: "/ReviewStorageService/ReadReviews"
+        server_address: "review-storage-service"
+    - capability: "http_request_abort"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media"
+        path: "/ReviewStorageService/ReadReviews"
+        server_address: "review-storage-service"
+    - capability: "http_request_delay"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media"
+        path: "/ReviewStorageService/StoreReview"
+        server_address: "review-storage-service"
+    - capability: "http_request_abort"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media"
+        path: "/ReviewStorageService/StoreReview"
+        server_address: "review-storage-service"

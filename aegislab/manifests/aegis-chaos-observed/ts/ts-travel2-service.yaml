@@ -1,0 +1,590 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-travel2-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/left"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/left"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/routes"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trips/routes"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "GET /api/v1/travel2service/routes/{tripId}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "GET /api/v1/travel2service/routes/{tripId}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/{tripId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "GET /api/v1/travel2service/admin_trip"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "GET /api/v1/travel2service/admin_trip"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/admin_trip"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trip_detail"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+        server_address: "ts-travel2-service"
+        span_name: "POST /api/v1/travel2service/trip_detail"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-basic-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-basic-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+          - "POST /api/v1/basicservice/basic/travels"
+        target_service: "ts-basic-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-seat-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-seat-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats/left_tickets"
+        target_service: "ts-seat-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-travel2-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-travel2-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"

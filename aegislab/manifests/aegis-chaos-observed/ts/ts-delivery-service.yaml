@@ -1,0 +1,33 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-delivery-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-delivery-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-delivery-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-delivery-service"
+        container: "ts-delivery-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-delivery-service"
+        container: "ts-delivery-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-delivery-service"
+        container: "ts-delivery-service"
+        namespace: "ts"

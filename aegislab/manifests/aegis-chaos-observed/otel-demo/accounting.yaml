@@ -1,0 +1,33 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "accounting"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "accounting"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "accounting"
+        namespace: "otel-demo"
+    - capability: "container_kill"
+      target:
+        app: "accounting"
+        container: "accounting"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "accounting"
+        container: "accounting"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "accounting"
+        container: "accounting"
+        namespace: "otel-demo"

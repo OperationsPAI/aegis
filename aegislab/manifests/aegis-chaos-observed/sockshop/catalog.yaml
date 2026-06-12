@@ -1,0 +1,216 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "catalog"
+  system: "sockshop"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "catalog"
+        namespace: "sockshop"
+    - capability: "pod_failure"
+      target:
+        app: "catalog"
+        namespace: "sockshop"
+    - capability: "container_kill"
+      target:
+        app: "catalog"
+        container: "catalog"
+        namespace: "sockshop"
+    - capability: "cpu_stress"
+      target:
+        app: "catalog"
+        container: "catalog"
+        namespace: "sockshop"
+    - capability: "time_skew"
+      target:
+        app: "catalog"
+        container: "catalog"
+        namespace: "sockshop"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+        server_address: "catalog"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+        server_address: "catalog"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_response_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_response_replace_code"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_response_patch_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_response_replace_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_request_replace_method"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_request_replace_path"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/*"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+        server_address: "catalog"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+        server_address: "catalog"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_response_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_response_replace_code"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_response_patch_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_response_replace_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_request_replace_method"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_request_replace_path"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue"
+    - capability: "http_request_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+        server_address: "catalog"
+        span_name: "GET /"
+    - capability: "http_request_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+        server_address: "catalog"
+        span_name: "GET /"
+    - capability: "http_response_abort"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_response_delay"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_response_replace_code"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_response_patch_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_response_replace_body"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_request_replace_method"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676
+    - capability: "http_request_replace_path"
+      target:
+        app: "catalog"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 6676

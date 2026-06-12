@@ -1,0 +1,47 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "social-graph-service"
+  system: "sn"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "social-graph-service"
+        namespace: "sn"
+    - capability: "pod_failure"
+      target:
+        app: "social-graph-service"
+        namespace: "sn"
+    - capability: "container_kill"
+      target:
+        app: "social-graph-service"
+        container: "social-graph-service"
+        namespace: "sn"
+    - capability: "cpu_stress"
+      target:
+        app: "social-graph-service"
+        container: "social-graph-service"
+        namespace: "sn"
+    - capability: "time_skew"
+      target:
+        app: "social-graph-service"
+        container: "social-graph-service"
+        namespace: "sn"
+    - capability: "http_request_delay"
+      target:
+        app: "social-graph-service"
+        method: "POST"
+        namespace: "sn"
+        path: "/SocialGraphService/FollowWithUsername"
+        server_address: "social-graph-service"
+    - capability: "http_request_abort"
+      target:
+        app: "social-graph-service"
+        method: "POST"
+        namespace: "sn"
+        path: "/SocialGraphService/FollowWithUsername"
+        server_address: "social-graph-service"
