@@ -447,3 +447,171 @@ func TestAllocLockTTLCoversWorstCase(t *testing.T) {
 		t.Fatalf("AllocLockTTL = %v; expected >=30s to cover worst-case etcd+k8s+viper latency (#166 hardening)", AllocLockTTL)
 	}
 }
+
+// seedSystemWithMaxCount seeds a viper system entry with a max_count cap.
+func seedSystemWithMaxCount(t *testing.T, name string, count, maxCount int) func() {
+	t.Helper()
+	prev := viper.Get("injection.system")
+	viper.Set("injection.system."+name, map[string]any{
+		"count":           count,
+		"ns_pattern":      "^" + name + `\d+$`,
+		"extract_pattern": "^(" + name + `)(\d+)$`,
+		"display_name":    name,
+		"app_label_key":   "app",
+		"is_builtin":      true,
+		"status":          int(consts.CommonEnabled),
+		"max_count":       maxCount,
+	})
+	return func() { viper.Set("injection.system", prev) }
+}
+
+// TestAllocAtCapacityReturnsErrPoolAtCapacity: Count==MaxCount, all slots locked,
+// AllowBootstrap=true → ErrPoolAtCapacity, CountWriter NOT called.
+func TestAllocAtCapacityReturnsErrPoolAtCapacity(t *testing.T) {
+	const system = "alloccap"
+	cleanup := seedSystemWithMaxCount(t, system, 3, 3) // count == max_count
+	defer cleanup()
+
+	// All slots lock-active; bootstrap target (index 3) blocked by cap.
+	withAllocSeams(t,
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string, ttl time.Duration) (bool, error) {
+			return true, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string) (int64, error) {
+			return 1, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, now time.Time) (bool, error) {
+			return true, nil // every existing slot is locked
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, endTime time.Time, traceID string, now time.Time) error {
+			return nil
+		},
+	)
+
+	probe := func(ctx context.Context, ns string) (bool, error) { return true, nil }
+
+	writer := &fakeCountWriter{}
+	_, err := AllocateNamespaceForRestart(
+		context.Background(),
+		&redisinfra.Gateway{},
+		system,
+		time.Now().Add(time.Hour),
+		"trace-cap",
+		probe,
+		AllocateOptions{AllowBootstrap: true, CountWriter: writer},
+	)
+	if err == nil {
+		t.Fatal("expected ErrPoolAtCapacity, got nil")
+	}
+	if !errors.Is(err, ErrPoolAtCapacity) {
+		t.Fatalf("expected ErrPoolAtCapacity, got %v", err)
+	}
+	if errors.Is(err, ErrPoolExhausted) {
+		t.Fatalf("ErrPoolAtCapacity must be distinct from ErrPoolExhausted")
+	}
+	if len(writer.calls) != 0 {
+		t.Fatalf("CountWriter must not be called when pool is at capacity: got calls %v", writer.calls)
+	}
+}
+
+// TestAllocBelowCapBootstraps: Count < MaxCount, all existing slots locked →
+// Pass 2 still bootstraps and calls CountWriter.
+func TestAllocBelowCapBootstraps(t *testing.T) {
+	const system = "allocbelowcap"
+	cleanup := seedSystemWithMaxCount(t, system, 2, 5) // count 2 < max_count 5
+	defer cleanup()
+
+	withAllocSeams(t,
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string, ttl time.Duration) (bool, error) {
+			return true, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string) (int64, error) {
+			return 1, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, now time.Time) (bool, error) {
+			// bootstrap target (index 2) is free
+			if ns == fmt.Sprintf("%s2", system) {
+				return false, nil
+			}
+			return true, nil // existing slots locked
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, endTime time.Time, traceID string, now time.Time) error {
+			return nil
+		},
+	)
+
+	probe := func(ctx context.Context, ns string) (bool, error) { return true, nil }
+
+	writer := &fakeCountWriter{}
+	res, err := AllocateNamespaceForRestart(
+		context.Background(),
+		&redisinfra.Gateway{},
+		system,
+		time.Now().Add(time.Hour),
+		"trace-belowcap",
+		probe,
+		AllocateOptions{AllowBootstrap: true, CountWriter: writer},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := fmt.Sprintf("%s2", system)
+	if res.Namespace != want {
+		t.Fatalf("namespace = %q, want %q", res.Namespace, want)
+	}
+	if !res.Fresh {
+		t.Fatalf("Fresh = false, want true (bootstrap path)")
+	}
+	if len(writer.calls) != 1 || writer.calls[0] != want {
+		t.Fatalf("CountWriter calls = %v, want [%s]", writer.calls, want)
+	}
+}
+
+// TestAllocMaxCountZeroUnbounded: MaxCount==0 keeps unbounded behavior —
+// Pass 2 bootstraps even when Count == some large value.
+func TestAllocMaxCountZeroUnbounded(t *testing.T) {
+	const system = "allocunbounded"
+	cleanup := seedSystemWithMaxCount(t, system, 2, 0) // max_count 0 = unbounded
+	defer cleanup()
+
+	withAllocSeams(t,
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string, ttl time.Duration) (bool, error) {
+			return true, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string) (int64, error) {
+			return 1, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, now time.Time) (bool, error) {
+			if ns == fmt.Sprintf("%s2", system) {
+				return false, nil
+			}
+			return true, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, endTime time.Time, traceID string, now time.Time) error {
+			return nil
+		},
+	)
+
+	probe := func(ctx context.Context, ns string) (bool, error) { return true, nil }
+
+	writer := &fakeCountWriter{}
+	res, err := AllocateNamespaceForRestart(
+		context.Background(),
+		&redisinfra.Gateway{},
+		system,
+		time.Now().Add(time.Hour),
+		"trace-unbounded",
+		probe,
+		AllocateOptions{AllowBootstrap: true, CountWriter: writer},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error (MaxCount=0 must not cap): %v", err)
+	}
+	want := fmt.Sprintf("%s2", system)
+	if res.Namespace != want {
+		t.Fatalf("namespace = %q, want %q", res.Namespace, want)
+	}
+	if len(writer.calls) != 1 {
+		t.Fatalf("CountWriter must be called once for bootstrap; got %v", writer.calls)
+	}
+}
