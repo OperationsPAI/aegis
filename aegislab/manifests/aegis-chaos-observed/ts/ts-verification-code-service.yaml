@@ -1,0 +1,100 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-verification-code-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/verify/{verifyCode}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+        server_address: "ts-verification-code-service"
+        span_name: "GET /api/v1/verifycode/verify/{verifyCode}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-verification-code-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/{verifyCode}"
+        port: 8080

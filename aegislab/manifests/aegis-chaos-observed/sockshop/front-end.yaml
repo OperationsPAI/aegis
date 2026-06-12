@@ -1,0 +1,1205 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "front-end"
+  system: "sockshop"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "front-end"
+        namespace: "sockshop"
+    - capability: "pod_failure"
+      target:
+        app: "front-end"
+        namespace: "sockshop"
+    - capability: "container_kill"
+      target:
+        app: "front-end"
+        container: "front-end"
+        namespace: "sockshop"
+    - capability: "cpu_stress"
+      target:
+        app: "front-end"
+        container: "front-end"
+        namespace: "sockshop"
+    - capability: "time_skew"
+      target:
+        app: "front-end"
+        container: "front-end"
+        namespace: "sockshop"
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /catalogue*"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /catalogue*"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue*"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/detail.html"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/basket.html"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/category.html"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /login"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /login"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/login"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /cart"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /cart"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /catalogue/images*"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /catalogue/images*"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/catalogue/images*"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "DELETE /cart"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "DELETE /cart"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "DELETE"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /cart"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /cart"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/cart"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /orders"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /orders"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/orders"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+        server_address: "front-end"
+        span_name: "GET /"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "GET"
+        namespace: "sockshop"
+        path: "/"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /addresses"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /addresses"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/addresses"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /cards"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /cards"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/cards"
+        port: 8079
+    - capability: "http_request_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /register"
+    - capability: "http_request_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+        server_address: "front-end"
+        span_name: "POST /register"
+    - capability: "http_response_abort"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_response_delay"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_response_replace_code"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_response_patch_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_response_replace_body"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_request_replace_method"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "http_request_replace_path"
+      target:
+        app: "front-end"
+        method: "POST"
+        namespace: "sockshop"
+        path: "/register"
+        port: 8079
+    - capability: "dns_error"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "catalog"
+        namespace: "sockshop"
+    - capability: "dns_random"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "catalog"
+        namespace: "sockshop"
+    - capability: "network_delay"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "network_loss"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "network_partition"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+        target_service: "catalog"
+    - capability: "dns_error"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "carts"
+        namespace: "sockshop"
+    - capability: "dns_random"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "carts"
+        namespace: "sockshop"
+    - capability: "network_delay"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "network_loss"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "network_partition"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "DELETE"
+          - "GET"
+          - "POST"
+        target_service: "carts"
+    - capability: "dns_error"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "users"
+        namespace: "sockshop"
+    - capability: "dns_random"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "users"
+        namespace: "sockshop"
+    - capability: "network_delay"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "network_loss"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "network_partition"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "users"
+    - capability: "dns_error"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "orders"
+        namespace: "sockshop"
+    - capability: "dns_random"
+      target:
+        app: "front-end"
+        domain_patterns:
+          - "orders"
+        namespace: "sockshop"
+    - capability: "network_delay"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
+    - capability: "network_loss"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
+    - capability: "network_partition"
+      target:
+        namespace: "sockshop"
+        source_app: "front-end"
+        span_names:
+          - "POST"
+        target_service: "orders"
