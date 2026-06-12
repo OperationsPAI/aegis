@@ -276,8 +276,8 @@ func jvmMySQLLatencyParamSchema() JSONMap {
 			"delay_ms": map[string]any{"type": "integer", "minimum": 1, "maximum": 60000},
 			"mysql_connector": map[string]any{
 				"type":    "string",
-				"enum":    []any{"5", "8"},
-				"default": "8",
+				"enum":    []any{"5", "8", "9"},
+				"default": "9",
 			},
 			"duration_s": durationParam(),
 		},
@@ -293,8 +293,8 @@ func jvmMySQLExceptionParamSchema() JSONMap {
 		"properties": map[string]any{
 			"mysql_connector": map[string]any{
 				"type":    "string",
-				"enum":    []any{"5", "8"},
-				"default": "8",
+				"enum":    []any{"5", "8", "9"},
+				"default": "9",
 			},
 			"duration_s": durationParam(),
 		},
