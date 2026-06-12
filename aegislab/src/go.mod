@@ -336,7 +336,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
 
-replace github.com/chaos-mesh/chaos-mesh/api => github.com/OperationsPAI/chaos-mesh/api v0.0.0-20260124102507-517f3df45e54
+replace github.com/chaos-mesh/chaos-mesh/api => github.com/OperationsPAI/chaos-mesh/api v0.0.0-20260612115020-63c33a9e7947
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc => go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.0.0-20240518090000-14441aefdf88
 

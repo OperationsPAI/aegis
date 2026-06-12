@@ -238,7 +238,7 @@ func (jvmRenderer) attachMySQLCommon(spec map[string]any, target, params map[str
 	}
 	connector, _ := params["mysql_connector"].(string)
 	if connector == "" {
-		connector = "8"
+		connector = "9"
 	}
 	spec["mysqlConnectorVersion"] = connector
 }
