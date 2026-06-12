@@ -1,0 +1,929 @@
+{
+  "system": "otel-demo",
+  "datapack_count": 100,
+  "min_count": 2,
+  "services": [
+    "accounting",
+    "ad",
+    "cart",
+    "checkout",
+    "currency",
+    "email",
+    "flagd",
+    "fraud-detection",
+    "frontend",
+    "frontend-proxy",
+    "image-provider",
+    "load-generator",
+    "payment",
+    "product-catalog",
+    "quote",
+    "recommendation",
+    "shipping"
+  ],
+  "http_endpoints": [
+    {
+      "service": "frontend-proxy",
+      "method": "GET",
+      "path": "",
+      "port": "",
+      "count": 5430,
+      "status": [
+        "200",
+        "308",
+        "500",
+        "504"
+      ],
+      "span_names": [
+        "ingress"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/products/[productId]/index",
+      "port": "",
+      "count": 2641,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET /api/products/[productId]/index"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/products/{productId}",
+      "port": "8080",
+      "count": 2624,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "cart",
+      "method": "POST",
+      "path": "/oteldemo.CartService/GetCart",
+      "port": "8080",
+      "count": 1586,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /oteldemo.CartService/GetCart"
+      ]
+    },
+    {
+      "service": "frontend-proxy",
+      "method": "POST",
+      "path": "",
+      "port": "",
+      "count": 1508,
+      "status": [
+        "200",
+        "500",
+        "504"
+      ],
+      "span_names": [
+        "ingress"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/cart",
+      "port": "",
+      "count": 1065,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "POST",
+        "POST /api/cart"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/data",
+      "port": "8080",
+      "count": 1050,
+      "status": [
+        "200",
+        "308"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "flagd",
+      "method": "POST",
+      "path": "/ofrep/v1/evaluate/flags/loadGeneratorFloodHomepage",
+      "port": "8016",
+      "count": 918,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "flagd.ofrep"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/cart",
+      "port": "8080",
+      "count": 854,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "cart",
+      "method": "POST",
+      "path": "/oteldemo.CartService/AddItem",
+      "port": "8080",
+      "count": 830,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /oteldemo.CartService/AddItem"
+      ]
+    },
+    {
+      "service": "image-provider",
+      "method": "GET",
+      "path": "/status",
+      "port": "8081",
+      "count": 724,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "image-provider"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/cart",
+      "port": "",
+      "count": 539,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET",
+        "GET /api/cart"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/data",
+      "port": "",
+      "count": 525,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /api/data"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/recommendations",
+      "port": "",
+      "count": 484,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET",
+        "GET /api/recommendations"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/recommendations",
+      "port": "8080",
+      "count": 480,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/cart",
+      "port": "8080",
+      "count": 420,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/checkout",
+      "port": "",
+      "count": 388,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "POST",
+        "POST /api/checkout"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/[productId]/index",
+      "port": "",
+      "count": 372,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET /api/product-reviews/[productId]/index"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/checkout",
+      "port": "8080",
+      "count": 354,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/",
+      "port": "8080",
+      "count": 296,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/",
+      "port": "",
+      "count": 296,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "shipping",
+      "method": "POST",
+      "path": "/get-quote",
+      "port": "8080",
+      "count": 281,
+      "status": [
+        "200",
+        "400"
+      ],
+      "span_names": [
+        "/get-quote"
+      ]
+    },
+    {
+      "service": "cart",
+      "method": "POST",
+      "path": "/oteldemo.CartService/EmptyCart",
+      "port": "8080",
+      "count": 222,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /oteldemo.CartService/EmptyCart"
+      ]
+    },
+    {
+      "service": "email",
+      "method": "POST",
+      "path": "/send_order_confirmation",
+      "port": "",
+      "count": 221,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /send_order_confirmation"
+      ]
+    },
+    {
+      "service": "quote",
+      "method": "POST",
+      "path": "/getquote",
+      "port": "8080",
+      "count": 221,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /getquote"
+      ]
+    },
+    {
+      "service": "shipping",
+      "method": "POST",
+      "path": "/ship-order",
+      "port": "8080",
+      "count": 219,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/ship-order"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/[productId]/index",
+      "port": "",
+      "count": 162,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST /api/product-ask-ai-assistant/[productId]/index"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/*",
+      "port": "8080",
+      "count": 102,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/9SIQT8TOJO",
+      "port": "8080",
+      "count": 49,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/0PUK6V6EV0",
+      "port": "8080",
+      "count": 43,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/L9ECAV7KIM",
+      "port": "8080",
+      "count": 40,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/1YMWWN1N4O",
+      "port": "8080",
+      "count": 39,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/2ZYFJ3GM2N",
+      "port": "8080",
+      "count": 32,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/LS4PSXUNUM",
+      "port": "8080",
+      "count": 29,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/LS4PSXUNUM",
+      "port": "8080",
+      "count": 29,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/*",
+      "port": "8080",
+      "count": 26,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/HQTGWGPNH4",
+      "port": "8080",
+      "count": 22,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/HQTGWGPNH4",
+      "port": "8080",
+      "count": 21,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/0PUK6V6EV0",
+      "port": "8080",
+      "count": 18,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/OLJCESPC7Z",
+      "port": "8080",
+      "count": 18,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/product-reviews/OLJCESPC7Z",
+      "port": "8080",
+      "count": 17,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/1YMWWN1N4O",
+      "port": "8080",
+      "count": 17,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "/api/products/{productId}",
+      "port": "",
+      "count": 17,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/L9ECAV7KIM",
+      "port": "8080",
+      "count": 14,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/9SIQT8TOJO",
+      "port": "8080",
+      "count": 11,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "/api/product-ask-ai-assistant/2ZYFJ3GM2N",
+      "port": "8080",
+      "count": 7,
+      "status": [
+        "500"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    }
+  ],
+  "grpc_operations": [
+    {
+      "service": "product-catalog",
+      "rpc_service": "oteldemo.ProductCatalogService",
+      "rpc_method": "GetProduct",
+      "count": 2612,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "flagd",
+      "rpc_service": "flagd.evaluation.v1.Service",
+      "rpc_method": "ResolveBoolean",
+      "count": 574,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "currency",
+      "rpc_service": "oteldemo.CurrencyService",
+      "rpc_method": "Convert",
+      "count": 562,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "ad",
+      "rpc_service": "oteldemo.AdService",
+      "rpc_method": "GetAds",
+      "count": 517,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "recommendation",
+      "rpc_service": "oteldemo.RecommendationService",
+      "rpc_method": "ListRecommendations",
+      "count": 490,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "checkout",
+      "rpc_service": "oteldemo.CheckoutService",
+      "rpc_method": "PlaceOrder",
+      "count": 355,
+      "status": [
+        "0",
+        "13"
+      ]
+    },
+    {
+      "service": "flagd",
+      "rpc_service": "flagd.evaluation.v1.Service",
+      "rpc_method": "ResolveInt",
+      "count": 304,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "product-catalog",
+      "rpc_service": "oteldemo.ProductCatalogService",
+      "rpc_method": "ListProducts",
+      "count": 286,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "payment",
+      "rpc_service": "oteldemo.PaymentService",
+      "rpc_method": "Charge",
+      "count": 221,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "flagd",
+      "rpc_service": "flagd.evaluation.v1.Service",
+      "rpc_method": "ResolveFloat",
+      "count": 40,
+      "status": [
+        "0"
+      ]
+    }
+  ],
+  "db_operations": [
+    {
+      "service": "cart",
+      "db_system": "redis",
+      "count": 4386
+    },
+    {
+      "service": "product-catalog",
+      "db_system": "postgresql",
+      "count": 2898
+    },
+    {
+      "service": "accounting",
+      "db_system": "postgresql",
+      "count": 263
+    }
+  ],
+  "edges": [
+    {
+      "source": "load-generator",
+      "target": "frontend-proxy",
+      "count": 6819,
+      "span_names": [
+        "ingress"
+      ]
+    },
+    {
+      "source": "frontend-proxy",
+      "target": "frontend",
+      "count": 6813,
+      "span_names": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "product-catalog",
+      "count": 2267,
+      "span_names": [
+        "oteldemo.ProductCatalogService/GetProduct"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "cart",
+      "count": 2017,
+      "span_names": [
+        "POST /oteldemo.CartService/AddItem",
+        "POST /oteldemo.CartService/GetCart"
+      ]
+    },
+    {
+      "source": "load-generator",
+      "target": "flagd",
+      "count": 918,
+      "span_names": [
+        "flagd.ofrep"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "cart",
+      "count": 576,
+      "span_names": [
+        "POST /oteldemo.CartService/EmptyCart",
+        "POST /oteldemo.CartService/GetCart"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "currency",
+      "count": 562,
+      "span_names": [
+        "Currency/Convert"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "ad",
+      "count": 508,
+      "span_names": [
+        "oteldemo.AdService/GetAds"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "shipping",
+      "count": 500,
+      "span_names": [
+        "/get-quote",
+        "/ship-order"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "recommendation",
+      "count": 479,
+      "span_names": [
+        "/oteldemo.RecommendationService/ListRecommendations"
+      ]
+    },
+    {
+      "source": "cart",
+      "target": "flagd",
+      "count": 449,
+      "span_names": [
+        "flagd.evaluation.v1.Service/ResolveBoolean"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "checkout",
+      "count": 350,
+      "span_names": [
+        "oteldemo.CheckoutService/PlaceOrder"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "product-catalog",
+      "count": 345,
+      "span_names": [
+        "oteldemo.ProductCatalogService/GetProduct"
+      ]
+    },
+    {
+      "source": "recommendation",
+      "target": "product-catalog",
+      "count": 286,
+      "span_names": [
+        "oteldemo.ProductCatalogService/ListProducts"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "email",
+      "count": 221,
+      "span_names": [
+        "POST /send_order_confirmation"
+      ]
+    },
+    {
+      "source": "checkout",
+      "target": "payment",
+      "count": 221,
+      "span_names": [
+        "grpc.oteldemo.PaymentService/Charge"
+      ]
+    },
+    {
+      "source": "shipping",
+      "target": "quote",
+      "count": 221,
+      "span_names": [
+        "POST /getquote"
+      ]
+    },
+    {
+      "source": "fraud-detection",
+      "target": "flagd",
+      "count": 41,
+      "span_names": [
+        "flagd.evaluation.v1.Service/ResolveInt"
+      ]
+    },
+    {
+      "source": "payment",
+      "target": "flagd",
+      "count": 40,
+      "span_names": [
+        "flagd.evaluation.v1.Service/ResolveFloat"
+      ]
+    },
+    {
+      "source": "ad",
+      "target": "flagd",
+      "count": 18,
+      "span_names": [
+        "flagd.evaluation.v1.Service/ResolveBoolean"
+      ]
+    },
+    {
+      "source": "recommendation",
+      "target": "flagd",
+      "count": 5,
+      "span_names": [
+        "flagd.evaluation.v1.Service/ResolveBoolean"
+      ]
+    }
+  ]
+}

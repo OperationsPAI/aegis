@@ -1,0 +1,220 @@
+{
+  "system": "hs",
+  "datapack_count": 11,
+  "min_count": 2,
+  "services": [
+    "attractions",
+    "frontend",
+    "geo",
+    "profile",
+    "rate",
+    "recommendation",
+    "reservation",
+    "search",
+    "user"
+  ],
+  "http_endpoints": [
+    {
+      "service": "frontend",
+      "method": "GET",
+      "path": "",
+      "port": "5000",
+      "count": 2410,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "HTTP /cinema",
+        "HTTP /hotels",
+        "HTTP /museums",
+        "HTTP /recommendations",
+        "HTTP /restaurants"
+      ]
+    },
+    {
+      "service": "frontend",
+      "method": "POST",
+      "path": "",
+      "port": "5000",
+      "count": 25,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "HTTP /reservation",
+        "HTTP /user"
+      ]
+    }
+  ],
+  "grpc_operations": [
+    {
+      "service": "profile",
+      "rpc_service": "profile.Profile",
+      "rpc_method": "GetProfiles",
+      "count": 1786,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "geo",
+      "rpc_service": "geo.Geo",
+      "rpc_method": "Nearby",
+      "count": 1237,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "rate",
+      "rpc_service": "rate.Rate",
+      "rpc_method": "GetRates",
+      "count": 1237,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "reservation",
+      "rpc_service": "reservation.Reservation",
+      "rpc_method": "CheckAvailability",
+      "count": 1237,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "search",
+      "rpc_service": "search.Search",
+      "rpc_method": "Nearby",
+      "count": 1233,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "recommendation",
+      "rpc_service": "recommendation.Recommendation",
+      "rpc_method": "GetRecommendations",
+      "count": 718,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "user",
+      "rpc_service": "user.User",
+      "rpc_method": "CheckUser",
+      "count": 479,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "attractions",
+      "rpc_service": "attractions.Attractions",
+      "rpc_method": "NearbyCinema",
+      "count": 163,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "attractions",
+      "rpc_service": "attractions.Attractions",
+      "rpc_method": "NearbyMus",
+      "count": 150,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "attractions",
+      "rpc_service": "attractions.Attractions",
+      "rpc_method": "NearbyRest",
+      "count": 142,
+      "status": [
+        "0"
+      ]
+    },
+    {
+      "service": "reservation",
+      "rpc_service": "reservation.Reservation",
+      "rpc_method": "MakeReservation",
+      "count": 10,
+      "status": [
+        "0"
+      ]
+    }
+  ],
+  "db_operations": [],
+  "edges": [
+    {
+      "source": "frontend",
+      "target": "profile",
+      "count": 1786,
+      "span_names": [
+        "profile.Profile/GetProfiles"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "reservation",
+      "count": 1247,
+      "span_names": [
+        "reservation.Reservation/CheckAvailability",
+        "reservation.Reservation/MakeReservation"
+      ]
+    },
+    {
+      "source": "search",
+      "target": "geo",
+      "count": 1233,
+      "span_names": [
+        "geo.Geo/Nearby"
+      ]
+    },
+    {
+      "source": "search",
+      "target": "rate",
+      "count": 1233,
+      "span_names": [
+        "rate.Rate/GetRates"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "search",
+      "count": 1233,
+      "span_names": [
+        "search.Search/Nearby"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "recommendation",
+      "count": 718,
+      "span_names": [
+        "recommendation.Recommendation/GetRecommendations"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "user",
+      "count": 479,
+      "span_names": [
+        "user.User/CheckUser"
+      ]
+    },
+    {
+      "source": "frontend",
+      "target": "attractions",
+      "count": 455,
+      "span_names": [
+        "attractions.Attractions/NearbyCinema",
+        "attractions.Attractions/NearbyMus",
+        "attractions.Attractions/NearbyRest"
+      ]
+    }
+  ]
+}
