@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "ts-food-service"
   system: "ts"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-food-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-food-service"
+        namespace: "ts"
     - capability: "container_kill"
       target:
         app: "ts-food-service"
@@ -18,208 +26,446 @@ spec:
         app: "ts-food-service"
         container: "ts-food-service"
         namespace: "ts"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-food-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/trainfoodservice/trainfoods/*"
-        port: 8080
-        server_address: "ts-train-food-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-food-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travelservice/routes/*"
-        port: 8080
-        server_address: "ts-travel-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-food-service"
-        method: "POST"
-        namespace: "ts"
-        path: "/api/v1/stationfoodservice/stationfoodstores"
-        port: 8080
-        server_address: "ts-station-food-service"
-        span_name: "POST"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-food-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/trainfoodservice/trainfoods/*"
-        port: 8080
-        server_address: "ts-train-food-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-food-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travelservice/routes/*"
-        port: 8080
-        server_address: "ts-travel-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-food-service"
-        method: "POST"
-        namespace: "ts"
-        path: "/api/v1/stationfoodservice/stationfoodstores"
-        port: 8080
-        server_address: "ts-station-food-service"
-        span_name: "POST"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.FoodApplication"
-        method: "main"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.config.Queues"
-        method: "emailQueue"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "createFoodBatches"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "createFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "deleteFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "findAllFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "findFoodOrderByOrderId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "getAllFood"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "home"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "test_send_delivery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.controller.FoodController"
-        method: "updateFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.entity.AllTripFood"
-        method: "AllTripFood"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.entity.Delivery"
-        method: "Delivery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.entity.FoodOrder"
-        method: "FoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.mq.RabbitSend"
-        method: "send"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "createFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "createFoodOrdersInBatch"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "deleteFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "findAllFoodOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "findByOrderId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "getAllFood"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "getServiceUrl"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-food-service"
-        class: "foodsearch.service.FoodServiceImpl"
-        method: "updateFoodOrder"
-        namespace: "ts"
-    - capability: "pod_failure"
-      target:
-        app: "ts-food-service"
-        namespace: "ts"
-    - capability: "pod_kill"
-      target:
-        app: "ts-food-service"
-        namespace: "ts"
     - capability: "time_skew"
       target:
         app: "ts-food-service"
         container: "ts-food-service"
         namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "GET /api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-food-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/foodservice/foods/{date}/{startStation}/{endStation}/{tripId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST /api/v1/foodservice/orders"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+        server_address: "ts-food-service"
+        span_name: "POST /api/v1/foodservice/orders"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-food-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-train-food-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-train-food-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/trainfoodservice/trainfoods/{tripId}"
+        target_service: "ts-train-food-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-delivery-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-delivery-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "food_delivery process"
+        target_service: "ts-delivery-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "GET /api/v1/travelservice/routes/{tripId}"
+        target_service: "ts-travel-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-station-food-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-food-service"
+        domain_patterns:
+          - "ts-station-food-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        span_names:
+          - "POST /api/v1/stationfoodservice/stationfoodstores"
+        target_service: "ts-station-food-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "mysql"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-food-service"
+        target_service: "rabbitmq"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "food_order"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "food_order"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "food_order"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "food_order"

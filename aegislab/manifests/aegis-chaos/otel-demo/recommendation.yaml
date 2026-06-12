@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "recommendation"
   system: "otel-demo"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "recommendation"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "recommendation"
+        namespace: "otel-demo"
     - capability: "container_kill"
       target:
         app: "recommendation"
@@ -18,16 +26,130 @@ spec:
         app: "recommendation"
         container: "recommendation"
         namespace: "otel-demo"
-    - capability: "pod_failure"
-      target:
-        app: "recommendation"
-        namespace: "otel-demo"
-    - capability: "pod_kill"
-      target:
-        app: "recommendation"
-        namespace: "otel-demo"
     - capability: "time_skew"
       target:
         app: "recommendation"
         container: "recommendation"
         namespace: "otel-demo"
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        server_address: "recommendation"
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        server_address: "recommendation"
+    - capability: "dns_error"
+      target:
+        app: "recommendation"
+        domain_patterns:
+          - "product-catalog"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "recommendation"
+        domain_patterns:
+          - "product-catalog"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "oteldemo.ProductCatalogService/ListProducts"
+        target_service: "product-catalog"
+    - capability: "dns_error"
+      target:
+        app: "recommendation"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "recommendation"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "recommendation"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveBoolean"
+        target_service: "flagd"

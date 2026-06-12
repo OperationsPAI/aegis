@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "frontend"
   system: "otel-demo"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "frontend"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "frontend"
+        namespace: "otel-demo"
     - capability: "container_kill"
       target:
         app: "frontend"
@@ -18,16 +26,2539 @@ spec:
         app: "frontend"
         container: "frontend"
         namespace: "otel-demo"
-    - capability: "pod_failure"
-      target:
-        app: "frontend"
-        namespace: "otel-demo"
-    - capability: "pod_kill"
-      target:
-        app: "frontend"
-        namespace: "otel-demo"
     - capability: "time_skew"
       target:
         app: "frontend"
         container: "frontend"
         namespace: "otel-demo"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+        server_address: "frontend"
+        span_name: "GET /api/products/[productId]/index"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+        server_address: "frontend"
+        span_name: "GET /api/products/[productId]/index"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/[productId]/index"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        server_address: "frontend"
+        span_name: "GET /api/data"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+        server_address: "frontend"
+        span_name: "GET /api/data"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/data"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/recommendations"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/cart"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+        server_address: "frontend"
+        span_name: "GET /api/product-reviews/[productId]/index"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+        server_address: "frontend"
+        span_name: "GET /api/product-reviews/[productId]/index"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/[productId]/index"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/checkout"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        server_address: "frontend"
+        span_name: "GET /"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+        server_address: "frontend"
+        span_name: "GET /"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+        server_address: "frontend"
+        span_name: "POST /api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+        server_address: "frontend"
+        span_name: "POST /api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/[productId]/index"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/LS4PSXUNUM"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/HQTGWGPNH4"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/0PUK6V6EV0"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/product-reviews/OLJCESPC7Z"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/1YMWWN1N4O"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+        server_address: "frontend"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "GET"
+        namespace: "otel-demo"
+        path: "/api/products/{productId}"
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/L9ECAV7KIM"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/9SIQT8TOJO"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+        server_address: "frontend"
+        span_name: "POST"
+    - capability: "http_response_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/api/product-ask-ai-assistant/2ZYFJ3GM2N"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "product-catalog"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "product-catalog"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.ProductCatalogService/GetProduct"
+        target_service: "product-catalog"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "cart"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "cart"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "POST /oteldemo.CartService/AddItem"
+          - "POST /oteldemo.CartService/GetCart"
+        target_service: "cart"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "ad"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "ad"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.AdService/GetAds"
+        target_service: "ad"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "recommendation"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "recommendation"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "/oteldemo.RecommendationService/ListRecommendations"
+        target_service: "recommendation"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "checkout"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "checkout"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend"
+        span_names:
+          - "oteldemo.CheckoutService/PlaceOrder"
+        target_service: "checkout"

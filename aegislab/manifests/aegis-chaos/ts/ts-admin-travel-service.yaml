@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "ts-admin-travel-service"
   system: "ts"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-admin-travel-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-admin-travel-service"
+        namespace: "ts"
     - capability: "container_kill"
       target:
         app: "ts-admin-travel-service"
@@ -18,196 +26,412 @@ spec:
         app: "ts-admin-travel-service"
         container: "ts-admin-travel-service"
         namespace: "ts"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/routeservice/routes/*"
-        port: 8080
-        server_address: "ts-route-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/trainservice/trains/byName/*"
-        port: 8080
-        server_address: "ts-train-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travel2service/admin_trip"
-        port: 8080
-        server_address: "ts-travel2-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travelservice/admin_trip"
-        port: 8080
-        server_address: "ts-travel-service"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "ts-admin-travel-service"
-        method: "POST"
-        namespace: "ts"
-        path: "/api/v1/stationservice/stations/idlist"
-        port: 8080
-        server_address: "ts-station-service"
-        span_name: "POST"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/routeservice/routes/*"
-        port: 8080
-        server_address: "ts-route-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/trainservice/trains/byName/*"
-        port: 8080
-        server_address: "ts-train-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travel2service/admin_trip"
-        port: 8080
-        server_address: "ts-travel2-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-admin-travel-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/travelservice/admin_trip"
-        port: 8080
-        server_address: "ts-travel-service"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "ts-admin-travel-service"
-        method: "POST"
-        namespace: "ts"
-        path: "/api/v1/stationservice/stations/idlist"
-        port: 8080
-        server_address: "ts-station-service"
-        span_name: "POST"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.AdminTravelApplication"
-        method: "main"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.controller.AdminTravelController"
-        method: "addTravel"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.controller.AdminTravelController"
-        method: "deleteTravel"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.controller.AdminTravelController"
-        method: "getAllTravels"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.controller.AdminTravelController"
-        method: "home"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.controller.AdminTravelController"
-        method: "updateTravel"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "addTravel"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "checkStationsExists"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "checkTravelInfo"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "deleteTravel"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "getAllTravels"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "getRouteByRouteId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "getServiceUrl"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "queryTrainTypeByName"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-admin-travel-service"
-        class: "admintravel.service.AdminTravelServiceImpl"
-        method: "updateTravel"
-        namespace: "ts"
-    - capability: "pod_failure"
-      target:
-        app: "ts-admin-travel-service"
-        namespace: "ts"
-    - capability: "pod_kill"
-      target:
-        app: "ts-admin-travel-service"
-        namespace: "ts"
     - capability: "time_skew"
       target:
         app: "ts-admin-travel-service"
         container: "ts-admin-travel-service"
         namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "GET /api/v1/admintravelservice/admintravel"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "GET /api/v1/admintravelservice/admintravel"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-travel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "POST /api/v1/admintravelservice/admintravel"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+        server_address: "ts-admin-travel-service"
+        span_name: "POST /api/v1/admintravelservice/admintravel"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-admin-travel-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/admintravelservice/admintravel"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travel2service/admin_trip"
+        target_service: "ts-travel2-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/travelservice/admin_trip"
+        target_service: "ts-travel-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "POST /api/v1/stationservice/stations/idlist"
+        target_service: "ts-station-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/trainservice/trains/byName/{name}"
+        target_service: "ts-train-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-admin-travel-service"
+        span_names:
+          - "GET /api/v1/routeservice/routes/{routeId}"
+        target_service: "ts-route-service"

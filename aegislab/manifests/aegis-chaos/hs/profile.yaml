@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "profile"
   system: "hs"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "profile"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "profile"
+        namespace: "hs"
     - capability: "container_kill"
       target:
         app: "profile"
@@ -18,16 +26,22 @@ spec:
         app: "profile"
         container: "profile"
         namespace: "hs"
-    - capability: "pod_failure"
-      target:
-        app: "profile"
-        namespace: "hs"
-    - capability: "pod_kill"
-      target:
-        app: "profile"
-        namespace: "hs"
     - capability: "time_skew"
       target:
         app: "profile"
         container: "profile"
         namespace: "hs"
+    - capability: "http_request_delay"
+      target:
+        app: "profile"
+        method: "POST"
+        namespace: "hs"
+        path: "/profile.Profile/GetProfiles"
+        server_address: "profile"
+    - capability: "http_request_abort"
+      target:
+        app: "profile"
+        method: "POST"
+        namespace: "hs"
+        path: "/profile.Profile/GetProfiles"
+        server_address: "profile"

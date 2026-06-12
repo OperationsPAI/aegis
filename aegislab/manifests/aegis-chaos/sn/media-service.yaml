@@ -3,31 +3,31 @@ kind: PointManifest
 metadata:
   chart_version: "observed-genesis"
   instance: "observed"
-  service: "user-timeline-service"
+  service: "media-service"
   system: "sn"
 spec:
   replace_scope: "service"
   points:
     - capability: "pod_kill"
       target:
-        app: "user-timeline-service"
+        app: "media-service"
         namespace: "sn"
     - capability: "pod_failure"
       target:
-        app: "user-timeline-service"
+        app: "media-service"
         namespace: "sn"
     - capability: "container_kill"
       target:
-        app: "user-timeline-service"
-        container: "user-timeline-service"
+        app: "media-service"
+        container: "media-service"
         namespace: "sn"
     - capability: "cpu_stress"
       target:
-        app: "user-timeline-service"
-        container: "user-timeline-service"
+        app: "media-service"
+        container: "media-service"
         namespace: "sn"
     - capability: "time_skew"
       target:
-        app: "user-timeline-service"
-        container: "user-timeline-service"
+        app: "media-service"
+        container: "media-service"
         namespace: "sn"

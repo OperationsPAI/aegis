@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "teastore-registry"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "teastore-registry"
+        namespace: "teastore"
+    - capability: "pod_failure"
+      target:
+        app: "teastore-registry"
+        namespace: "teastore"
     - capability: "container_kill"
       target:
         app: "teastore-registry"
@@ -18,172 +26,142 @@ spec:
         app: "teastore-registry"
         container: "registry"
         namespace: "teastore"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-registry"
-        method: "GET"
-        namespace: "teastore"
-        path: "/rest/services/*"
-        port: 8080
-        server_address: "teastore-webui"
-        span_name: "GET /rest/services/{name}"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-registry"
-        method: "PUT"
-        namespace: "teastore"
-        path: "/rest/services/*/*"
-        port: 8080
-        server_address: "teastore-webui"
-        span_name: "PUT /rest/services/{name}/{location}"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-registry"
-        method: "GET"
-        namespace: "teastore"
-        path: "/rest/services/*"
-        port: 8080
-        server_address: "teastore-webui"
-        span_name: "GET /rest/services/{name}"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-registry"
-        method: "PUT"
-        namespace: "teastore"
-        path: "/rest/services/*/*"
-        port: 8080
-        server_address: "teastore-webui"
-        span_name: "PUT /rest/services/{name}/{location}"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.HeartbeatInfo"
-        method: "HeartbeatInfo"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.HeartbeatInfo"
-        method: "isAlive"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.HeartbeatInfo"
-        method: "newHeartbeat"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "Registry"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "getLocations"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "getRegistryInstance"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "heartBeatCleanup"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "register"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "unregister"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.Registry"
-        method: "updateHeartbeatMap"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryREST"
-        method: "getInstances"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryREST"
-        method: "register"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryREST"
-        method: "unregister"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryStartup"
-        method: "RegistryStartup"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryStartup"
-        method: "contextDestroyed"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryStartup"
-        method: "contextInitialized"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.rest.RegistryStartup"
-        method: "run"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.servlet.IndexServlet"
-        method: "IndexServlet"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.servlet.IndexServlet"
-        method: "doGet"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-registry"
-        class: "tools.descartes.teastore.registry.servlet.IndexServlet"
-        method: "doPost"
-        namespace: "teastore"
-    - capability: "pod_failure"
-      target:
-        app: "teastore-registry"
-        namespace: "teastore"
-    - capability: "pod_kill"
-      target:
-        app: "teastore-registry"
-        namespace: "teastore"
     - capability: "time_skew"
       target:
         app: "teastore-registry"
         container: "registry"
         namespace: "teastore"
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET /rest/services/{name}"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+        server_address: "teastore-registry"
+        span_name: "GET /rest/services/{name}"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-registry"
+        method: "GET"
+        namespace: "teastore"
+        path: "/rest/services/{name}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT /rest/services/{name}/{location}"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+        server_address: "teastore-registry"
+        span_name: "PUT /rest/services/{name}/{location}"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-registry"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/rest/services/{name}/{location}"
+        port: 8080
