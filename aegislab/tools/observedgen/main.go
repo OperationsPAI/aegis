@@ -68,6 +68,13 @@ func isGRPCRoute(p string) bool {
 	return len(segs) == 2 && strings.Contains(segs[0], ".") && segs[1] != "" && !strings.Contains(segs[1], ".")
 }
 
+func validPort(s string) int {
+	if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+		return p
+	}
+	return 0
+}
+
 func isStatic(p string) bool {
 	if i := strings.LastIndex(p, "."); i >= 0 {
 		return staticExt[strings.ToLower(p[i:])]
@@ -235,22 +242,43 @@ func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, 
 		add(c, map[string]any{"namespace": ns, "app": svc, "container": ctr})
 	}
 
-	// http endpoints (server-attributed)
+	// http endpoints (server-attributed). The chaos service requires a port on
+	// http targets, but some Server spans don't record server.port; backfill from
+	// the service's dominant observed port (a service listens on one port), and
+	// skip endpoints for a service that never recorded any port at all.
+	dominantPort := 0
+	{
+		cnt := map[int]int{}
+		for _, e := range https {
+			if p := validPort(e.Port); p != 0 {
+				cnt[p]++
+			}
+		}
+		best := 0
+		for p, c := range cnt {
+			if c > best || (c == best && (dominantPort == 0 || p < dominantPort)) {
+				best, dominantPort = c, p
+			}
+		}
+	}
 	seen := map[string]bool{}
 	for _, e := range https {
 		if e.Path == "" || isStatic(e.Path) { // a pathless http span is not targetable
 			continue
 		}
-		k := e.Method + " " + e.Path + " " + e.Port
+		port := dominantPort
+		if p := validPort(e.Port); p != 0 {
+			port = p
+		}
+		if port == 0 { // no port observed anywhere for this service — not HTTPChaos-able
+			continue
+		}
+		k := fmt.Sprintf("%s %s %d", e.Method, e.Path, port)
 		if seen[k] {
 			continue
 		}
 		seen[k] = true
-		base := map[string]any{"namespace": ns, "app": svc, "method": e.Method, "path": e.Path}
-		if p, err := strconv.Atoi(e.Port); err == nil && p > 0 && p < 65536 {
-			base["port"] = p
-		}
-		base["server_address"] = svc
+		base := map[string]any{"namespace": ns, "app": svc, "method": e.Method, "path": e.Path, "port": port, "server_address": svc}
 		if len(e.SpanNames) > 0 {
 			base["span_name"] = e.SpanNames[0]
 		}
@@ -258,32 +286,19 @@ func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, 
 			add(c, cloneTarget(base))
 		}
 		if !isGRPCRoute(e.Path) { // HTTPChaos response/mutation is HTTP/1.x only
-			a1b := map[string]any{"namespace": ns, "app": svc, "method": e.Method, "path": e.Path}
-			if v, ok := base["port"]; ok {
-				a1b["port"] = v
-			}
+			a1b := map[string]any{"namespace": ns, "app": svc, "method": e.Method, "path": e.Path, "port": port}
 			for _, c := range append(append([]string{}, httpRespCaps...), httpReqMutationCaps...) {
 				add(c, cloneTarget(a1b))
 			}
 		}
 	}
 
-	// gRPC server ops: base http_request_* only (pseudo-route path)
-	gseen := map[string]bool{}
-	for _, g := range grpcs {
-		if g.RPCService == "" || g.RPCMethod == "" {
-			continue
-		}
-		path := "/" + g.RPCService + "/" + g.RPCMethod
-		if gseen[path] {
-			continue
-		}
-		gseen[path] = true
-		base := map[string]any{"namespace": ns, "app": svc, "method": "POST", "path": path, "server_address": svc}
-		for _, c := range httpReqCaps {
-			add(c, cloneTarget(base))
-		}
-	}
+	// gRPC server ops get NO http_request_* points: the chaos service requires a
+	// port on http targets (HTTPChaosSpec.Port is non-optional) and gRPC ops carry
+	// no stable listen port, so such points fail server schema validation; and
+	// HTTPChaos on a gRPC/Thrift listener is inert anyway. These services are
+	// covered by pod + network points instead.
+	_ = grpcs
 
 	// dns + network, keyed by this service as the caller (source)
 	dnsDone, netDone := map[string]bool{}, map[string]bool{}

@@ -31,20 +31,6 @@ spec:
         app: "ad"
         container: "ad"
         namespace: "otel-demo"
-    - capability: "http_request_delay"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.AdService/GetAds"
-        server_address: "ad"
-    - capability: "http_request_abort"
-      target:
-        app: "ad"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.AdService/GetAds"
-        server_address: "ad"
     - capability: "dns_error"
       target:
         app: "ad"

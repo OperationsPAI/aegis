@@ -31,20 +31,6 @@ spec:
         app: "recommendation"
         container: "recommendation"
         namespace: "otel-demo"
-    - capability: "http_request_delay"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.RecommendationService/ListRecommendations"
-        server_address: "recommendation"
-    - capability: "http_request_abort"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.RecommendationService/ListRecommendations"
-        server_address: "recommendation"
     - capability: "dns_error"
       target:
         app: "recommendation"

@@ -31,17 +31,3 @@ spec:
         app: "geo"
         container: "geo"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "geo"
-        method: "POST"
-        namespace: "hs"
-        path: "/geo.Geo/Nearby"
-        server_address: "geo"
-    - capability: "http_request_abort"
-      target:
-        app: "geo"
-        method: "POST"
-        namespace: "hs"
-        path: "/geo.Geo/Nearby"
-        server_address: "geo"

@@ -31,17 +31,3 @@ spec:
         app: "user-mention-service"
         container: "user-mention-service"
         namespace: "sn"
-    - capability: "http_request_delay"
-      target:
-        app: "user-mention-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/UserMentionService/ComposeUserMentions"
-        server_address: "user-mention-service"
-    - capability: "http_request_abort"
-      target:
-        app: "user-mention-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/UserMentionService/ComposeUserMentions"
-        server_address: "user-mention-service"

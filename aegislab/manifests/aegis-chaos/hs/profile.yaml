@@ -31,17 +31,3 @@ spec:
         app: "profile"
         container: "profile"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "profile"
-        method: "POST"
-        namespace: "hs"
-        path: "/profile.Profile/GetProfiles"
-        server_address: "profile"
-    - capability: "http_request_abort"
-      target:
-        app: "profile"
-        method: "POST"
-        namespace: "hs"
-        path: "/profile.Profile/GetProfiles"
-        server_address: "profile"

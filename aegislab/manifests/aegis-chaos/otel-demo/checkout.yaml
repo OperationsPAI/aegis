@@ -31,20 +31,6 @@ spec:
         app: "checkout"
         container: "checkout"
         namespace: "otel-demo"
-    - capability: "http_request_delay"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CheckoutService/PlaceOrder"
-        server_address: "checkout"
-    - capability: "http_request_abort"
-      target:
-        app: "checkout"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CheckoutService/PlaceOrder"
-        server_address: "checkout"
     - capability: "dns_error"
       target:
         app: "checkout"

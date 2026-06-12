@@ -31,17 +31,3 @@ spec:
         app: "user-review-service"
         container: "user-review-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "user-review-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UserReviewService/UploadUserReview"
-        server_address: "user-review-service"
-    - capability: "http_request_abort"
-      target:
-        app: "user-review-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UserReviewService/UploadUserReview"
-        server_address: "user-review-service"

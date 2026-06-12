@@ -31,17 +31,3 @@ spec:
         app: "rate"
         container: "rate"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "rate"
-        method: "POST"
-        namespace: "hs"
-        path: "/rate.Rate/GetRates"
-        server_address: "rate"
-    - capability: "http_request_abort"
-      target:
-        app: "rate"
-        method: "POST"
-        namespace: "hs"
-        path: "/rate.Rate/GetRates"
-        server_address: "rate"

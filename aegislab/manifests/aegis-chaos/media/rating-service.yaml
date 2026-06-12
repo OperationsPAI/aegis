@@ -31,20 +31,6 @@ spec:
         app: "rating-service"
         container: "rating-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "rating-service"
-        method: "POST"
-        namespace: "media"
-        path: "/RatingService/UploadRating"
-        server_address: "rating-service"
-    - capability: "http_request_abort"
-      target:
-        app: "rating-service"
-        method: "POST"
-        namespace: "media"
-        path: "/RatingService/UploadRating"
-        server_address: "rating-service"
     - capability: "dns_error"
       target:
         app: "rating-service"

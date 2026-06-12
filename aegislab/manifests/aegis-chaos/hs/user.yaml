@@ -31,17 +31,3 @@ spec:
         app: "user"
         container: "user"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "user"
-        method: "POST"
-        namespace: "hs"
-        path: "/user.User/CheckUser"
-        server_address: "user"
-    - capability: "http_request_abort"
-      target:
-        app: "user"
-        method: "POST"
-        namespace: "hs"
-        path: "/user.User/CheckUser"
-        server_address: "user"

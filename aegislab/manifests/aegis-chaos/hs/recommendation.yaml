@@ -31,17 +31,3 @@ spec:
         app: "recommendation"
         container: "recommendation"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "hs"
-        path: "/recommendation.Recommendation/GetRecommendations"
-        server_address: "recommendation"
-    - capability: "http_request_abort"
-      target:
-        app: "recommendation"
-        method: "POST"
-        namespace: "hs"
-        path: "/recommendation.Recommendation/GetRecommendations"
-        server_address: "recommendation"
