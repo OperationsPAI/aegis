@@ -13,11 +13,12 @@ images:
 controllerManager:
   image:
     repository: chaos-mesh
-    # mysql-fix spans BOTH the controller (JVMChaos mysql CR rendering) and the
-    # chaos-daemon (target-JVM javaagent SQL parse/throw), so the controller
-    # carries 20260612-mysql-fix-v2 too — overriding the global tag below.
+    # mysql-fix spans BOTH the controller (JVMChaos mysql CR rendering — the BIND
+    # now uses extractSQL($1,$2) and accepts Connector/J 9) and the chaos-daemon
+    # (target-JVM javaagent SQL parse/throw), so the controller carries
+    # 20260612-mysql-fix-v3 too — overriding the global tag below.
     # Dashboard has no relevant change → stays on the global tag.
-    tag: 20260612-mysql-fix-v2
+    tag: 20260612-mysql-fix-v3
   podChaos:
     podFailure:
       pauseImage: pair-diag-cn-guangzhou.cr.volces.com/pair/google-containers/pause:latest
@@ -41,10 +42,14 @@ chaosDaemon:
     # the JVMChaos mysql-action parseSQL null-SQL NPE, but the fault still was
     # NOT thrown on matching queries (verified 2026-06-12 on ts route/food:
     # AllInjected=True, 0 `aegis-injected MySQL fault` even on hot tables);
-    # v2 (mysql-fix-v2) follows up on the fault-throwing path itself.
+    # v2 follows up on the fault-throwing path; v3 adds Connector/J 9 +
+    # PreparedStatement SQL extraction; v4 overlays byteman-helper v0.12.2
+    # (OperationsPAI/byteman-helper@92c89f0) so matchDBTable matches unqualified
+    # ORM tables (`from user`, not `from db.user`) — jvm_mysql now actually
+    # fires (verified 2026-06-12 on ts-user-service: user SELECT ~1000ms).
     # dashboard has no relevant code change so it stays on the global tag above;
-    # controller-manager carries the same mysql-fix-v2 (set in its own image block).
-    tag: 20260612-mysql-fix-v2
+    # controller-manager carries the same mysql-fix lineage (set in its own block).
+    tag: 20260612-mysql-fix-v4
 
 dashboard:
   image:
