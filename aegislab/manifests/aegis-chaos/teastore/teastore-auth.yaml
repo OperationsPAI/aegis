@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "teastore-auth"
   system: "teastore"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "teastore-auth"
+        namespace: "teastore"
+    - capability: "pod_failure"
+      target:
+        app: "teastore-auth"
+        namespace: "teastore"
     - capability: "container_kill"
       target:
         app: "teastore-auth"
@@ -18,244 +26,403 @@ spec:
         app: "teastore-auth"
         container: "auth"
         namespace: "teastore"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "GET"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
-        port: 8080
-        server_address: "teastore-registry"
-        span_name: "GET"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/cart/add/*"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/login"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
-    - capability: "http_request_abort"
-      target:
-        app: "teastore-auth"
-        method: "PUT"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth"
-        port: 8080
-        server_address: "teastore-registry"
-        span_name: "PUT"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "GET"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
-        port: 8080
-        server_address: "teastore-registry"
-        span_name: "GET"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/cart/add/*"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/login"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "POST"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
-        port: 8080
-        server_address: "teastore-auth"
-        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
-    - capability: "http_request_delay"
-      target:
-        app: "teastore-auth"
-        method: "PUT"
-        namespace: "teastore"
-        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth"
-        port: 8080
-        server_address: "teastore-registry"
-        span_name: "PUT"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthCartRest"
-        method: "addProductToCart"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthCartRest"
-        method: "removeProductFromCart"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthCartRest"
-        method: "updateQuantity"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
-        method: "isLoggedIn"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
-        method: "login"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
-        method: "logout"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.AuthUserActionsRest"
-        method: "placeOrder"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.rest.ReadyRest"
-        method: "isReady"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.BCryptProvider"
-        method: "BCryptProvider"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.BCryptProvider"
-        method: "checkPassword"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ConstantKeyProvider"
-        method: "getKey"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.RandomSessionIdGenerator"
-        method: "getSessionId"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
-        method: "blobToString"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
-        method: "getKeyProvider"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
-        method: "getSha512"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
-        method: "secure"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.security.ShaSecurityProvider"
-        method: "validate"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.startup.AuthStartup"
-        method: "AuthStartup"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.startup.AuthStartup"
-        method: "contextDestroyed"
-        namespace: "teastore"
-    - capability: "jvm_method_latency"
-      target:
-        app: "teastore-auth"
-        class: "tools.descartes.teastore.auth.startup.AuthStartup"
-        method: "contextInitialized"
-        namespace: "teastore"
-    - capability: "pod_failure"
-      target:
-        app: "teastore-auth"
-        namespace: "teastore"
-    - capability: "pod_kill"
-      target:
-        app: "teastore-auth"
-        namespace: "teastore"
     - capability: "time_skew"
       target:
         app: "teastore-auth"
         container: "auth"
         namespace: "teastore"
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/isloggedin"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/cart/add/{pid}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/logout"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/logout"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "POST /tools.descartes.teastore.auth/rest/useractions/login"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-auth"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.auth/rest/useractions/login"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "GET"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+        server_address: "teastore-auth"
+        span_name: "GET"
+    - capability: "http_response_abort"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "teastore-auth"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "teastore-auth"
+        domain_patterns:
+          - "teastore-registry"
+        namespace: "teastore"
+    - capability: "dns_random"
+      target:
+        app: "teastore-auth"
+        domain_patterns:
+          - "teastore-registry"
+        namespace: "teastore"
+    - capability: "network_delay"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"
+    - capability: "network_loss"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"
+    - capability: "network_duplicate"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"
+    - capability: "network_corrupt"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"
+    - capability: "network_partition"
+      target:
+        namespace: "teastore"
+        source_app: "teastore-auth"
+        span_names:
+          - "GET /rest/services/{name}"
+          - "PUT /rest/services/{name}/{location}"
+        target_service: "teastore-registry"

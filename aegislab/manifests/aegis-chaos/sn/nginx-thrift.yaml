@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "nginx-thrift"
   system: "sn"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "nginx-thrift"
+        namespace: "sn"
+    - capability: "pod_failure"
+      target:
+        app: "nginx-thrift"
+        namespace: "sn"
     - capability: "container_kill"
       target:
         app: "nginx-thrift"
@@ -18,124 +26,518 @@ spec:
         app: "nginx-thrift"
         container: "nginx-thrift"
         namespace: "sn"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "GET"
-        namespace: "sn"
-        path: "/wrk2-api/home-timeline/read"
-        port: 9090
-        server_address: "home-timeline-service"
-        span_name: "/wrk2-api/home-timeline/read"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "GET"
-        namespace: "sn"
-        path: "/wrk2-api/user-timeline/read"
-        port: 9090
-        server_address: "user-timeline-service"
-        span_name: "/wrk2-api/user-timeline/read"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/post/compose"
-        port: 9090
-        server_address: "compose-post-service"
-        span_name: "/wrk2-api/post/compose"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/follow"
-        port: 9090
-        server_address: "social-graph-service"
-        span_name: "/wrk2-api/user/follow"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/register"
-        port: 9090
-        server_address: "user-service"
-        span_name: "/wrk2-api/user/register"
-    - capability: "http_request_abort"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/unfollow"
-        port: 9090
-        server_address: "social-graph-service"
-        span_name: "/wrk2-api/user/unfollow"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "GET"
-        namespace: "sn"
-        path: "/wrk2-api/home-timeline/read"
-        port: 9090
-        server_address: "home-timeline-service"
-        span_name: "/wrk2-api/home-timeline/read"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "GET"
-        namespace: "sn"
-        path: "/wrk2-api/user-timeline/read"
-        port: 9090
-        server_address: "user-timeline-service"
-        span_name: "/wrk2-api/user-timeline/read"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/post/compose"
-        port: 9090
-        server_address: "compose-post-service"
-        span_name: "/wrk2-api/post/compose"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/follow"
-        port: 9090
-        server_address: "social-graph-service"
-        span_name: "/wrk2-api/user/follow"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/register"
-        port: 9090
-        server_address: "user-service"
-        span_name: "/wrk2-api/user/register"
-    - capability: "http_request_delay"
-      target:
-        app: "nginx-thrift"
-        method: "POST"
-        namespace: "sn"
-        path: "/wrk2-api/user/unfollow"
-        port: 9090
-        server_address: "social-graph-service"
-        span_name: "/wrk2-api/user/unfollow"
-    - capability: "pod_failure"
-      target:
-        app: "nginx-thrift"
-        namespace: "sn"
-    - capability: "pod_kill"
-      target:
-        app: "nginx-thrift"
-        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "nginx-thrift"
         container: "nginx-thrift"
         namespace: "sn"
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/follow"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/follow"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/follow"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/home-timeline/read"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/home-timeline/read"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/home-timeline/read"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user-timeline/read"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user-timeline/read"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "GET"
+        namespace: "sn"
+        path: "/wrk2-api/user-timeline/read"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/post/compose"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/post/compose"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/post/compose"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/unfollow"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/unfollow"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/unfollow"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/register"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+        server_address: "nginx-thrift"
+        span_name: "/wrk2-api/user/register"
+    - capability: "http_response_abort"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "nginx-thrift"
+        method: "POST"
+        namespace: "sn"
+        path: "/wrk2-api/user/register"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "social-graph-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "social-graph-service"
+        namespace: "sn"
+    - capability: "network_delay"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "network_loss"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "network_partition"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "follow_with_username_server"
+        target_service: "social-graph-service"
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-service"
+        namespace: "sn"
+    - capability: "network_delay"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "sn"
+        source_app: "nginx-thrift"
+        span_names:
+          - "register_user_withid_server"
+        target_service: "user-service"

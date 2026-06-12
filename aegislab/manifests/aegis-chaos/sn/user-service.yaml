@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "user-service"
   system: "sn"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "user-service"
+        namespace: "sn"
+    - capability: "pod_failure"
+      target:
+        app: "user-service"
+        namespace: "sn"
     - capability: "container_kill"
       target:
         app: "user-service"
@@ -18,16 +26,22 @@ spec:
         app: "user-service"
         container: "user-service"
         namespace: "sn"
-    - capability: "pod_failure"
-      target:
-        app: "user-service"
-        namespace: "sn"
-    - capability: "pod_kill"
-      target:
-        app: "user-service"
-        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "user-service"
         container: "user-service"
         namespace: "sn"
+    - capability: "http_request_delay"
+      target:
+        app: "user-service"
+        method: "POST"
+        namespace: "sn"
+        path: "/UserService/RegisterUserWithId"
+        server_address: "user-service"
+    - capability: "http_request_abort"
+      target:
+        app: "user-service"
+        method: "POST"
+        namespace: "sn"
+        path: "/UserService/RegisterUserWithId"
+        server_address: "user-service"

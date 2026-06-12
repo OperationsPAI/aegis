@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "ts-config-service"
   system: "ts"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-config-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-config-service"
+        namespace: "ts"
     - capability: "container_kill"
       target:
         app: "ts-config-service"
@@ -18,94 +26,348 @@ spec:
         app: "ts-config-service"
         container: "ts-config-service"
         namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.ConfigApplication"
-        method: "main"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "createConfig"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "deleteConfig"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "home"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "queryAll"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "retrieve"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.controller.ConfigController"
-        method: "updateConfig"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.init.InitData"
-        method: "run"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.service.ConfigServiceImpl"
-        method: "create"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.service.ConfigServiceImpl"
-        method: "delete"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.service.ConfigServiceImpl"
-        method: "query"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.service.ConfigServiceImpl"
-        method: "queryAll"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-config-service"
-        class: "config.service.ConfigServiceImpl"
-        method: "update"
-        namespace: "ts"
-    - capability: "pod_failure"
-      target:
-        app: "ts-config-service"
-        namespace: "ts"
-    - capability: "pod_kill"
-      target:
-        app: "ts-config-service"
-        namespace: "ts"
     - capability: "time_skew"
       target:
         app: "ts-config-service"
         container: "ts-config-service"
         namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "GET /api/v1/configservice/configs/{configName}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "GET /api/v1/configservice/configs/{configName}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/{configName}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "GET /api/v1/configservice/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "GET /api/v1/configservice/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-config-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "POST /api/v1/configservice/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "POST /api/v1/configservice/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-config-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "PUT /api/v1/configservice/configs"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+        server_address: "ts-config-service"
+        span_name: "PUT /api/v1/configservice/configs"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-config-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs"
+        port: 8080
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-config-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "config"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "config"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "config"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "config"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "update"
+        table: "config"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-config-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "update"
+        table: "config"

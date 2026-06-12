@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "ts-delivery-service"
   system: "ts"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-delivery-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-delivery-service"
+        namespace: "ts"
     - capability: "container_kill"
       target:
         app: "ts-delivery-service"
@@ -18,40 +26,66 @@ spec:
         app: "ts-delivery-service"
         container: "ts-delivery-service"
         namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-delivery-service"
-        class: "delivery.DeliveryApplication"
-        method: "main"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-delivery-service"
-        class: "delivery.config.Queues"
-        method: "emailQueue"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-delivery-service"
-        class: "delivery.entity.Delivery"
-        method: "Delivery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-delivery-service"
-        class: "delivery.mq.RabbitReceive"
-        method: "process"
-        namespace: "ts"
-    - capability: "pod_failure"
-      target:
-        app: "ts-delivery-service"
-        namespace: "ts"
-    - capability: "pod_kill"
-      target:
-        app: "ts-delivery-service"
-        namespace: "ts"
     - capability: "time_skew"
       target:
         app: "ts-delivery-service"
         container: "ts-delivery-service"
         namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-delivery-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-delivery-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "delivery"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-delivery-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "delivery"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-delivery-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "delivery"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-delivery-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "delivery"

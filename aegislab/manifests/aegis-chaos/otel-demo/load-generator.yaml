@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "load-generator"
   system: "otel-demo"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "load-generator"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "load-generator"
+        namespace: "otel-demo"
     - capability: "container_kill"
       target:
         app: "load-generator"
@@ -18,16 +26,116 @@ spec:
         app: "load-generator"
         container: "load-generator"
         namespace: "otel-demo"
-    - capability: "pod_failure"
-      target:
-        app: "load-generator"
-        namespace: "otel-demo"
-    - capability: "pod_kill"
-      target:
-        app: "load-generator"
-        namespace: "otel-demo"
     - capability: "time_skew"
       target:
         app: "load-generator"
         container: "load-generator"
         namespace: "otel-demo"
+    - capability: "dns_error"
+      target:
+        app: "load-generator"
+        domain_patterns:
+          - "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "load-generator"
+        domain_patterns:
+          - "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "ingress"
+        target_service: "frontend-proxy"
+    - capability: "dns_error"
+      target:
+        app: "load-generator"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "load-generator"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "load-generator"
+        span_names:
+          - "flagd.ofrep"
+        target_service: "flagd"

@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "ts-order-service"
   system: "ts"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-order-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-order-service"
+        namespace: "ts"
     - capability: "container_kill"
       target:
         app: "ts-order-service"
@@ -18,376 +26,831 @@ spec:
         app: "ts-order-service"
         container: "ts-order-service"
         namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.OrderApplication"
-        method: "main"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "addcreateNewOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "calculateSoldTicket"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "createNewOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "deleteOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "findAllOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "getOrderById"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "getOrderPrice"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "getTicketListByDateAndTripId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "home"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "modifyOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "payOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "queryOrders"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "queryOrdersForRefresh"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "saveOrderInfo"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "securityInfoCheck"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.controller.OrderController"
-        method: "updateOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.Order"
-        method: "Order"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.Order"
-        method: "equals"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.Order"
-        method: "hashCode"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderAlterInfo"
-        method: "OrderAlterInfo"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "OrderInfo"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "disableBoughtDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "disableStateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "disableTravelDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "enableBoughtDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "enableStateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "enableTravelDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "getLoginId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "getState"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "isEnableBoughtDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "isEnableStateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "isEnableTravelDateQuery"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.entity.OrderInfo"
-        method: "setLoginId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.init.InitData"
-        method: "run"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "addNewOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "alterOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "cancelOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "checkDuplicateOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "checkSecurityAboutOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "countOrdersAfterTime"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "countValidOrders"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "create"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "deleteOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "findOrderById"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "findOrdersWithFilters"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "getAllOrders"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "getOrderById"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "getOrderPrice"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "getServiceUrl"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "getSoldTickets"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "initOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "modifyOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "payOrder"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "queryAlreadySoldOrders"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "queryForStationId"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "queryOrders"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "queryOrdersForRefresh"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "saveChanges"
-        namespace: "ts"
-    - capability: "jvm_method_latency"
-      target:
-        app: "ts-order-service"
-        class: "order.service.OrderServiceImpl"
-        method: "updateOrder"
-        namespace: "ts"
-    - capability: "pod_failure"
-      target:
-        app: "ts-order-service"
-        namespace: "ts"
-    - capability: "pod_kill"
-      target:
-        app: "ts-order-service"
-        namespace: "ts"
     - capability: "time_skew"
       target:
         app: "ts-order-service"
         container: "ts-order-service"
         namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/refresh"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/refresh"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/refresh"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/tickets"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/tickets"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/tickets"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/security/{checkDate}/{accountId}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/security/{checkDate}/{accountId}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/{checkDate}/{accountId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/{orderId}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/{orderId}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/status/{orderId}/{status}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "DELETE /api/v1/orderservice/order/{orderId}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "DELETE /api/v1/orderservice/order/{orderId}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/{orderId}"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/admin"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "POST /api/v1/orderservice/order/admin"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "PUT /api/v1/orderservice/order/admin"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "PUT /api/v1/orderservice/order/admin"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/admin"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "PUT /api/v1/orderservice/order"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+        server_address: "ts-order-service"
+        span_name: "PUT /api/v1/orderservice/order"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-order-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "orders"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "orders"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "update"
+        table: "orders"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "update"
+        table: "orders"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "orders"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "orders"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "delete"
+        table: "orders"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-order-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "delete"
+        table: "orders"

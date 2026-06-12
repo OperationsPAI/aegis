@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "recommendation"
   system: "hs"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "recommendation"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "recommendation"
+        namespace: "hs"
     - capability: "container_kill"
       target:
         app: "recommendation"
@@ -18,16 +26,22 @@ spec:
         app: "recommendation"
         container: "recommendation"
         namespace: "hs"
-    - capability: "pod_failure"
-      target:
-        app: "recommendation"
-        namespace: "hs"
-    - capability: "pod_kill"
-      target:
-        app: "recommendation"
-        namespace: "hs"
     - capability: "time_skew"
       target:
         app: "recommendation"
         container: "recommendation"
         namespace: "hs"
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "hs"
+        path: "/recommendation.Recommendation/GetRecommendations"
+        server_address: "recommendation"
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "hs"
+        path: "/recommendation.Recommendation/GetRecommendations"
+        server_address: "recommendation"

@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "email"
   system: "otel-demo"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "email"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "email"
+        namespace: "otel-demo"
     - capability: "container_kill"
       target:
         app: "email"
@@ -18,16 +26,66 @@ spec:
         app: "email"
         container: "email"
         namespace: "otel-demo"
-    - capability: "pod_failure"
-      target:
-        app: "email"
-        namespace: "otel-demo"
-    - capability: "pod_kill"
-      target:
-        app: "email"
-        namespace: "otel-demo"
     - capability: "time_skew"
       target:
         app: "email"
         container: "email"
         namespace: "otel-demo"
+    - capability: "http_request_delay"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+        server_address: "email"
+        span_name: "POST /send_order_confirmation"
+    - capability: "http_request_abort"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+        server_address: "email"
+        span_name: "POST /send_order_confirmation"
+    - capability: "http_response_abort"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_response_delay"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_response_replace_code"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_response_patch_body"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_response_replace_body"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_request_replace_method"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"
+    - capability: "http_request_replace_path"
+      target:
+        app: "email"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/send_order_confirmation"

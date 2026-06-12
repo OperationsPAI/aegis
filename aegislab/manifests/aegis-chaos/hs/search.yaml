@@ -1,13 +1,21 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: "seed-genesis"
-  instance: "seed"
+  chart_version: "observed-genesis"
+  instance: "observed"
   service: "search"
   system: "hs"
 spec:
   replace_scope: "service"
   points:
+    - capability: "pod_kill"
+      target:
+        app: "search"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "search"
+        namespace: "hs"
     - capability: "container_kill"
       target:
         app: "search"
@@ -18,16 +26,130 @@ spec:
         app: "search"
         container: "search"
         namespace: "hs"
-    - capability: "pod_failure"
-      target:
-        app: "search"
-        namespace: "hs"
-    - capability: "pod_kill"
-      target:
-        app: "search"
-        namespace: "hs"
     - capability: "time_skew"
       target:
         app: "search"
         container: "search"
         namespace: "hs"
+    - capability: "http_request_delay"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hs"
+        path: "/search.Search/Nearby"
+        server_address: "search"
+    - capability: "http_request_abort"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hs"
+        path: "/search.Search/Nearby"
+        server_address: "search"
+    - capability: "dns_error"
+      target:
+        app: "search"
+        domain_patterns:
+          - "geo"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "search"
+        domain_patterns:
+          - "geo"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "geo.Geo/Nearby"
+        target_service: "geo"
+    - capability: "dns_error"
+      target:
+        app: "search"
+        domain_patterns:
+          - "rate"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "search"
+        domain_patterns:
+          - "rate"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        span_names:
+          - "rate.Rate/GetRates"
+        target_service: "rate"
