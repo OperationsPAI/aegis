@@ -1,0 +1,781 @@
+{
+  "system": "sockshop",
+  "datapack_count": 100,
+  "min_count": 2,
+  "services": [
+    "carts",
+    "catalog",
+    "front-end",
+    "orders",
+    "payment",
+    "shipping",
+    "users"
+  ],
+  "http_endpoints": [
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/catalogue*",
+      "port": "8079",
+      "count": 20663,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /catalogue*"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/*",
+      "port": "",
+      "count": 13304,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue",
+      "port": "",
+      "count": 11902,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/detail.html",
+      "port": "8079",
+      "count": 10205,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/basket.html",
+      "port": "8079",
+      "count": 5851,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/category.html",
+      "port": "8079",
+      "count": 5059,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/login",
+      "port": "8079",
+      "count": 4667,
+      "status": [
+        "200",
+        "401"
+      ],
+      "span_names": [
+        "GET /login"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/login",
+      "port": "",
+      "count": 4662,
+      "status": [
+        "200",
+        "401"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "GET",
+      "path": "/carts/*/merge",
+      "port": "",
+      "count": 4653,
+      "status": [
+        "202",
+        "404"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "POST",
+      "path": "/cart",
+      "port": "8079",
+      "count": 4550,
+      "status": [
+        "201"
+      ],
+      "span_names": [
+        "POST /cart"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "POST",
+      "path": "/carts/*/items",
+      "port": "",
+      "count": 4533,
+      "status": [
+        "201"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/catalogue/images*",
+      "port": "8079",
+      "count": 4482,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /catalogue/images*"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "GET",
+      "path": "/carts/*/items",
+      "port": "",
+      "count": 3774,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/*",
+      "port": "",
+      "count": 2883,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "DELETE",
+      "path": "/cart",
+      "port": "8079",
+      "count": 2343,
+      "status": [
+        "202",
+        "404"
+      ],
+      "span_names": [
+        "DELETE /cart"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/cart",
+      "port": "8079",
+      "count": 2342,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /cart"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "DELETE",
+      "path": "/carts/*",
+      "port": "",
+      "count": 2334,
+      "status": [
+        "202",
+        "404"
+      ],
+      "span_names": [
+        "DELETE"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/cards/*",
+      "port": "",
+      "count": 1448,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "POST",
+      "path": "/orders",
+      "port": "8079",
+      "count": 1447,
+      "status": [
+        "201"
+      ],
+      "span_names": [
+        "POST /orders"
+      ]
+    },
+    {
+      "service": "orders",
+      "method": "POST",
+      "path": "/orders",
+      "port": "",
+      "count": 1447,
+      "status": [
+        "201"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "GET",
+      "path": "/",
+      "port": "8079",
+      "count": 1446,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "POST",
+      "path": "/addresses",
+      "port": "8079",
+      "count": 1446,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /addresses"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "POST",
+      "path": "/cards",
+      "port": "8079",
+      "count": 1446,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /cards"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "POST",
+      "path": "/addresses",
+      "port": "",
+      "count": 1444,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "POST",
+      "path": "/cards",
+      "port": "",
+      "count": 1444,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/addresses/*",
+      "port": "",
+      "count": 1443,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/*/addresses",
+      "port": "",
+      "count": 1441,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/*/cards",
+      "port": "",
+      "count": 1441,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 702,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "orders",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 702,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 701,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "shipping",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 701,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 700,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "payment",
+      "method": "GET",
+      "path": "/",
+      "port": "6676",
+      "count": 700,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/youtube_1.jpeg",
+      "port": "",
+      "count": 558,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/bit_of_leg_1.jpeg",
+      "port": "",
+      "count": 503,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/cross_1.jpeg",
+      "port": "",
+      "count": 495,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/WAT.jpg",
+      "port": "",
+      "count": 494,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/colourful_socks.jpg",
+      "port": "",
+      "count": 493,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/classic.jpg",
+      "port": "",
+      "count": 493,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/puma_1.jpeg",
+      "port": "",
+      "count": 485,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/catsocks.jpg",
+      "port": "",
+      "count": 485,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "catalog",
+      "method": "GET",
+      "path": "/catalogue/images/holy_1.jpeg",
+      "port": "",
+      "count": 481,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "front-end",
+      "method": "POST",
+      "path": "/register",
+      "port": "8079",
+      "count": 174,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /register"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "POST",
+      "path": "/register",
+      "port": "",
+      "count": 173,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "GET",
+      "path": "/carts/user0/merge",
+      "port": "",
+      "count": 14,
+      "status": [
+        "404"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "GET",
+      "path": "/carts/user0/items",
+      "port": "",
+      "count": 10,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/user0",
+      "port": "",
+      "count": 10,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "POST",
+      "path": "/carts/user0/items",
+      "port": "",
+      "count": 9,
+      "status": [
+        "201"
+      ],
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "service": "carts",
+      "method": "DELETE",
+      "path": "/carts/user0",
+      "port": "",
+      "count": 5,
+      "status": [
+        "202"
+      ],
+      "span_names": [
+        "DELETE"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/user0/addresses",
+      "port": "",
+      "count": 5,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/customers/user0/cards",
+      "port": "",
+      "count": 5,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "users",
+      "method": "GET",
+      "path": "/addresses/user0:1",
+      "port": "",
+      "count": 5,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    }
+  ],
+  "grpc_operations": [],
+  "db_operations": [],
+  "edges": [
+    {
+      "source": "front-end",
+      "target": "catalog",
+      "count": 29688,
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "source": "front-end",
+      "target": "carts",
+      "count": 13882,
+      "span_names": [
+        "DELETE",
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "source": "front-end",
+      "target": "users",
+      "count": 12057,
+      "span_names": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "source": "orders",
+      "target": "users",
+      "count": 4344,
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "source": "front-end",
+      "target": "orders",
+      "count": 1447,
+      "span_names": [
+        "POST"
+      ]
+    },
+    {
+      "source": "orders",
+      "target": "carts",
+      "count": 1446,
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "source": "orders",
+      "target": "payment",
+      "count": 1393,
+      "span_names": [
+        "PaymentGrpc/authorize"
+      ]
+    },
+    {
+      "source": "orders",
+      "target": "shipping",
+      "count": 1391,
+      "span_names": [
+        "ShippingGrpc/ship"
+      ]
+    }
+  ]
+}

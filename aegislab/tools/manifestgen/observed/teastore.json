@@ -1,0 +1,397 @@
+{
+  "system": "teastore",
+  "datapack_count": 100,
+  "min_count": 2,
+  "services": [
+    "teastore-auth",
+    "teastore-image",
+    "teastore-persistence",
+    "teastore-recommender",
+    "teastore-registry",
+    "teastore-webui"
+  ],
+  "http_endpoints": [
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}",
+      "port": "8080",
+      "count": 628993,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/categories",
+      "port": "8080",
+      "count": 139914,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/categories"
+      ]
+    },
+    {
+      "service": "teastore-auth",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.auth/rest/useractions/isloggedin",
+      "port": "8080",
+      "count": 139892,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.auth/rest/useractions/isloggedin"
+      ]
+    },
+    {
+      "service": "teastore-image",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.image/rest/image/getWebImages",
+      "port": "8080",
+      "count": 139430,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.image/rest/image/getWebImages"
+      ]
+    },
+    {
+      "service": "teastore-image",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.image/rest/image/getProductImages",
+      "port": "8080",
+      "count": 104494,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.image/rest/image/getProductImages"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.webui/index",
+      "port": "",
+      "count": 52635,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.webui/index"
+      ]
+    },
+    {
+      "service": "teastore-recommender",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.recommender/rest/recommend",
+      "port": "8080",
+      "count": 50023,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.recommender/rest/recommend"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.webui/loginAction",
+      "port": "",
+      "count": 35111,
+      "status": [
+        "302"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.webui/loginAction"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.webui/cartAction",
+      "port": "",
+      "count": 35090,
+      "status": [
+        "302",
+        "500"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.webui/cartAction"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.webui/cart",
+      "port": "",
+      "count": 35065,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.webui/cart"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.webui/category",
+      "port": "",
+      "count": 35056,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.webui/category"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}",
+      "port": "8080",
+      "count": 34988,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}",
+      "port": "8080",
+      "count": 34983,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}",
+      "port": "8080",
+      "count": 34982,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}"
+      ]
+    },
+    {
+      "service": "teastore-auth",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.auth/rest/cart/add/{pid}",
+      "port": "8080",
+      "count": 34918,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.auth/rest/cart/add/{pid}"
+      ]
+    },
+    {
+      "service": "teastore-registry",
+      "method": "GET",
+      "path": "/rest/services/{name}",
+      "port": "8080",
+      "count": 19207,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /rest/services/{name}"
+      ]
+    },
+    {
+      "service": "teastore-auth",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.auth/rest/useractions/logout",
+      "port": "8080",
+      "count": 17544,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.auth/rest/useractions/logout"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.persistence/rest/users/name/{name}",
+      "port": "8080",
+      "count": 17540,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.persistence/rest/users/name/{name}"
+      ]
+    },
+    {
+      "service": "teastore-auth",
+      "method": "POST",
+      "path": "/tools.descartes.teastore.auth/rest/useractions/login",
+      "port": "8080",
+      "count": 17518,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "POST /tools.descartes.teastore.auth/rest/useractions/login"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.webui/product",
+      "port": "",
+      "count": 17491,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "GET /tools.descartes.teastore.webui/product"
+      ]
+    },
+    {
+      "service": "teastore-registry",
+      "method": "PUT",
+      "path": "/rest/services/{name}/{location}",
+      "port": "8080",
+      "count": 11993,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "PUT /rest/services/{name}/{location}"
+      ]
+    },
+    {
+      "service": "teastore-persistence",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/",
+      "port": "8080",
+      "count": 160,
+      "status": [
+        "404"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "teastore-image",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/",
+      "port": "8080",
+      "count": 24,
+      "status": [
+        "404"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    },
+    {
+      "service": "teastore-webui",
+      "method": "GET",
+      "path": "/*",
+      "port": "8080",
+      "count": 14,
+      "status": [
+        "404"
+      ],
+      "span_names": [
+        "GET /*"
+      ]
+    },
+    {
+      "service": "teastore-auth",
+      "method": "GET",
+      "path": "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/",
+      "port": "8080",
+      "count": 13,
+      "status": [
+        "404"
+      ],
+      "span_names": [
+        "GET"
+      ]
+    }
+  ],
+  "grpc_operations": [],
+  "db_operations": [
+    {
+      "service": "teastore-persistence",
+      "db_system": "mysql",
+      "count": 228161
+    }
+  ],
+  "edges": [
+    {
+      "source": "teastore-webui",
+      "target": "teastore-registry",
+      "count": 12055,
+      "span_names": [
+        "GET /rest/services/{name}",
+        "PUT /rest/services/{name}/{location}"
+      ]
+    },
+    {
+      "source": "teastore-recommender",
+      "target": "teastore-registry",
+      "count": 7069,
+      "span_names": [
+        "GET /rest/services/{name}",
+        "PUT /rest/services/{name}/{location}"
+      ]
+    },
+    {
+      "source": "teastore-auth",
+      "target": "teastore-registry",
+      "count": 4808,
+      "span_names": [
+        "GET /rest/services/{name}",
+        "PUT /rest/services/{name}/{location}"
+      ]
+    },
+    {
+      "source": "teastore-image",
+      "target": "teastore-registry",
+      "count": 4806,
+      "span_names": [
+        "GET /rest/services/{name}",
+        "PUT /rest/services/{name}/{location}"
+      ]
+    },
+    {
+      "source": "teastore-persistence",
+      "target": "teastore-registry",
+      "count": 2404,
+      "span_names": [
+        "PUT /rest/services/{name}/{location}"
+      ]
+    }
+  ]
+}

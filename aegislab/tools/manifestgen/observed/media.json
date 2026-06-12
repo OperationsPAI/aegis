@@ -1,0 +1,328 @@
+{
+  "system": "media",
+  "datapack_count": 100,
+  "min_count": 2,
+  "services": [
+    "cast-info-service",
+    "compose-review-service",
+    "movie-id-service",
+    "movie-info-service",
+    "movie-review-service",
+    "nginx-web-server",
+    "plot-service",
+    "rating-service",
+    "review-storage-service",
+    "text-service",
+    "unique-id-service",
+    "user-review-service",
+    "user-service"
+  ],
+  "http_endpoints": [
+    {
+      "service": "nginx-web-server",
+      "method": "GET",
+      "path": "/wrk2-api/movie/read-page",
+      "port": "8080",
+      "count": 30194,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/movie/read-page"
+      ]
+    },
+    {
+      "service": "nginx-web-server",
+      "method": "GET",
+      "path": "/wrk2-api/movie/read-info",
+      "port": "8080",
+      "count": 18208,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/movie/read-info"
+      ]
+    },
+    {
+      "service": "nginx-web-server",
+      "method": "POST",
+      "path": "/wrk2-api/review/compose",
+      "port": "8080",
+      "count": 12033,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/review/compose"
+      ]
+    }
+  ],
+  "grpc_operations": [
+    {
+      "service": "movie-info-service",
+      "rpc_service": "MovieInfoService",
+      "rpc_method": "ReadMovieInfo",
+      "count": 48402,
+      "status": []
+    },
+    {
+      "service": "review-storage-service",
+      "rpc_service": "ReviewStorageService",
+      "rpc_method": "ReadReviews",
+      "count": 30192,
+      "status": []
+    },
+    {
+      "service": "cast-info-service",
+      "rpc_service": "PageService",
+      "rpc_method": "ReadPage",
+      "count": 30178,
+      "status": []
+    },
+    {
+      "service": "cast-info-service",
+      "rpc_service": "CastInfoService",
+      "rpc_method": "ReadCastInfo",
+      "count": 30176,
+      "status": []
+    },
+    {
+      "service": "plot-service",
+      "rpc_service": "PlotService",
+      "rpc_method": "ReadPlot",
+      "count": 30170,
+      "status": []
+    },
+    {
+      "service": "movie-review-service",
+      "rpc_service": "MovieReviewService",
+      "rpc_method": "ReadMovieReviews",
+      "count": 30158,
+      "status": []
+    },
+    {
+      "service": "movie-id-service",
+      "rpc_service": "MovieIdService",
+      "rpc_method": "UploadMovieId",
+      "count": 12037,
+      "status": []
+    },
+    {
+      "service": "text-service",
+      "rpc_service": "TextService",
+      "rpc_method": "UploadText",
+      "count": 12035,
+      "status": []
+    },
+    {
+      "service": "review-storage-service",
+      "rpc_service": "ReviewStorageService",
+      "rpc_method": "StoreReview",
+      "count": 12027,
+      "status": []
+    },
+    {
+      "service": "compose-review-service",
+      "rpc_service": "ComposeReviewService",
+      "rpc_method": "UploadMovieId",
+      "count": 12025,
+      "status": []
+    },
+    {
+      "service": "compose-review-service",
+      "rpc_service": "ComposeReviewService",
+      "rpc_method": "UploadRating",
+      "count": 12025,
+      "status": []
+    },
+    {
+      "service": "compose-review-service",
+      "rpc_service": "ComposeReviewService",
+      "rpc_method": "UploadText",
+      "count": 12025,
+      "status": []
+    },
+    {
+      "service": "compose-review-service",
+      "rpc_service": "ComposeReviewService",
+      "rpc_method": "UploadUniqueId",
+      "count": 12025,
+      "status": []
+    },
+    {
+      "service": "compose-review-service",
+      "rpc_service": "ComposeReviewService",
+      "rpc_method": "UploadUserId",
+      "count": 12025,
+      "status": []
+    },
+    {
+      "service": "movie-review-service",
+      "rpc_service": "MovieReviewService",
+      "rpc_method": "UploadMovieReview",
+      "count": 12024,
+      "status": []
+    },
+    {
+      "service": "rating-service",
+      "rpc_service": "RatingService",
+      "rpc_method": "UploadRating",
+      "count": 12024,
+      "status": []
+    },
+    {
+      "service": "unique-id-service",
+      "rpc_service": "UniqueIdService",
+      "rpc_method": "UploadUniqueId",
+      "count": 12021,
+      "status": []
+    },
+    {
+      "service": "user-review-service",
+      "rpc_service": "UserReviewService",
+      "rpc_method": "UploadUserReview",
+      "count": 12015,
+      "status": []
+    }
+  ],
+  "db_operations": [],
+  "edges": [
+    {
+      "source": "cast-info-service",
+      "target": "movie-info-service",
+      "count": 30192,
+      "span_names": [
+        "ReadMovieInfo"
+      ]
+    },
+    {
+      "source": "nginx-web-server",
+      "target": "cast-info-service",
+      "count": 30178,
+      "span_names": [
+        "ReadPage"
+      ]
+    },
+    {
+      "source": "movie-review-service",
+      "target": "review-storage-service",
+      "count": 30176,
+      "span_names": [
+        "ReadReviews"
+      ]
+    },
+    {
+      "source": "cast-info-service",
+      "target": "plot-service",
+      "count": 30170,
+      "span_names": [
+        "ReadPlot"
+      ]
+    },
+    {
+      "source": "cast-info-service",
+      "target": "movie-review-service",
+      "count": 30158,
+      "span_names": [
+        "ReadMovieReviews"
+      ]
+    },
+    {
+      "source": "nginx-web-server",
+      "target": "movie-info-service",
+      "count": 18210,
+      "span_names": [
+        "ReadMovieInfo"
+      ]
+    },
+    {
+      "source": "nginx-web-server",
+      "target": "movie-id-service",
+      "count": 12037,
+      "span_names": [
+        "UploadMovieId"
+      ]
+    },
+    {
+      "source": "nginx-web-server",
+      "target": "text-service",
+      "count": 12035,
+      "span_names": [
+        "UploadText"
+      ]
+    },
+    {
+      "source": "movie-id-service",
+      "target": "compose-review-service",
+      "count": 12025,
+      "span_names": [
+        "UploadMovieId"
+      ]
+    },
+    {
+      "source": "text-service",
+      "target": "compose-review-service",
+      "count": 12025,
+      "span_names": [
+        "UploadText"
+      ]
+    },
+    {
+      "source": "movie-id-service",
+      "target": "rating-service",
+      "count": 12024,
+      "span_names": [
+        "UploadRating"
+      ]
+    },
+    {
+      "source": "compose-review-service",
+      "target": "review-storage-service",
+      "count": 12021,
+      "span_names": [
+        "StoreReview"
+      ]
+    },
+    {
+      "source": "nginx-web-server",
+      "target": "unique-id-service",
+      "count": 12021,
+      "span_names": [
+        "UploadUniqueId"
+      ]
+    },
+    {
+      "source": "unique-id-service",
+      "target": "compose-review-service",
+      "count": 12020,
+      "span_names": [
+        "UploadUniqueId"
+      ]
+    },
+    {
+      "source": "rating-service",
+      "target": "compose-review-service",
+      "count": 12019,
+      "span_names": [
+        "UploadRating"
+      ]
+    },
+    {
+      "source": "compose-review-service",
+      "target": "movie-review-service",
+      "count": 12017,
+      "span_names": [
+        "UploadMovieReview"
+      ]
+    },
+    {
+      "source": "compose-review-service",
+      "target": "user-review-service",
+      "count": 12012,
+      "span_names": [
+        "UploadUserReview"
+      ]
+    }
+  ]
+}

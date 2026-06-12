@@ -1,0 +1,156 @@
+{
+  "system": "sn",
+  "datapack_count": 100,
+  "min_count": 2,
+  "services": [
+    "compose-post-service",
+    "home-timeline-service",
+    "media-service",
+    "nginx-thrift",
+    "post-storage-service",
+    "social-graph-service",
+    "text-service",
+    "unique-id-service",
+    "url-shorten-service",
+    "user-mention-service",
+    "user-service",
+    "user-timeline-service"
+  ],
+  "http_endpoints": [
+    {
+      "service": "nginx-thrift",
+      "method": "POST",
+      "path": "/wrk2-api/user/follow",
+      "port": "8080",
+      "count": 57378,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/user/follow"
+      ]
+    },
+    {
+      "service": "nginx-thrift",
+      "method": "GET",
+      "path": "/wrk2-api/home-timeline/read",
+      "port": "8080",
+      "count": 29684,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/home-timeline/read"
+      ]
+    },
+    {
+      "service": "nginx-thrift",
+      "method": "GET",
+      "path": "/wrk2-api/user-timeline/read",
+      "port": "8080",
+      "count": 14892,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/user-timeline/read"
+      ]
+    },
+    {
+      "service": "nginx-thrift",
+      "method": "POST",
+      "path": "/wrk2-api/post/compose",
+      "port": "8080",
+      "count": 5787,
+      "status": [
+        "200",
+        "500"
+      ],
+      "span_names": [
+        "/wrk2-api/post/compose"
+      ]
+    },
+    {
+      "service": "nginx-thrift",
+      "method": "POST",
+      "path": "/wrk2-api/user/unfollow",
+      "port": "8080",
+      "count": 2996,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/user/unfollow"
+      ]
+    },
+    {
+      "service": "nginx-thrift",
+      "method": "POST",
+      "path": "/wrk2-api/user/register",
+      "port": "8080",
+      "count": 1924,
+      "status": [
+        "200"
+      ],
+      "span_names": [
+        "/wrk2-api/user/register"
+      ]
+    }
+  ],
+  "grpc_operations": [
+    {
+      "service": "social-graph-service",
+      "rpc_service": "SocialGraphService",
+      "rpc_method": "FollowWithUsername",
+      "count": 50987,
+      "status": []
+    },
+    {
+      "service": "post-storage-service",
+      "rpc_service": "PostStorageService",
+      "rpc_method": "ReadPosts",
+      "count": 44606,
+      "status": []
+    },
+    {
+      "service": "url-shorten-service",
+      "rpc_service": "UrlShortenService",
+      "rpc_method": "ComposeUrls",
+      "count": 5817,
+      "status": []
+    },
+    {
+      "service": "user-mention-service",
+      "rpc_service": "UserMentionService",
+      "rpc_method": "ComposeUserMentions",
+      "count": 5790,
+      "status": []
+    },
+    {
+      "service": "user-service",
+      "rpc_service": "UserService",
+      "rpc_method": "RegisterUserWithId",
+      "count": 1924,
+      "status": []
+    }
+  ],
+  "db_operations": [],
+  "edges": [
+    {
+      "source": "nginx-thrift",
+      "target": "social-graph-service",
+      "count": 50987,
+      "span_names": [
+        "follow_with_username_server"
+      ]
+    },
+    {
+      "source": "nginx-thrift",
+      "target": "user-service",
+      "count": 1924,
+      "span_names": [
+        "register_user_withid_server"
+      ]
+    }
+  ]
+}
