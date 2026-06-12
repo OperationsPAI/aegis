@@ -108,6 +108,10 @@ type point struct {
 func main() {
 	in := flag.String("in", "aegislab/tools/manifestgen/observed", "dir of observed <system>.json")
 	out := flag.String("out", "aegislab/manifests/aegis-chaos-observed", "output root")
+	callerReq := flag.Bool("caller-request-points", false,
+		"also emit caller-keyed http_request_* for each edge's downstream route "+
+			"(bridge-mode / non-IPVLAN CNIs where egress HTTPChaos fires; inert on "+
+			"byte-cluster's inbound-only bridgeless tproxy)")
 	flag.Parse()
 
 	entries, err := filepath.Glob(filepath.Join(*in, "*.json"))
@@ -116,13 +120,13 @@ func main() {
 		os.Exit(1)
 	}
 	for _, f := range entries {
-		if err := renderSystem(f, *out); err != nil {
+		if err := renderSystem(f, *out, *callerReq); err != nil {
 			fmt.Fprintf(os.Stderr, "warn: %s: %v\n", f, err)
 		}
 	}
 }
 
-func renderSystem(path, outRoot string) error {
+func renderSystem(path, outRoot string, callerReq bool) error {
 	var o observed
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -174,7 +178,7 @@ func renderSystem(path, outRoot string) error {
 	sort.Strings(services)
 
 	for _, svc := range services {
-		pts := buildService(o.System, ns, svc, httpBySvc[svc], grpcBySvc[svc], edgesBySrc[svc])
+		pts := buildService(o.System, ns, svc, httpBySvc[svc], grpcBySvc[svc], edgesBySrc[svc], callerReq)
 		if len(pts) == 0 {
 			continue
 		}
@@ -185,7 +189,7 @@ func renderSystem(path, outRoot string) error {
 	return nil
 }
 
-func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, edges []edge) []point {
+func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, edges []edge, callerReq bool) []point {
 	var pts []point
 	add := func(cap string, t map[string]any) { pts = append(pts, point{cap, t}) }
 
@@ -267,7 +271,49 @@ func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, 
 			add(c, cloneTarget(nt))
 		}
 	}
+
+	// caller-keyed http_request_* for each edge's downstream route (bridge-mode
+	// egress semantics; off by default because byte-cluster's bridgeless tproxy
+	// is inbound-only). Method/path come from the edge's observed operations.
+	if callerReq {
+		crSeen := map[string]bool{}
+		for _, e := range edges {
+			if e.Target == "" || e.Target == svc {
+				continue
+			}
+			for _, sn := range e.SpanNames {
+				m, p, ok := parseSpanOp(sn)
+				if !ok || isStatic(p) {
+					continue
+				}
+				k := m + " " + p
+				if crSeen[k] {
+					continue
+				}
+				crSeen[k] = true
+				base := map[string]any{"namespace": ns, "app": svc, "method": m, "path": p, "server_address": e.Target}
+				for _, c := range append(append([]string{}, httpReqCaps...), httpReqMutationCaps...) {
+					add(c, cloneTarget(base))
+				}
+			}
+		}
+	}
 	return pts
+}
+
+// parseSpanOp extracts METHOD and path from a normalized span name of the form
+// "METHOD /path". gRPC/Thrift span names (no leading HTTP verb or no /path)
+// return ok=false.
+func parseSpanOp(sn string) (method, path string, ok bool) {
+	parts := strings.SplitN(sn, " ", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	m, p := parts[0], parts[1]
+	if m == "" || strings.ToUpper(m) != m || !strings.HasPrefix(p, "/") {
+		return "", "", false
+	}
+	return m, p, true
 }
 
 func cloneTarget(t map[string]any) map[string]any {
