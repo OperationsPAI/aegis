@@ -11,6 +11,7 @@ Surface-level (per-family capability variants collapsed). `+` = in observed only
 | http | 0 | 11 | 11 | 0 |
 | network | 8 | 8 | 0 | 0 |
 | dns | 0 | 8 | 8 | 0 |
+| jvm_mysql | 0 | 0 | 0 | 0 |
 
 **HTTP** — +11 / -0
   - gained (11): attractions POST /attractions.Attractions/NearbyCinema; attractions POST /attractions.Attractions/NearbyMus; attractions POST /attractions.Attractions/NearbyRest; geo POST /geo.Geo/Nearby; profile POST /profile.Profile/GetProfiles; rate POST /rate.Rate/GetRates; recommendation POST /recommendation.Recommendation/GetRecommendations; reservation POST /reservation.Reservation/CheckAvailability; reservation POST /reservation.Reservation/MakeReservation; search POST /search.Search/Nearby; user POST /user.User/CheckUser
@@ -23,6 +24,7 @@ Surface-level (per-family capability variants collapsed). `+` = in observed only
 | http | 8 | 21 | 18 | 5 |
 | network | 7 | 17 | 15 | 5 |
 | dns | 6 | 17 | 15 | 4 |
+| jvm_mysql | 0 | 0 | 0 | 0 |
 
 **HTTP** — +18 / -5
   - lost (5): nginx-web-server POST /wrk2-api/cast-info/write; nginx-web-server POST /wrk2-api/movie-info/write; nginx-web-server POST /wrk2-api/movie/register; nginx-web-server POST /wrk2-api/plot/write; nginx-web-server POST /wrk2-api/user/register
@@ -41,17 +43,18 @@ Surface-level (per-family capability variants collapsed). `+` = in observed only
 |---|---|---|---|---|
 | workload | 18 | 17 | 1 | 2 |
 | http | 3 | 47 | 44 | 0 |
-| network | 24 | 21 | 4 | 7 |
+| network | 24 | 24 | 5 | 5 |
 | dns | 10 | 21 | 18 | 7 |
+| jvm_mysql | 0 | 0 | 0 | 0 |
 
 _current also has 128 jvm/db points (by design not emitted by observed)._
 
 **HTTP** — +44 / -0
   - gained (44): ad POST /oteldemo.AdService/GetAds; cart POST /oteldemo.CartService/AddItem; cart POST /oteldemo.CartService/EmptyCart; cart POST /oteldemo.CartService/GetCart; checkout POST /oteldemo.CheckoutService/PlaceOrder; currency POST /oteldemo.CurrencyService/Convert; email POST /send_order_confirmation; flagd POST /flagd.evaluation.v1.Service/ResolveBoolean; flagd POST /flagd.evaluation.v1.Service/ResolveFloat; flagd POST /flagd.evaluation.v1.Service/ResolveInt; flagd POST /ofrep/v1/evaluate/flags/loadGeneratorFloodHomepage; frontend GET /  …
 
-**NETWORK** — +4 / -7
-  - lost (7): accounting postgresql; cart valkey-cart; email checkout; frontend load-generator; image-provider load-generator; shipping checkout; shipping load-generator
-  - gained (4): frontend-proxy frontend; load-generator flagd; load-generator frontend-proxy; payment flagd
+**NETWORK** — +5 / -5
+  - lost (5): email checkout; frontend load-generator; image-provider load-generator; shipping checkout; shipping load-generator
+  - gained (5): checkout kafka; frontend-proxy frontend; load-generator flagd; load-generator frontend-proxy; payment flagd
 
 **WORKLOAD(services)** — +1 / -2
   - lost (2): postgresql; valkey-cart
@@ -65,6 +68,7 @@ _current also has 128 jvm/db points (by design not emitted by observed)._
 | http | 6 | 11 | 5 | 0 |
 | network | 5 | 2 | 0 | 3 |
 | dns | 5 | 2 | 0 | 3 |
+| jvm_mysql | 0 | 0 | 0 | 0 |
 
 **HTTP** — +5 / -0
   - gained (5): post-storage-service POST /PostStorageService/ReadPosts; social-graph-service POST /SocialGraphService/FollowWithUsername; url-shorten-service POST /UrlShortenService/ComposeUrls; user-mention-service POST /UserMentionService/ComposeUserMentions; user-service POST /UserService/RegisterUserWithId
@@ -83,6 +87,7 @@ _current also has 128 jvm/db points (by design not emitted by observed)._
 | http | 26 | 44 | 29 | 11 |
 | network | 11 | 8 | 5 | 8 |
 | dns | 11 | 8 | 5 | 8 |
+| jvm_mysql | 0 | 0 | 0 | 0 |
 
 _current also has 3662 jvm/db points (by design not emitted by observed)._
 
@@ -100,17 +105,19 @@ _current also has 3662 jvm/db points (by design not emitted by observed)._
 |---|---|---|---|---|
 | workload | 6 | 6 | 0 | 0 |
 | http | 34 | 25 | 10 | 19 |
-| network | 6 | 5 | 0 | 1 |
+| network | 6 | 6 | 1 | 1 |
 | dns | 6 | 5 | 0 | 1 |
+| jvm_mysql | 3 | 3 | 0 | 0 |
 
-_current also has 3269 jvm/db points (by design not emitted by observed)._
+_current also has 3263 jvm/db points (by design not emitted by observed)._
 
 **HTTP** — +10 / -19
   - lost (19): teastore-auth POST /tools.descartes.teastore.auth/rest/cart/add/*; teastore-auth PUT /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth; teastore-image PUT /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image; teastore-persistence GET /tools.descartes.teastore.persistence/rest/categories/*; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/*; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/category/*; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/count/*; teastore-persistence GET /tools.descartes.teastore.persistence/rest/users/name/*; teastore-persistence PUT /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence; teastore-recommender GET /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/; teastore-recommender GET /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/; teastore-recommender PUT /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/teastore-recommender-0.teastore-recommender  …
   - gained (10): teastore-auth POST /tools.descartes.teastore.auth/rest/cart/add/{pid}; teastore-persistence GET /tools.descartes.teastore.persistence/rest/categories/{id:[0-9][0-9]*}; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/category/{category:[0-9][0-9]*}; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/count/{category:[0-9][0-9]*}; teastore-persistence GET /tools.descartes.teastore.persistence/rest/products/{id:[0-9][0-9]*}; teastore-persistence GET /tools.descartes.teastore.persistence/rest/users/name/{name}; teastore-persistence GET /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/; teastore-registry GET /rest/services/{name}; teastore-registry PUT /rest/services/{name}/{location}; teastore-webui GET /*
 
-**NETWORK** — +0 / -1
+**NETWORK** — +1 / -1
   - lost (1): teastore-registry teastore-webui
+  - gained (1): teastore-persistence teastore-db
 
 ## ts
 
@@ -118,18 +125,19 @@ _current also has 3269 jvm/db points (by design not emitted by observed)._
 |---|---|---|---|---|
 | workload | 43 | 40 | 0 | 3 |
 | http | 162 | 199 | 151 | 114 |
-| network | 115 | 85 | 2 | 32 |
+| network | 115 | 108 | 3 | 10 |
 | dns | 115 | 85 | 2 | 32 |
+| jvm_mysql | 159 | 56 | 0 | 103 |
 
-_current also has 9610 jvm/db points (by design not emitted by observed)._
+_current also has 9292 jvm/db points (by design not emitted by observed)._
 
 **HTTP** — +151 / -114
   - lost (114): ts-admin-basic-info-service GET /api/v1/configservice/configs; ts-admin-basic-info-service GET /api/v1/contactservice/contacts; ts-admin-basic-info-service GET /api/v1/priceservice/prices; ts-admin-basic-info-service GET /api/v1/stationservice/stations; ts-admin-basic-info-service GET /api/v1/trainservice/trains; ts-admin-basic-info-service POST /api/v1/configservice/configs; ts-admin-basic-info-service POST /api/v1/contactservice/contacts/*; ts-admin-basic-info-service POST /api/v1/stationservice/stations; ts-admin-basic-info-service POST /api/v1/trainservice/trains; ts-admin-basic-info-service PUT /api/v1/configservice/configs; ts-admin-basic-info-service PUT /api/v1/contactservice/contacts; ts-admin-basic-info-service PUT /api/v1/stationservice/stations  …
   - gained (151): ts-admin-basic-info-service GET /api/v1/adminbasicservice/adminbasic/configs; ts-admin-basic-info-service GET /api/v1/adminbasicservice/adminbasic/contacts; ts-admin-basic-info-service GET /api/v1/adminbasicservice/adminbasic/prices; ts-admin-basic-info-service GET /api/v1/adminbasicservice/adminbasic/stations; ts-admin-basic-info-service GET /api/v1/adminbasicservice/adminbasic/trains; ts-admin-basic-info-service POST /api/v1/adminbasicservice/adminbasic/configs; ts-admin-basic-info-service POST /api/v1/adminbasicservice/adminbasic/contacts; ts-admin-basic-info-service POST /api/v1/adminbasicservice/adminbasic/stations; ts-admin-basic-info-service POST /api/v1/adminbasicservice/adminbasic/trains; ts-admin-basic-info-service PUT /api/v1/adminbasicservice/adminbasic/configs; ts-admin-basic-info-service PUT /api/v1/adminbasicservice/adminbasic/contacts; ts-admin-basic-info-service PUT /api/v1/adminbasicservice/adminbasic/stations  …
 
-**NETWORK** — +2 / -32
-  - lost (32): loadgenerator ts-rabbitmq; ts-assurance-service mysql; ts-auth-service mysql; ts-config-service mysql; ts-consign-price-service mysql; ts-consign-service mysql; ts-contacts-service mysql; ts-delivery-service mysql; ts-delivery-service ts-rabbitmq; ts-food-delivery-service mysql; ts-food-service mysql; ts-food-service ts-rabbitmq  …
-  - gained (2): loadgenerator ts-ui-dashboard; ts-food-service ts-delivery-service
+**NETWORK** — +3 / -10
+  - lost (10): loadgenerator ts-rabbitmq; ts-delivery-service ts-rabbitmq; ts-food-delivery-service mysql; ts-food-service ts-rabbitmq; ts-notification-service mysql; ts-notification-service ts-rabbitmq; ts-rebook-service ts-order-other-service; ts-ui-dashboard ts-rabbitmq; ts-ui-dashboard ts-rebook-service; ts-wait-order-service mysql
+  - gained (3): loadgenerator ts-ui-dashboard; ts-food-service rabbitmq; ts-food-service ts-delivery-service
 
 **WORKLOAD(services)** — +0 / -3
   - lost (3): mysql; ts-rabbitmq; ts-rebook-service
@@ -140,5 +148,6 @@ _current also has 9610 jvm/db points (by design not emitted by observed)._
 |---|---|---|
 | workload | 4 | 6 |
 | http | 268 | 149 |
-| network | 26 | 56 |
+| network | 29 | 32 |
 | dns | 48 | 55 |
+| jvm_mysql | 0 | 103 |

@@ -148,6 +148,7 @@
     }
   ],
   "db_operations": [],
+  "infra_deps": [],
   "edges": [
     {
       "source": "frontend",

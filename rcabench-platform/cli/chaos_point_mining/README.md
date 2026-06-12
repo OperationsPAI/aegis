@@ -55,8 +55,12 @@ cluster). Re-run the pipeline to refresh.
 
 ## Known limitations
 
-- `jvm_*` / DB table+sql_type points are **not** trace-derivable (need bytecode
-  analysis) — those families stay sourced from the existing manifestgen data.
+- `jvm_method_*` / `jvm_runtime_mutator` are **not** trace-derivable (need
+  bytecode analysis) — those stay sourced from the existing manifestgen data.
+  `jvm_mysql_*` IS derived here, from db client spans (db_name/table/sql_type).
+- Message-queue targets are resolved to the broker workload via the datapack's
+  `k8s.json` (pod IP → app label); without it they fall back to the broker type
+  (`rabbitmq`/`kafka`), which won't match a pod selector.
 - Single-digit synthetic ids (`user0`) are not collapsed (the id rule requires a
   2+ digit run); harmless, they survive as low-count distinct paths.
 - DSB/Thrift internal services expose little HTTP (only the nginx edge); their

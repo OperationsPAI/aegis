@@ -345,6 +345,34 @@
     {
       "service": "teastore-persistence",
       "db_system": "mysql",
+      "db_name": "teadb",
+      "table": "PERSISTENCECATEGORY",
+      "sql_type": "select",
+      "count": 139931
+    },
+    {
+      "service": "teastore-persistence",
+      "db_system": "mysql",
+      "db_name": "teadb",
+      "table": "PERSISTENCEPRODUCT",
+      "sql_type": "select",
+      "count": 70693
+    },
+    {
+      "service": "teastore-persistence",
+      "db_system": "mysql",
+      "db_name": "teadb",
+      "table": "PERSISTENCEUSER",
+      "sql_type": "select",
+      "count": 17537
+    }
+  ],
+  "infra_deps": [
+    {
+      "service": "teastore-persistence",
+      "target": "teastore-db",
+      "kind": "db",
+      "system": "mysql",
       "count": 228161
     }
   ],

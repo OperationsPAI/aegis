@@ -3,11 +3,11 @@
 // rcabench-platform/cli/chaos_point_mining) into aegis-chaos/v1beta
 // PointManifests.
 //
-// It emits only the families that are derivable from normal-phase traces —
-// pod/cpu/mem/time, http (server-attributed), gRPC base, dns and network
-// (from topology edges). JVM / db-table families need bytecode analysis and
-// are intentionally not produced here; they stay sourced from manifestgen's
-// existing data and are merged later.
+// It emits the families derivable from normal-phase traces — pod/cpu/mem/time,
+// http (server-attributed), gRPC base, dns and network (from topology edges +
+// infra deps), and jvm_mysql_* (from db client spans' db_name/table/sql_type).
+// jvm_method_* / jvm_runtime_mutator need bytecode analysis and are NOT produced
+// here; they stay sourced from manifestgen's existing data and are merged later.
 //
 // Output goes to a SEPARATE tree (default manifests/aegis-chaos-observed/) so
 // the current catalog is never clobbered and the two can be diffed.
@@ -47,6 +47,7 @@ var (
 	httpReqCaps         = []string{"http_request_delay", "http_request_abort"}
 	dnsCaps             = []string{"dns_error", "dns_random"}
 	networkCaps         = []string{"network_delay", "network_loss", "network_duplicate", "network_corrupt", "network_bandwidth", "network_partition"}
+	jvmMysqlCaps        = []string{"jvm_mysql_latency", "jvm_mysql_exception"}
 )
 
 var staticExt = map[string]bool{".css": true, ".js": true, ".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".ico": true, ".svg": true, ".woff": true, ".woff2": true, ".ttf": true, ".eot": true, ".map": true}
@@ -75,11 +76,32 @@ func isStatic(p string) bool {
 }
 
 type observed struct {
-	System    string `json:"system"`
-	Services  []string
-	HTTP      []httpEndpoint `json:"http_endpoints"`
-	GRPC      []grpcOp       `json:"grpc_operations"`
-	Edges     []edge         `json:"edges"`
+	System   string         `json:"system"`
+	Services []string       `json:"services"`
+	HTTP     []httpEndpoint `json:"http_endpoints"`
+	GRPC     []grpcOp       `json:"grpc_operations"`
+	Edges    []edge         `json:"edges"`
+	Infra    []infraDep     `json:"infra_deps"`
+	DB       []dbOp         `json:"db_operations"`
+}
+
+type dbOp struct {
+	Service  string `json:"service"`
+	DBSystem string `json:"db_system"`
+	DBName   string `json:"db_name"`
+	Table    string `json:"table"`
+	SQLType  string `json:"sql_type"`
+}
+
+// infraDep is a call to a leaf middleware (mysql/redis/rabbitmq) that emits no
+// span of its own — the target is taken from server.address (db, a real
+// workload name) or messaging.system (mq, the broker type, since the span only
+// carries the broker IP).
+type infraDep struct {
+	Service string `json:"service"`
+	Target  string `json:"target"`
+	Kind    string `json:"kind"`
+	System  string `json:"system"`
 }
 
 type httpEndpoint struct {
@@ -160,6 +182,18 @@ func renderSystem(path, outRoot string, callerReq bool) error {
 		svcSet[e.Source] = true
 		svcSet[e.Target] = true
 	}
+	// infra targets (mysql/rabbitmq/...) become network targets of the calling
+	// service; they are leaves, so they do not own points themselves.
+	infraBySrc := map[string][]infraDep{}
+	for _, d := range o.Infra {
+		infraBySrc[d.Service] = append(infraBySrc[d.Service], d)
+		svcSet[d.Service] = true
+	}
+	dbBySvc := map[string][]dbOp{}
+	for _, d := range o.DB {
+		dbBySvc[d.Service] = append(dbBySvc[d.Service], d)
+		svcSet[d.Service] = true
+	}
 	for s := range httpBySvc {
 		svcSet[s] = true
 	}
@@ -178,7 +212,7 @@ func renderSystem(path, outRoot string, callerReq bool) error {
 	sort.Strings(services)
 
 	for _, svc := range services {
-		pts := buildService(o.System, ns, svc, httpBySvc[svc], grpcBySvc[svc], edgesBySrc[svc], callerReq)
+		pts := buildService(o.System, ns, svc, httpBySvc[svc], grpcBySvc[svc], edgesBySrc[svc], infraBySrc[svc], dbBySvc[svc], callerReq)
 		if len(pts) == 0 {
 			continue
 		}
@@ -189,7 +223,7 @@ func renderSystem(path, outRoot string, callerReq bool) error {
 	return nil
 }
 
-func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, edges []edge, callerReq bool) []point {
+func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, edges []edge, infra []infraDep, dbs []dbOp, callerReq bool) []point {
 	var pts []point
 	add := func(cap string, t map[string]any) { pts = append(pts, point{cap, t}) }
 
@@ -252,7 +286,7 @@ func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, 
 	}
 
 	// dns + network, keyed by this service as the caller (source)
-	dnsDone := map[string]bool{}
+	dnsDone, netDone := map[string]bool{}, map[string]bool{}
 	for _, e := range edges {
 		if e.Target == "" || e.Target == svc {
 			continue
@@ -263,12 +297,45 @@ func buildService(system, ns, svc string, https []httpEndpoint, grpcs []grpcOp, 
 				add(c, map[string]any{"namespace": ns, "app": svc, "domain_patterns": []string{e.Target}})
 			}
 		}
+		netDone[e.Target] = true
 		nt := map[string]any{"namespace": ns, "source_app": svc, "target_service": e.Target}
 		if len(e.SpanNames) > 0 {
 			nt["span_names"] = e.SpanNames
 		}
 		for _, c := range networkCaps {
 			add(c, cloneTarget(nt))
+		}
+	}
+
+	// infra dependencies (mysql/redis/rabbitmq): network only (no dns/pod — the
+	// broker/db is a leaf with no span of its own).
+	for _, d := range infra {
+		if d.Target == "" || d.Target == svc || netDone[d.Target] {
+			continue
+		}
+		netDone[d.Target] = true
+		nt := map[string]any{"namespace": ns, "source_app": svc, "target_service": d.Target}
+		for _, c := range networkCaps {
+			add(c, cloneTarget(nt))
+		}
+	}
+
+	// jvm_mysql_* from db client spans (db_name/table/sql_type). Gated on mysql,
+	// matching manifestgen; the JDBC-intercepting agent only bites Java stacks,
+	// which are the only ones with mysql db spans here.
+	sqlSeen := map[string]bool{}
+	for _, d := range dbs {
+		if d.DBSystem != "mysql" || d.DBName == "" || d.Table == "" || d.SQLType == "" {
+			continue
+		}
+		k := d.DBName + "|" + d.Table + "|" + d.SQLType
+		if sqlSeen[k] {
+			continue
+		}
+		sqlSeen[k] = true
+		t := map[string]any{"namespace": ns, "app": svc, "db_name": d.DBName, "table": d.Table, "sql_type": d.SQLType}
+		for _, c := range jvmMysqlCaps {
+			add(c, cloneTarget(t))
 		}
 	}
 

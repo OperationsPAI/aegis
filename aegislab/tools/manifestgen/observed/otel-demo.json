@@ -739,17 +739,49 @@
     {
       "service": "cart",
       "db_system": "redis",
+      "db_name": "",
+      "table": "",
+      "sql_type": "",
       "count": 4386
     },
     {
       "service": "product-catalog",
       "db_system": "postgresql",
+      "db_name": "",
+      "table": "",
+      "sql_type": "",
       "count": 2898
     },
     {
       "service": "accounting",
       "db_system": "postgresql",
+      "db_name": "",
+      "table": "",
+      "sql_type": "",
       "count": 263
+    }
+  ],
+  "infra_deps": [
+    {
+      "service": "cart",
+      "target": "valkey-cart",
+      "kind": "db",
+      "system": "redis",
+      "count": 4386
+    },
+    {
+      "service": "accounting",
+      "target": "postgresql",
+      "kind": "db",
+      "system": "postgresql",
+      "count": 263
+    },
+    {
+      "service": "checkout",
+      "target": "kafka",
+      "kind": "mq",
+      "system": "kafka",
+      "count": 223
     }
   ],
   "edges": [

@@ -286,3 +286,61 @@ spec:
         span_names:
           - "GET /api/v1/consignpriceservice/consignprice/{weight}/{isWithinRegion}"
         target_service: "ts-consign-price-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-consign-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-consign-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "consign_record"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-consign-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "consign_record"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-consign-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "consign_record"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-consign-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "consign_record"

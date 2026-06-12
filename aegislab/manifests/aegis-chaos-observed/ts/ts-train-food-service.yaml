@@ -98,3 +98,61 @@ spec:
         namespace: "ts"
         path: "/api/v1/trainfoodservice/trainfoods/{tripId}"
         port: 8080
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-train-food-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food_list"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food_list"

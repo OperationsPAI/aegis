@@ -44,6 +44,7 @@ _NUM = re.compile(r"^\d+$")
 _TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,}$")    # opaque session / cart tokens
 _HASDIGIT = re.compile(r"\d")
 _DIGITRUN = re.compile(r"\d{2,}")               # any run of >=2 digits => an id
+_IP = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")    # bare IPv4 (no resolvable name)
 
 
 def _high_card(seg: str) -> bool:
@@ -88,11 +89,41 @@ def _first(sa: dict, *keys: str) -> str:
     return ""
 
 
+def load_k8s_ip_map(path: Path) -> dict:
+    """IP -> workload/service name, from a datapack's k8s.json. A message broker
+    is reached via its Service ClusterIP (e.g. 192.168.x.x -> "rabbitmq"), so we
+    map both Service ClusterIPs (-> service name) and pod IPs (-> app label)."""
+    if not path.exists():
+        return {}
+    try:
+        d = json.loads(path.read_text())
+    except Exception:
+        return {}
+    m = {}
+    for lst in (d.get("pods") or {}).values():
+        for p in lst:
+            md = p.get("metadata") or {}
+            lb = md.get("labels") or {}
+            ip = (p.get("status") or {}).get("pod_ip")
+            name = lb.get("app") or lb.get("app.kubernetes.io/name") or md.get("name")
+            if ip and name:
+                m[ip] = name
+    for lst in (d.get("services") or {}).values():
+        for s in lst:
+            sp = s.get("spec") or {}
+            name = (s.get("metadata") or {}).get("name")
+            for ip in [sp.get("cluster_ip")] + list(sp.get("cluster_i_ps") or []):
+                if ip and ip != "None" and name:
+                    m[ip] = name
+    return m
+
+
 def _new_system() -> dict:
     return {
         "http": defaultdict(lambda: {"count": 0, "status": set(), "span_names": set()}),
         "grpc": defaultdict(lambda: {"count": 0, "status": set()}),
         "db": defaultdict(lambda: {"count": 0}),
+        "infra": defaultdict(lambda: {"count": 0}),
         "edges": defaultdict(lambda: {"count": 0, "span_names": set()}),
         "services": set(),
         "datapacks": set(),
@@ -112,6 +143,7 @@ def extract(parquet_paths: list[Path]) -> dict:
             print(f"skip {pth}: {e}", file=sys.stderr)
             continue
         dp = Path(pth).parent.name
+        ip2name = load_k8s_ip_map(Path(pth).parent / "k8s.json")
         span_svc = dict(zip(df["SpanId"].to_list(), df["ServiceName"].to_list()))
         for row in df.iter_rows(named=True):
             try:
@@ -155,7 +187,24 @@ def extract(parquet_paths: list[Path]) -> dict:
                     e["count"] += 1
                     sn and e["span_names"].add(sn)
             elif kind == "Client" and db_sys:
-                S["db"][(svc, db_sys)]["count"] += 1
+                # full sql granularity feeds jvm_mysql_* (db_name/table/sql_type)
+                dbn = _first(sa, "db.name")
+                tbl = _first(sa, "db.sql.table")
+                sqt = _first(sa, "db.operation").lower()  # agent expects lowercase sqlType
+                S["db"][(svc, db_sys, dbn, tbl, sqt)]["count"] += 1
+                # infra dependency: the db host (server.address is the workload
+                # name, e.g. "mysql"/"valkey-cart"); skip bare IPs.
+                tgt = _first(sa, "server.address", "net.peer.name")
+                if tgt and not _IP.match(tgt) and tgt != svc:
+                    S["infra"][(svc, tgt, "db", db_sys)]["count"] += 1
+            elif kind == "Producer":
+                # message queues carry only an IP peer; resolve it to the broker
+                # workload via k8s.json, else fall back to the system type.
+                msys = _first(sa, "messaging.system")
+                if msys:
+                    peer = _first(sa, "network.peer.address", "net.peer.ip", "net.peer.name")
+                    tgt = ip2name.get(peer) or msys
+                    S["infra"][(svc, tgt, "mq", msys)]["count"] += 1
     return sysd
 
 
@@ -188,8 +237,14 @@ def dump(sysd: dict, out_dir: Path, min_count: int) -> dict:
                 for (s, rs, rm), e in sorted(S["grpc"].items(), key=lambda x: -x[1]["count"])
                 if e["count"] >= min_count],
             "db_operations": [
-                {"service": s, "db_system": d, "count": e["count"]}
-                for (s, d), e in sorted(S["db"].items(), key=lambda x: -x[1]["count"])],
+                {"service": s, "db_system": d, "db_name": dn, "table": tb,
+                 "sql_type": st, "count": e["count"]}
+                for (s, d, dn, tb, st), e in sorted(S["db"].items(), key=lambda x: -x[1]["count"])
+                if e["count"] >= min_count],
+            "infra_deps": [
+                {"service": s, "target": t, "kind": k, "system": sysm, "count": e["count"]}
+                for (s, t, k, sysm), e in sorted(S["infra"].items(), key=lambda x: -x[1]["count"])
+                if e["count"] >= min_count],
             "edges": [
                 {"source": s, "target": t, "count": e["count"],
                  "span_names": _spans(e["span_names"])}
@@ -202,7 +257,7 @@ def dump(sysd: dict, out_dir: Path, min_count: int) -> dict:
             "http": len(obj["http_endpoints"]),
             "http_dropped_longtail": len(http_all) - len(http_keep),
             "grpc": len(obj["grpc_operations"]), "db": len(obj["db_operations"]),
-            "edges": len(obj["edges"])}
+            "infra": len(obj["infra_deps"]), "edges": len(obj["edges"])}
     return summary
 
 
