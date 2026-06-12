@@ -31,17 +31,3 @@ spec:
         app: "post-storage-service"
         container: "post-storage-service"
         namespace: "sn"
-    - capability: "http_request_delay"
-      target:
-        app: "post-storage-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/PostStorageService/ReadPosts"
-        server_address: "post-storage-service"
-    - capability: "http_request_abort"
-      target:
-        app: "post-storage-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/PostStorageService/ReadPosts"
-        server_address: "post-storage-service"

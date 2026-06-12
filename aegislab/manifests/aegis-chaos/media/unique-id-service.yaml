@@ -31,20 +31,6 @@ spec:
         app: "unique-id-service"
         container: "unique-id-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "unique-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UniqueIdService/UploadUniqueId"
-        server_address: "unique-id-service"
-    - capability: "http_request_abort"
-      target:
-        app: "unique-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/UniqueIdService/UploadUniqueId"
-        server_address: "unique-id-service"
     - capability: "dns_error"
       target:
         app: "unique-id-service"

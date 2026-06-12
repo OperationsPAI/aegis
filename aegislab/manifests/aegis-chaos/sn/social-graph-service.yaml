@@ -31,17 +31,3 @@ spec:
         app: "social-graph-service"
         container: "social-graph-service"
         namespace: "sn"
-    - capability: "http_request_delay"
-      target:
-        app: "social-graph-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/SocialGraphService/FollowWithUsername"
-        server_address: "social-graph-service"
-    - capability: "http_request_abort"
-      target:
-        app: "social-graph-service"
-        method: "POST"
-        namespace: "sn"
-        path: "/SocialGraphService/FollowWithUsername"
-        server_address: "social-graph-service"

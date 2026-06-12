@@ -31,20 +31,6 @@ spec:
         app: "search"
         container: "search"
         namespace: "hs"
-    - capability: "http_request_delay"
-      target:
-        app: "search"
-        method: "POST"
-        namespace: "hs"
-        path: "/search.Search/Nearby"
-        server_address: "search"
-    - capability: "http_request_abort"
-      target:
-        app: "search"
-        method: "POST"
-        namespace: "hs"
-        path: "/search.Search/Nearby"
-        server_address: "search"
     - capability: "dns_error"
       target:
         app: "search"

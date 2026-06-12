@@ -31,17 +31,3 @@ spec:
         app: "currency"
         container: "currency"
         namespace: "otel-demo"
-    - capability: "http_request_delay"
-      target:
-        app: "currency"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        server_address: "currency"
-    - capability: "http_request_abort"
-      target:
-        app: "currency"
-        method: "POST"
-        namespace: "otel-demo"
-        path: "/oteldemo.CurrencyService/Convert"
-        server_address: "currency"

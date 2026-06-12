@@ -37,6 +37,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_request_abort"
@@ -45,6 +46,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/index"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/index"
     - capability: "http_request_delay"
@@ -53,6 +55,7 @@ spec:
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_request_abort"
@@ -61,6 +64,7 @@ spec:
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/loginAction"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "POST /tools.descartes.teastore.webui/loginAction"
     - capability: "http_request_delay"
@@ -69,6 +73,7 @@ spec:
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_request_abort"
@@ -77,6 +82,7 @@ spec:
         method: "POST"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cartAction"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "POST /tools.descartes.teastore.webui/cartAction"
     - capability: "http_request_delay"
@@ -85,6 +91,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_request_abort"
@@ -93,6 +100,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/cart"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/cart"
     - capability: "http_request_delay"
@@ -101,6 +109,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_request_abort"
@@ -109,6 +118,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/category"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/category"
     - capability: "http_request_delay"
@@ -117,6 +127,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_request_abort"
@@ -125,6 +136,7 @@ spec:
         method: "GET"
         namespace: "teastore"
         path: "/tools.descartes.teastore.webui/product"
+        port: 8080
         server_address: "teastore-webui"
         span_name: "GET /tools.descartes.teastore.webui/product"
     - capability: "http_request_delay"

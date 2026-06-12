@@ -31,17 +31,3 @@ spec:
         app: "movie-info-service"
         container: "movie-info-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "movie-info-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieInfoService/ReadMovieInfo"
-        server_address: "movie-info-service"
-    - capability: "http_request_abort"
-      target:
-        app: "movie-info-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieInfoService/ReadMovieInfo"
-        server_address: "movie-info-service"

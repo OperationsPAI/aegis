@@ -31,20 +31,6 @@ spec:
         app: "movie-id-service"
         container: "movie-id-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/UploadMovieId"
-        server_address: "movie-id-service"
-    - capability: "http_request_abort"
-      target:
-        app: "movie-id-service"
-        method: "POST"
-        namespace: "media"
-        path: "/MovieIdService/UploadMovieId"
-        server_address: "movie-id-service"
     - capability: "dns_error"
       target:
         app: "movie-id-service"

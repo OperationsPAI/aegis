@@ -31,20 +31,6 @@ spec:
         app: "text-service"
         container: "text-service"
         namespace: "media"
-    - capability: "http_request_delay"
-      target:
-        app: "text-service"
-        method: "POST"
-        namespace: "media"
-        path: "/TextService/UploadText"
-        server_address: "text-service"
-    - capability: "http_request_abort"
-      target:
-        app: "text-service"
-        method: "POST"
-        namespace: "media"
-        path: "/TextService/UploadText"
-        server_address: "text-service"
     - capability: "dns_error"
       target:
         app: "text-service"
