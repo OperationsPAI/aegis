@@ -218,3 +218,9 @@ client/typescript
 # never in version control.
 data/sso/
 data/sso-secrets/
+
+# scratch render outputs of observedgen — reproducible from the committed
+# observed JSON via `observedgen` + `merge-catalog.sh`. The real catalog that
+# the chaos system reads lives in manifests/aegis-chaos/.
+manifests/aegis-chaos-observed/
+manifests/aegis-chaos-merged/
