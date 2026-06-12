@@ -376,6 +376,9 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 			traceID := uuid.NewString()
 			result, allocErr := AllocateNamespaceForRestart(ctx, s.redis, pedestalItem.ContainerName, lockEndTime, traceID, probe, allocOpts)
 			if allocErr != nil {
+				if errors.Is(allocErr, ErrPoolAtCapacity) {
+					return nil, fmt.Errorf("auto-allocate batch %d for system %s: pool at max_count capacity, retry when a slot frees: %w", batchIdx, pedestalItem.ContainerName, consts.ErrTooManyRequests)
+				}
 				hint := fmt.Sprintf("run `aegisctl inject guided --install --namespace %s<N>` to expand the pool, or pass --allow-bootstrap", pedestalItem.ContainerName)
 				return nil, fmt.Errorf("auto-allocate batch %d for system %s: %w (hint: %s)", batchIdx, pedestalItem.ContainerName, allocErr, hint)
 			}

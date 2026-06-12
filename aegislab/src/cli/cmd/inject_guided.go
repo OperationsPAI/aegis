@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -709,11 +711,38 @@ func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedCon
 	}
 
 	cli, ctx := newAPIClient()
-	typedResp, _, err := cli.ProjectsAPI.SubmitProjectFaultInjection(ctx, int32(pid)).
-		InjectionSubmitInjectionReq(body).
-		Execute()
-	if err != nil {
-		return nil, err
+
+	const poolWaitTimeout = 15 * time.Minute
+	const backoffBase = 5 * time.Second
+	const backoffCap = 30 * time.Second
+	deadline := time.Now().Add(poolWaitTimeout)
+
+	var typedResp *apiclient.DtoGenericResponseInjectionSubmitInjectionResp
+	for {
+		var httpResp *http.Response
+		typedResp, httpResp, err = cli.ProjectsAPI.SubmitProjectFaultInjection(ctx, int32(pid)).
+			InjectionSubmitInjectionReq(body).
+			Execute()
+		if err == nil {
+			break
+		}
+		if httpResp == nil || httpResp.StatusCode != http.StatusTooManyRequests || !guidedAllowBootstrap {
+			return nil, err
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("pool still at max_count capacity after %s; giving up: %w", poolWaitTimeout, err)
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoffBase)))
+		wait := backoffBase + jitter
+		if wait > backoffCap {
+			wait = backoffCap
+		}
+		output.PrintInfo(fmt.Sprintf("pool at capacity (429), retrying in %s ...", wait.Round(time.Second)))
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
 	}
 
 	// The local injectSubmitResponse is shared with regression.go (out of

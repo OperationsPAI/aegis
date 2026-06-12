@@ -14,6 +14,9 @@ import (
 // ErrPoolExhausted is re-exported from internal/alloc.
 var ErrPoolExhausted = alloc.ErrPoolExhausted
 
+// ErrPoolAtCapacity is re-exported from internal/alloc.
+var ErrPoolAtCapacity = alloc.ErrPoolAtCapacity
+
 // ErrNamespaceLocked is re-exported from internal/alloc.
 var ErrNamespaceLocked = alloc.ErrNamespaceLocked
 

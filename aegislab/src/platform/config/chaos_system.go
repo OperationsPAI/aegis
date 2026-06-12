@@ -72,6 +72,12 @@ type ChaosSystemConfig struct {
 	// → existing helm uninstall + ns delete. See ReclaimModeSoft for the
 	// rationale (DSB charts that bootstrap seed data are expensive to rebuild).
 	ReclaimMode string `mapstructure:"reclaim_mode"`
+	// MaxCount is the hard ceiling on the pool size for this system. When
+	// > 0 and cfg.Count >= MaxCount, Pass 2 (bootstrap a fresh slot) is
+	// suppressed and ErrPoolAtCapacity is returned instead of ErrPoolExhausted.
+	// Zero means unbounded (back-compat; default for all existing systems).
+	// Set via etcd key `injection.system.<sys>.max_count`.
+	MaxCount int `mapstructure:"max_count"`
 }
 
 // IsSoftReclaim reports whether this system opted into soft reclaim. Centralized

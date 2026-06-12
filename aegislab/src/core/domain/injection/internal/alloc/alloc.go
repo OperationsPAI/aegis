@@ -24,6 +24,14 @@ import (
 // tradeoffs.
 var ErrPoolExhausted = errors.New("namespace pool exhausted: every slot is locked or has no deployed workload")
 
+// ErrPoolAtCapacity is returned when AllowBootstrap is true but the pool has
+// already reached its per-system MaxCount ceiling. Unlike ErrPoolExhausted
+// (terminal — pool can't grow without operator action), this is RETRYABLE:
+// it means every slot is currently busy and Pass 2 cannot bootstrap a new
+// one because the cap forbids it. The caller should back off and retry once
+// in-flight traces complete and release their namespace locks.
+var ErrPoolAtCapacity = errors.New("namespace pool at capacity: all slots busy and max_count ceiling reached; retry shortly")
+
 // CountWriter is the narrow contract the allocator needs to register new
 // namespaces with the chaos-system count. Declared locally to avoid the
 // chaossystem→consumer→injection import cycle.
@@ -260,6 +268,9 @@ func AllocateNamespaceForRestart(
 	// Pass 2: bootstrap a fresh slot at index = count, if allowed.
 	if !opts.AllowBootstrap {
 		return AllocateResult{}, ErrPoolExhausted
+	}
+	if cfg.MaxCount > 0 && cfg.Count >= cfg.MaxCount {
+		return AllocateResult{}, ErrPoolAtCapacity
 	}
 	freshNs := fmt.Sprintf(template, cfg.Count)
 	bumped, bumpErr := opts.CountWriter.EnsureCountForNamespace(ctx, system, freshNs)
