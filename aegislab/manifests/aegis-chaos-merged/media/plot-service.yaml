@@ -1,0 +1,47 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "plot-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "plot-service"
+        namespace: "media"
+    - capability: "pod_failure"
+      target:
+        app: "plot-service"
+        namespace: "media"
+    - capability: "container_kill"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media"
+    - capability: "cpu_stress"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media"
+    - capability: "time_skew"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media"
+    - capability: "http_request_delay"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media"
+        path: "/PlotService/ReadPlot"
+        server_address: "plot-service"
+    - capability: "http_request_abort"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media"
+        path: "/PlotService/ReadPlot"
+        server_address: "plot-service"

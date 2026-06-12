@@ -1,0 +1,579 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-train-food-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to lowercase"
+        method: "getAllTrainFood"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to lowercase"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to lowercase"
+        method: "home"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to uppercase"
+        method: "getAllTrainFood"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to uppercase"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Convert string to uppercase"
+        method: "home"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllTrainFood"
+        mutation_from: "\"*\""
+        mutation_to: "\"mutated_*\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllTrainFood"
+        mutation_from: "\"/trainfoods\""
+        mutation_to: "\"mutated_/trainfoods\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getTrainFoodOfTrip"
+        mutation_from: "\"*\""
+        mutation_to: "\"mutated_*\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getTrainFoodOfTrip"
+        mutation_from: "\"/trainfoods/{tripId}\""
+        mutation_to: "\"mutated_/trainfoods/{tripId}\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"/trainfoods/welcome\""
+        mutation_to: "\"mutated_/trainfoods/welcome\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"Welcome to [ Train Food Service ] !\""
+        mutation_to: "\"mutated_Welcome to [ Train Food Service ] !\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with empty string"
+        method: "getAllTrainFood"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with empty string"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with empty string"
+        method: "home"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with null"
+        method: "getAllTrainFood"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with null"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string result with null"
+        method: "home"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string with random content"
+        method: "getAllTrainFood"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string with random content"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Replace string with random content"
+        method: "home"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Reverse string content"
+        method: "getAllTrainFood"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Reverse string content"
+        method: "getTrainFoodOfTrip"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        description: "Reverse string content"
+        method: "home"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Convert string to lowercase"
+        method: "TrainFood"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Convert string to uppercase"
+        method: "TrainFood"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Mutate string constant to an error-oriented value"
+        method: "TrainFood"
+        mutation_from: "\"\""
+        mutation_to: "\"mutated_\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Replace string result with empty string"
+        method: "TrainFood"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Replace string result with null"
+        method: "TrainFood"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Replace string with random content"
+        method: "TrainFood"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        description: "Reverse string content"
+        method: "TrainFood"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Convert string to lowercase"
+        method: "run"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Convert string to lowercase"
+        method: "toFoodList"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Convert string to uppercase"
+        method: "run"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Convert string to uppercase"
+        method: "toFoodList"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate integer constant 0 to 1"
+        method: "toFoodList"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate integer constant 1 to 0"
+        method: "run"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate integer constant 1 to 0"
+        method: "toFoodList"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"\""
+        mutation_to: "\"mutated_\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"/trainfood.txt\""
+        mutation_to: "\"mutated_/trainfood.txt\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"=\""
+        mutation_to: "\"mutated_=\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "toFoodList"
+        mutation_from: "\",\""
+        mutation_to: "\"mutated_,\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "toFoodList"
+        mutation_from: "\"_\""
+        mutation_to: "\"mutated__\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string result with empty string"
+        method: "run"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string result with empty string"
+        method: "toFoodList"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string result with null"
+        method: "run"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string result with null"
+        method: "toFoodList"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string with random content"
+        method: "run"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Replace string with random content"
+        method: "toFoodList"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Reverse string content"
+        method: "run"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        description: "Reverse string content"
+        method: "toFoodList"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "listTrainFood"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "listTrainFoodByTripId"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "listTrainFood"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "listTrainFoodByTripId"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"

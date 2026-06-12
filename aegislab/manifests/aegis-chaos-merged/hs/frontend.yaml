@@ -1,0 +1,375 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "frontend"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "frontend"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "frontend"
+        namespace: "hs"
+    - capability: "container_kill"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "hs"
+    - capability: "cpu_stress"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "hs"
+    - capability: "time_skew"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "hs"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "profile"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "profile"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "profile.Profile/GetProfiles"
+        target_service: "profile"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "reservation"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "reservation"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "reservation.Reservation/CheckAvailability"
+          - "reservation.Reservation/MakeReservation"
+        target_service: "reservation"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "search"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "search"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "search.Search/Nearby"
+        target_service: "search"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "recommendation"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "recommendation"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "recommendation.Recommendation/GetRecommendations"
+        target_service: "recommendation"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "user"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "user"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "user.User/CheckUser"
+        target_service: "user"
+    - capability: "dns_error"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "attractions"
+        namespace: "hs"
+    - capability: "dns_random"
+      target:
+        app: "frontend"
+        domain_patterns:
+          - "attractions"
+        namespace: "hs"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "frontend"
+        span_names:
+          - "attractions.Attractions/NearbyCinema"
+          - "attractions.Attractions/NearbyMus"
+          - "attractions.Attractions/NearbyRest"
+        target_service: "attractions"
