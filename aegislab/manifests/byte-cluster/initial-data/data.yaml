@@ -561,6 +561,91 @@ containers:
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
+      # Bumped 1.0.10 → 1.0.11 to pick up trainticket chart 0.4.6:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 1.0.10.
+      - name: 1.0.11
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.4.6
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: global.security.allowInsecureImages
+              type: 0
+              category: 1
+              value_type: 2
+              default_value: "true"
+              overridable: true
+            - key: global.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "0.4.4"
+              overridable: true
+            - key: mysql.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
+              overridable: true
+            - key: rabbitmq.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com
+              overridable: true
+            - key: rabbitmq.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opspai/rabbitmq
+              overridable: true
+            - key: loadgenerator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
+              overridable: true
+            - key: loadgenerator.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+              overridable: true
+            - key: loadgenerator.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "024"
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
   - type: 2
     name: otel-demo
     is_public: true
@@ -717,6 +802,25 @@ containers:
           # chaos actually bite (every pod was CPU-uncapped → stress inert).
           # See aegis#563. Chart-only.
           version: 0.1.11
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values:
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+      # Bumped 0.1.11 → 0.1.12 to pick up otel-demo-aegis chart 0.1.13:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 0.1.11.
+      - name: 0.1.12
+        github_link: open-telemetry/opentelemetry-demo
+        status: 1
+        helm_config:
+          version: 0.1.13
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
@@ -1071,6 +1175,61 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 1.1.7 → 1.1.8 to pick up sockshop chart 1.3.2:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 1.1.7.
+      - name: 1.1.8
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        helm_config:
+          version: 1.3.2
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260531-otellogs-4a8dcb9
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/otel-instr-sockshop
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
     # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
@@ -1241,6 +1400,43 @@ containers:
         status: 1
         helm_config:
           version: 0.2.3
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+      # Bumped 0.1.8 → 0.1.9 to pick up hotel-reservation chart 0.2.5:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 0.1.8.
+      - name: 0.1.9
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.5
           chart_name: hotel-reservation
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -1574,6 +1770,67 @@ containers:
         status: 1
         helm_config:
           version: 0.2.3
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260531-9d7d2a1
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.10 → 0.1.11 to pick up social-network chart 0.2.5:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 0.1.10.
+      - name: 0.1.11
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.5
           chart_name: social-network
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -1961,6 +2218,67 @@ containers:
               default_value: "false"
               overridable: true
           status: 1
+      # Bumped 0.1.10 → 0.1.11 to pick up media-microservices chart 0.2.5:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 0.1.10.
+      - name: 0.1.11
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.5
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            - key: load-generator.container.imageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260530-e7ad889
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
   - type: 2
     name: teastore
     is_public: true
@@ -2133,6 +2451,79 @@ containers:
         status: 1
         helm_config:
           version: 0.1.9
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://lgu-se-internal.github.io/TeaStore
+          values:
+            - key: global.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260602-9758cbfe
+              overridable: true
+            - key: jmeter.targetPort
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "80"
+              overridable: true
+            - key: opentelemetry.monitoringNamespace
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring
+              overridable: true
+            - key: opentelemetry.instrumentationName
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-instr-teastore
+              overridable: true
+            - key: jmeter.waitForRegistryImage.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+            - key: jmeter.waitForRegistryImage.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "1.36"
+              overridable: true
+            - key: jmeter.waitForRegistryImage.pullPolicy
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: IfNotPresent
+              overridable: true
+            - key: aegis.points.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
+      # Bumped 0.1.9 → 0.1.10 to pick up teastore chart 0.1.11:
+      # adds create_schema=false to the per-ns OTel collector and drops the
+      # spanmetrics connector. Chart-only; all values identical to 0.1.9.
+      - name: 0.1.10
+        github_link: LGU-SE-Internal/TeaStore
+        status: 1
+        helm_config:
+          version: 0.1.11
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
