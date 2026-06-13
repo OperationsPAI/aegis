@@ -133,7 +133,10 @@ clickhouse:
         extraConfig:
           max_concurrent_queries: 5000
           max_concurrent_select_queries: 4000
-          concurrent_threads_soft_limit_ratio_to_cores: 2
+          # Bumped 2→4 (soft limit 16c×4=64 slots): at ratio=2 (32 slots) vs
+          # ~9800 queries/min CH backed up — 3M ConcurrencyControlQueriesDelayed,
+          # inserts queued past the async timeout → collector connection resets.
+          concurrent_threads_soft_limit_ratio_to_cores: 4
           # Upstream chart defaults we want to keep (see chart values.yaml).
           max_connections: 4096
           keep_alive_timeout: 64
@@ -144,11 +147,14 @@ clickhouse:
           # per-namespace OTel collectors fire so one CH node isn't swamped
           # (saw ~336 concurrent sync inserts / ~23% ExceptionWhileProcessing
           # under the inject loop → ingestion backlog → empty datapack build
-          # windows). wait_for_async_insert=1 preserves insert durability.
+          # windows). wait_for_async_insert=0 (fire-and-forget): the synchronous
+          # 120s async-insert wait was the direct cause of TIMEOUT_EXCEEDED →
+          # collector closes socket → CH "Broken pipe" resets that crash-looped
+          # the collectors. Trade weaker delivery guarantee for no reset cascade.
           profiles:
             default:
               async_insert: 1
-              wait_for_async_insert: 1
+              wait_for_async_insert: 0
               async_insert_busy_timeout_ms: 1000
               async_insert_max_data_size: 10485760
           users:
