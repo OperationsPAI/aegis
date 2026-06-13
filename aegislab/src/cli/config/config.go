@@ -33,6 +33,8 @@ type Context struct {
 	TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
 	CACert         string    `yaml:"ca-cert,omitempty"`
 	Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
+	KubeContext    string    `yaml:"kube-context,omitempty"`
+	KubeConfig     string    `yaml:"kubeconfig,omitempty"`
 }
 
 func (c *Context) UnmarshalYAML(value *yaml.Node) error {
@@ -47,6 +49,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 		TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
 		CACert         string    `yaml:"ca-cert,omitempty"`
 		Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
+		KubeContext    string    `yaml:"kube-context,omitempty"`
+		KubeConfig     string    `yaml:"kubeconfig,omitempty"`
 	}
 
 	var raw rawContext
@@ -64,6 +68,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 	c.TokenExpiry = raw.TokenExpiry
 	c.CACert = raw.CACert
 	c.Insecure = raw.Insecure
+	c.KubeContext = raw.KubeContext
+	c.KubeConfig = raw.KubeConfig
 	return nil
 }
 

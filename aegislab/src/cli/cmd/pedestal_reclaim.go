@@ -165,6 +165,19 @@ func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHour
 		return decisions[i].LastDeployed.Before(decisions[j].LastDeployed)
 	})
 
+	if len(decisions) == 0 {
+		kubeCtxName := resolveActiveKubeContext()
+		patternList := make([]string, 0, len(patterns))
+		for name := range patterns {
+			patternList = append(patternList, name)
+		}
+		sort.Strings(patternList)
+		output.PrintInfo(fmt.Sprintf(
+			"no reclaim candidates: scanned %d namespace(s) in kube-context %q; none matched systems: %s",
+			len(namespaces), kubeCtxName, strings.Join(patternList, ", "),
+		))
+	}
+
 	printReclaimTable(decisions, apply)
 
 	if !apply {
@@ -535,4 +548,20 @@ func sortedKeys(m map[string]string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// resolveActiveKubeContext returns the kube-context label for the diagnostic
+// message. Prefers the aegisctl config KubeContext; falls back to shelling
+// kubectl config current-context so the message is always non-empty.
+func resolveActiveKubeContext() string {
+	if ks, _, err := activeKubeSettings(); err == nil && ks.KubeContext != "" {
+		return ks.KubeContext
+	}
+	out, err := chartRunner.Run("kubectl", "config", "current-context")
+	if err == nil {
+		if ctx := strings.TrimSpace(string(out)); ctx != "" {
+			return ctx
+		}
+	}
+	return "<unknown>"
 }
