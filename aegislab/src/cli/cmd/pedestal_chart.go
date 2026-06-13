@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"aegis/cli/config"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
@@ -30,12 +31,82 @@ type realChartExec struct{}
 
 func (realChartExec) LookPath(name string) (string, error) { return exec.LookPath(name) }
 func (realChartExec) Run(name string, args ...string) ([]byte, error) {
+	args = injectKubeFlags(name, args)
 	cmd := exec.Command(name, args...)
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 	err := cmd.Run()
 	return buf.Bytes(), err
+}
+
+// injectKubeFlags prepends --context / --kube-context and --kubeconfig to
+// kubectl/helm invocations when the active aegisctl context has KubeContext or
+// KubeConfig set. Args that already carry those flags are left unchanged so
+// callers that construct them explicitly still win.
+func injectKubeFlags(name string, args []string) []string {
+	if cfg == nil {
+		return args
+	}
+	ks, _, err := activeKubeSettings()
+	if err != nil {
+		return args
+	}
+	return injectKubeFlagsWithSettings(ks, name, args)
+}
+
+// injectKubeFlagsWithSettings applies kube flag injection given explicit
+// settings. Separated from injectKubeFlags so tests can supply settings
+// directly without needing a populated global cfg.
+func injectKubeFlagsWithSettings(ks kubeSettings, name string, args []string) []string {
+	if ks.KubeContext == "" && ks.KubeConfig == "" {
+		return args
+	}
+	switch name {
+	case "kubectl":
+		if ks.KubeContext != "" && !sliceContains(args, "--context") {
+			args = append([]string{"--context", ks.KubeContext}, args...)
+		}
+		if ks.KubeConfig != "" && !sliceContains(args, "--kubeconfig") {
+			args = append([]string{"--kubeconfig", ks.KubeConfig}, args...)
+		}
+	case "helm":
+		if ks.KubeContext != "" && !sliceContains(args, "--kube-context") {
+			args = append(args, "--kube-context", ks.KubeContext)
+		}
+		if ks.KubeConfig != "" && !sliceContains(args, "--kubeconfig") {
+			args = append(args, "--kubeconfig", ks.KubeConfig)
+		}
+	}
+	return args
+}
+
+// activeKubeSettings returns the KubeContext/KubeConfig from the active
+// aegisctl context. Separated so tests can check the result without shelling
+// out to kubectl.
+func activeKubeSettings() (kubeSettings, string, error) {
+	if cfg == nil {
+		return kubeSettings{}, "", fmt.Errorf("config not loaded")
+	}
+	ctx, name, err := config.GetCurrentContext(cfg)
+	if err != nil {
+		return kubeSettings{}, "", err
+	}
+	return kubeSettings{KubeContext: ctx.KubeContext, KubeConfig: ctx.KubeConfig}, name, nil
+}
+
+type kubeSettings struct {
+	KubeContext string
+	KubeConfig  string
+}
+
+func sliceContains(s []string, item string) bool {
+	for _, v := range s {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }
 
 // chartRunner is the package-level indirection; tests swap this out.

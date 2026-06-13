@@ -23,6 +23,8 @@ var contextSetUsername string
 var contextSetPasswordStdin bool
 var contextSetCACert string
 var contextSetInsecure bool
+var contextSetKubeContext string
+var contextSetKubeConfig string
 
 var contextSetCmd = &cobra.Command{
 	Use:   "set",
@@ -58,6 +60,12 @@ var contextSetCmd = &cobra.Command{
 		}
 		if cmd.Flags().Lookup("insecure-skip-tls-verify").Changed {
 			ctx.Insecure = contextSetInsecure
+		}
+		if contextSetKubeContext != "" {
+			ctx.KubeContext = contextSetKubeContext
+		}
+		if contextSetKubeConfig != "" {
+			ctx.KubeConfig = expandPath(contextSetKubeConfig)
 		}
 
 		cfg.Contexts[contextSetName] = ctx
@@ -134,6 +142,8 @@ func init() {
 	contextSetCmd.Flags().BoolVar(&contextSetPasswordStdin, "password-stdin", false, "Read stored password from stdin (paired with --username)")
 	contextSetCmd.Flags().StringVar(&contextSetCACert, "ca-cert", "", "Absolute path to a PEM file with extra trusted CA(s)")
 	contextSetCmd.Flags().BoolVar(&contextSetInsecure, "insecure-skip-tls-verify", false, "Persist insecure-skip-tls-verify=true on this context (DEV ONLY)")
+	contextSetCmd.Flags().StringVar(&contextSetKubeContext, "kube-context", "", "kubectl context name to use for local-shell pedestal commands (e.g. byte-cluster)")
+	contextSetCmd.Flags().StringVar(&contextSetKubeConfig, "kubeconfig", "", "Path to kubeconfig file for local-shell pedestal commands (default: ambient ~/.kube/config)")
 
 	contextCmd.AddCommand(contextSetCmd)
 	contextCmd.AddCommand(contextUseCmd)

@@ -604,3 +604,122 @@ func findHelmUpgradeCall(t *testing.T, calls [][]string) []string {
 	}
 	return found[0]
 }
+
+// TestInjectKubeFlags verifies that injectKubeFlags prepends --context/--kubeconfig
+// to kubectl and appends --kube-context/--kubeconfig to helm when the active
+// aegisctl context carries KubeContext/KubeConfig.
+func TestInjectKubeFlags(t *testing.T) {
+	cases := []struct {
+		name        string
+		kubeContext string
+		kubeConfig  string
+		binary      string
+		args        []string
+		wantContext string
+		wantConfig  string
+		wantFlag    string // the flag name to check for kubectl or helm
+		wantInArgs  bool   // the flag should be present
+	}{
+		{
+			name:        "kubectl_injects_context",
+			kubeContext: "byte-cluster",
+			binary:      "kubectl",
+			args:        []string{"get", "ns"},
+			wantContext: "byte-cluster",
+			wantFlag:    "--context",
+			wantInArgs:  true,
+		},
+		{
+			name:       "kubectl_injects_kubeconfig",
+			kubeConfig: "/home/user/.kube/byte.yaml",
+			binary:     "kubectl",
+			args:       []string{"get", "ns"},
+			wantFlag:   "--kubeconfig",
+			wantInArgs: true,
+		},
+		{
+			name:        "helm_injects_kube_context",
+			kubeContext: "byte-cluster",
+			binary:      "helm",
+			args:        []string{"upgrade", "--install", "ts0", "trainticket"},
+			wantFlag:    "--kube-context",
+			wantInArgs:  true,
+		},
+		{
+			name:       "helm_injects_kubeconfig",
+			kubeConfig: "/home/user/.kube/byte.yaml",
+			binary:     "helm",
+			args:       []string{"upgrade", "--install", "ts0", "trainticket"},
+			wantFlag:   "--kubeconfig",
+			wantInArgs: true,
+		},
+		{
+			name:        "empty_kube_context_is_noop",
+			kubeContext: "",
+			kubeConfig:  "",
+			binary:      "kubectl",
+			args:        []string{"get", "ns"},
+			wantFlag:    "--context",
+			wantInArgs:  false,
+		},
+		{
+			name:        "kubectl_skips_context_when_already_present",
+			kubeContext: "byte-cluster",
+			binary:      "kubectl",
+			args:        []string{"--context", "other-cluster", "get", "ns"},
+			wantFlag:    "--context",
+			wantInArgs:  true,
+		},
+		{
+			name:        "helm_skips_kube_context_when_already_present",
+			kubeContext: "byte-cluster",
+			binary:      "helm",
+			args:        []string{"--kube-context", "other-cluster", "upgrade", "--install"},
+			wantFlag:    "--kube-context",
+			wantInArgs:  true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := injectKubeFlagsWithSettings(kubeSettings{
+				KubeContext: tc.kubeContext,
+				KubeConfig:  tc.kubeConfig,
+			}, tc.binary, tc.args)
+
+			hasFlag := containsArg(result, tc.wantFlag)
+			if tc.wantInArgs && !hasFlag {
+				t.Errorf("expected %q in args %v", tc.wantFlag, result)
+			}
+
+			// When kube-context set and no pre-existing flag: verify only one
+			// occurrence of our injected value (not doubled).
+			if tc.kubeContext != "" && tc.binary == "kubectl" && !containsArg(tc.args, "--context") {
+				count := 0
+				for _, a := range result {
+					if a == "--context" {
+						count++
+					}
+				}
+				if count != 1 {
+					t.Errorf("want exactly one --context in %v, got %d", result, count)
+				}
+			}
+		})
+	}
+}
+
+// TestInjectKubeFlags_NilCfg verifies that injectKubeFlags is a no-op when cfg
+// is nil (the command runs outside PersistentPreRunE, e.g. in tests that don't
+// set up a config).
+func TestInjectKubeFlags_NilCfg(t *testing.T) {
+	oldCfg := cfg
+	cfg = nil
+	t.Cleanup(func() { cfg = oldCfg })
+
+	args := []string{"get", "ns"}
+	got := injectKubeFlags("kubectl", args)
+	if len(got) != len(args) {
+		t.Fatalf("with nil cfg args should be unchanged; got %v", got)
+	}
+}
