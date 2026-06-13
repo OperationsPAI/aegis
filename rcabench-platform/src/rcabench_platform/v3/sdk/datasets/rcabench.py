@@ -55,14 +55,19 @@ JVM_RETURN_VALUE_OPT: dict[int, str] = {
 }
 
 REQUIRED_FILES = [
+    # NOTE: *_metrics_histogram.parquet are intentionally NOT required. Their
+    # rows came predominantly from the spanmetrics connector (now dropped) plus
+    # app-SDK histograms that route through the per-ns collector; when that
+    # collector blips the histogram parquet is empty while spans and the
+    # kubelet-sourced *_metrics_sum survive. The detector reasons over raw
+    # spans + metrics_sum, not the histogram, so an empty histogram must not
+    # fail the datapack. The file is still written whenever data exists.
     # Parquet files
     "abnormal_logs.parquet",
     "abnormal_metrics_sum.parquet",
-    "abnormal_metrics_histogram.parquet",
     "abnormal_trace_id_ts.parquet",
     "abnormal_metrics.parquet",
     "abnormal_traces.parquet",
-    "normal_metrics_histogram.parquet",
     "normal_trace_id_ts.parquet",
     "normal_logs.parquet",
     "normal_metrics.parquet",
