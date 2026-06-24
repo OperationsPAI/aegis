@@ -7,13 +7,13 @@ dependencies:
   version: 0.1.0
 - name: rustfs
   repository: ""
-  version: 0.1.0
+  version: 0.2.0
 - name: blob
   repository: ""
   version: 0.1.0
 - name: gateway
   repository: ""
-  version: 0.1.0
+  version: 0.2.0
 - name: configcenter
   repository: ""
   version: 0.1.0
@@ -32,5 +32,5 @@ dependencies:
 - name: chaos
   repository: ""
   version: 0.1.0
-digest: sha256:ff41bce8ec84f51a39463445e233f49762162598e3ec87fab16aaf8a5abe84d7
-generated: "2026-05-19T12:54:24.083022112+01:00"
+digest: sha256:a66818e45a6a2d74e3ee3b4a4e907cac5b00a44afebca723fec93a75663bd83c
+generated: "2026-06-24T14:22:46.155078421+01:00"

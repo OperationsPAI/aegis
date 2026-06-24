@@ -54,6 +54,34 @@ type Route struct {
 	StripPrefix    bool            `mapstructure:"strip_prefix"`
 	TimeoutSeconds int             `mapstructure:"timeout_seconds"`
 	Retry          RetryPolicy     `mapstructure:"retry"`
+
+	// UpstreamAuthHeader, when set, is written onto the request just
+	// before it is proxied (after edge auth has already passed) — e.g.
+	// "Authorization". Use it to present a fixed service credential to an
+	// upstream that runs its own authentication, so aegis stays the single
+	// RBAC + audit choke point without the upstream needing to trust the
+	// X-Aegis-* headers.
+	UpstreamAuthHeader string `mapstructure:"upstream_auth_header"`
+	// UpstreamAuthValue is the literal value for UpstreamAuthHeader. Prefer
+	// UpstreamAuthValueEnv so the secret never lands in config.
+	UpstreamAuthValue string `mapstructure:"upstream_auth_value"`
+	// UpstreamAuthValueEnv names an env var holding the value; it takes
+	// precedence over UpstreamAuthValue and is resolved once at load time
+	// (NewRouteTable), so the secret can be sourced from a K8s Secret.
+	UpstreamAuthValueEnv string `mapstructure:"upstream_auth_value_env"`
+
+	// resolvedUpstreamAuth is the post-resolution value (set by
+	// NewRouteTable); never populated from config directly.
+	resolvedUpstreamAuth string
+}
+
+// UpstreamAuth returns the header name and resolved value to inject
+// toward the upstream, or empty strings when no credential is configured.
+func (r Route) UpstreamAuth() (string, string) {
+	if r.UpstreamAuthHeader == "" || r.resolvedUpstreamAuth == "" {
+		return "", ""
+	}
+	return r.UpstreamAuthHeader, r.resolvedUpstreamAuth
 }
 
 // Timeout returns the configured per-route upstream timeout, falling
@@ -76,10 +104,11 @@ type CORSConfig struct {
 
 // Config is the [gateway] section of config.<env>.toml.
 type Config struct {
-	Routes            []Route         `mapstructure:"routes"`
-	CORS              CORSConfig      `mapstructure:"cors"`
-	RateLimit         RateLimitPolicy `mapstructure:"rate_limit"`
-	TrustedHeaderKey  string          `mapstructure:"trusted_header_key"`
+	Routes           []Route         `mapstructure:"routes"`
+	CORS             CORSConfig      `mapstructure:"cors"`
+	RateLimit        RateLimitPolicy `mapstructure:"rate_limit"`
+	TrustedHeaderKey string          `mapstructure:"trusted_header_key"`
+	Audit            AuditConfig     `mapstructure:"audit"`
 }
 
 // Trusted-header names injected by the gateway after JWT pre-auth.
@@ -94,18 +123,18 @@ type Config struct {
 // is_active and is_admin are "1" or "0". api_key_scopes is comma-separated.
 // task_id is empty for user tokens; set for service tokens.
 const (
-	HeaderUserID        = "X-Aegis-User-Id"
-	HeaderUserEmail     = "X-Aegis-User-Email"
-	HeaderRoles         = "X-Aegis-Roles"
-	HeaderTokenAud      = "X-Aegis-Token-Aud"
-	HeaderTokenJti      = "X-Aegis-Token-Jti"
-	HeaderSignature     = "X-Aegis-Signature"
-	HeaderRequestID     = "X-Aegis-Request-Id"
-	HeaderUsername      = "X-Aegis-Username"
-	HeaderIsActive      = "X-Aegis-Is-Active"
-	HeaderIsAdmin       = "X-Aegis-Is-Admin"
-	HeaderAuthType      = "X-Aegis-Auth-Type"
-	HeaderAPIKeyID      = "X-Aegis-Api-Key-Id"
-	HeaderAPIKeyScopes  = "X-Aegis-Api-Key-Scopes"
-	HeaderTaskID        = "X-Aegis-Task-Id"
+	HeaderUserID       = "X-Aegis-User-Id"
+	HeaderUserEmail    = "X-Aegis-User-Email"
+	HeaderRoles        = "X-Aegis-Roles"
+	HeaderTokenAud     = "X-Aegis-Token-Aud"
+	HeaderTokenJti     = "X-Aegis-Token-Jti"
+	HeaderSignature    = "X-Aegis-Signature"
+	HeaderRequestID    = "X-Aegis-Request-Id"
+	HeaderUsername     = "X-Aegis-Username"
+	HeaderIsActive     = "X-Aegis-Is-Active"
+	HeaderIsAdmin      = "X-Aegis-Is-Admin"
+	HeaderAuthType     = "X-Aegis-Auth-Type"
+	HeaderAPIKeyID     = "X-Aegis-Api-Key-Id"
+	HeaderAPIKeyScopes = "X-Aegis-Api-Key-Scopes"
+	HeaderTaskID       = "X-Aegis-Task-Id"
 )

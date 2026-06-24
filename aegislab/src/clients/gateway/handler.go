@@ -14,17 +14,19 @@ type Handler struct {
 	auth    *Authenticator
 	rl      *RateLimiter
 	cors    CORSConfig
+	audit   *AuditSink
 }
 
 // NewHandler wires the matched-route dispatch pipeline. It is the
 // single object the http.Server hangs off.
-func NewHandler(routes *RouteTable, proxies *ProxyPool, auth *Authenticator, rl *RateLimiter, cfg Config) *Handler {
+func NewHandler(routes *RouteTable, proxies *ProxyPool, auth *Authenticator, rl *RateLimiter, audit *AuditSink, cfg Config) *Handler {
 	return &Handler{
 		routes:  routes,
 		proxies: proxies,
 		auth:    auth,
 		rl:      rl,
 		cors:    cfg.CORS,
+		audit:   audit,
 	}
 }
 
@@ -62,9 +64,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chain := h.auth.Middleware(route, proxy)
+	// Innermost: present the upstream's own credential only after edge
+	// auth has passed. Then auth → rate-limit → CORS → logging/audit.
+	inner := upstreamAuthMiddleware(route, proxy)
+	chain := h.auth.Middleware(route, inner)
 	chain = h.rl.Middleware(route, chain)
 	chain = CORSMiddleware(h.cors, chain)
-	chain = LoggingMiddleware(route, chain)
+	chain = LoggingMiddleware(route, h.audit, chain)
 	chain.ServeHTTP(w, r)
 }

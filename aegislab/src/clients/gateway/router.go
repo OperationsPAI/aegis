@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"os"
 	"sort"
 	"strings"
 
@@ -30,6 +31,17 @@ func NewRouteTable(routes []Route) *RouteTable {
 		}
 		if r.Auth == "" {
 			r.Auth = AuthJWT
+		}
+		r.resolvedUpstreamAuth = r.UpstreamAuthValue
+		if r.UpstreamAuthValueEnv != "" {
+			if v := os.Getenv(r.UpstreamAuthValueEnv); v != "" {
+				r.resolvedUpstreamAuth = v
+			} else {
+				logrus.WithFields(logrus.Fields{
+					"prefix": r.Prefix,
+					"env":    r.UpstreamAuthValueEnv,
+				}).Warn("gateway: upstream_auth_value_env is set but empty; upstream credential will not be injected")
+			}
 		}
 		cp = append(cp, r)
 	}

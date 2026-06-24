@@ -1,0 +1,61 @@
+{{- if and .Values.enabled .Values.standalone.enabled }}
+{{- /*
+  Standalone config. Rendered ONLY when the gateway runs outside the
+  rcabench umbrella, so the pod has a self-contained config.prod.toml to
+  mount instead of the parent's shared ConfigMap. Umbrella installs leave
+  standalone.enabled=false and keep using <release>-rcabench-config.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gateway.fullname" . }}-config
+data:
+  config.prod.toml: |
+    name = "aegis-gateway"
+    port = {{ .Values.httpPort }}
+
+    [system]
+    timezone = "{{ .Values.standalone.timezone | default "UTC" }}"
+
+    [tracing]
+    endpoint = "{{ .Values.standalone.tracing.endpoint }}"
+
+    [gateway]
+    trusted_header_key = "{{ .Values.trustedHeaderKey }}"
+
+    [gateway.rate_limit]
+    rps   = {{ .Values.rateLimit.rps | default 200 }}
+    burst = {{ .Values.rateLimit.burst | default 400 }}
+
+    [gateway.cors]
+    allowed_origins   = {{ .Values.cors.allowedOrigins | toJson }}
+    allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
+    allow_credentials = true
+    max_age_seconds   = 86400
+    {{- if .Values.audit.enabled }}
+
+    [gateway.audit]
+    access_log_path = "{{ .Values.audit.accessLogPath }}"
+    audit_log_path  = "{{ .Values.audit.auditLogPath }}"
+    {{- end }}
+    {{- range .Values.routes }}
+
+    [[gateway.routes]]
+    prefix   = "{{ .prefix }}"
+    upstream = "{{ .upstream }}"
+    auth     = "{{ .auth | default "jwt" }}"
+    {{- if .stripPrefix }}
+    strip_prefix = true
+    {{- end }}
+    {{- if .timeoutSeconds }}
+    timeout_seconds = {{ .timeoutSeconds }}
+    {{- end }}
+    {{- if .upstreamAuthHeader }}
+    upstream_auth_header = "{{ .upstreamAuthHeader }}"
+    {{- end }}
+    {{- if .upstreamAuthValueEnv }}
+    upstream_auth_value_env = "{{ .upstreamAuthValueEnv }}"
+    {{- end }}
+    {{- end }}
+{{- end }}

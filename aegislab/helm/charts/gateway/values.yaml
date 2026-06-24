@@ -60,4 +60,59 @@ cors:
     - http://localhost:3323
     - http://127.0.0.1:3323
 
+# --- Standalone mode -------------------------------------------------
+# When the gateway is consumed OUTSIDE the rcabench umbrella (e.g. as a
+# shared front door for agent-env/arl), there is no parent ConfigMap to
+# mount. standalone.enabled renders a self-contained config.prod.toml
+# from the values below and mounts that instead of the parent's.
+standalone:
+  enabled: false
+  timezone: "UTC"
+  tracing:
+    endpoint: ""
+  # SSO identity provider the gateway verifies JWTs against. Point these
+  # at your aegis-sso install (or any OIDC issuer exposing JWKS).
+  sso:
+    issuer: ""
+    baseURL: ""
+    jwksURL: ""
+    clientID: "aegis-gateway"
+
+# Route table (standalone mode). Each entry maps a path prefix to an
+# upstream. Use upstreamAuthHeader + upstreamAuthValueEnv to present a
+# fixed service credential to an upstream that runs its own auth (the
+# "static service credential" model) — the value is read from the named
+# env var, wired via upstreamSecrets below.
+routes: []
+#  - prefix: "/"
+#    upstream: "arl-operator-gateway:8080"
+#    auth: "jwt"
+#    upstreamAuthHeader: "Authorization"
+#    upstreamAuthValueEnv: "ARL_UPSTREAM_API_KEY"
+
+# Env vars sourced from Secrets, injected into the gateway pod and
+# referenced by a route's upstreamAuthValueEnv. The secret value is the
+# full header line the upstream expects, e.g. "Bearer <arl-api-key>".
+upstreamSecrets: []
+#  - envVar: "ARL_UPSTREAM_API_KEY"
+#    secretName: "arl-gateway-upstream"
+#    secretKey: "authorization"
+
+# On-disk access + audit trail. accessLogPath captures every proxied
+# request; auditLogPath captures the state-changing subset with the
+# resolved identity. Both live under volume mountPath.
+audit:
+  enabled: false
+  mountPath: "/var/log/aegis-gateway"
+  accessLogPath: "/var/log/aegis-gateway/access.jsonl"
+  auditLogPath: "/var/log/aegis-gateway/audit.jsonl"
+  # Volume backing the log directory. Default emptyDir lives for the pod
+  # lifetime; enable the PVC for durable retention.
+  volume:
+    persistentVolumeClaim:
+      enabled: false
+      existingClaim: ""
+      size: "5Gi"
+      storageClassName: ""
+
 resources: {}

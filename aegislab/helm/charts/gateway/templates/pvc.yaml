@@ -1,0 +1,15 @@
+{{- if and .Values.enabled .Values.audit.enabled .Values.audit.volume.persistentVolumeClaim.enabled (not .Values.audit.volume.persistentVolumeClaim.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "gateway.fullname" . }}-audit
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.audit.volume.persistentVolumeClaim.size | default "5Gi" }}
+  {{- with .Values.audit.volume.persistentVolumeClaim.storageClassName }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}

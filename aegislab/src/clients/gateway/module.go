@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"context"
+
 	"aegis/clients/sso"
 	"aegis/platform/jwtkeys"
 
@@ -14,12 +16,21 @@ var Module = fx.Module("gateway",
 		NewProxyPool,
 		newRateLimiter,
 		newAuthenticator,
+		newAuditSink,
 		NewHandler,
 	),
 )
 
 func newRouteTable(cfg Config) *RouteTable {
 	return NewRouteTable(cfg.Routes)
+}
+
+func newAuditSink(lc fx.Lifecycle, cfg Config) *AuditSink {
+	s := NewAuditSink(cfg.Audit)
+	lc.Append(fx.Hook{
+		OnStop: func(context.Context) error { return s.Close() },
+	})
+	return s
 }
 
 func newRateLimiter(cfg Config) *RateLimiter {

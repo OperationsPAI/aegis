@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +11,33 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+// clientIP prefers the left-most X-Forwarded-For hop, falling back to the
+// peer address. The gateway is the trust boundary, so an upstream proxy
+// (if any) is expected to set XFF; absent that we use RemoteAddr.
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			return strings.TrimSpace(xff[:i])
+		}
+		return strings.TrimSpace(xff)
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+// isMutating reports whether the method changes upstream state and thus
+// warrants an audit-log entry (read-only verbs only hit the access log).
+func isMutating(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return false
+	default:
+		return true
+	}
+}
 
 // redactSensitivePathSegments masks signed-token segments that appear in URL
 // paths. /raw/<HMAC-token> is the only case today — the token is the auth
@@ -35,10 +63,12 @@ func (s *statusRecorder) WriteHeader(code int) {
 	s.ResponseWriter.WriteHeader(code)
 }
 
-// LoggingMiddleware emits one access-log line per request and
-// propagates `traceparent` to the upstream via OTel propagators. It is
-// the outermost middleware in the gateway chain.
-func LoggingMiddleware(route *Route, next http.Handler) http.Handler {
+// LoggingMiddleware emits one access-log line per request, mirrors a
+// structured record to the on-disk access/audit sink, and propagates
+// `traceparent` to the upstream via OTel propagators. It is the outermost
+// middleware in the gateway chain, so it observes the final status —
+// including auth rejections — which makes it the gateway's audit point.
+func LoggingMiddleware(route *Route, audit *AuditSink, next http.Handler) http.Handler {
 	prop := otel.GetTextMapPropagator()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -60,15 +90,42 @@ func LoggingMiddleware(route *Route, next http.Handler) http.Handler {
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
 
+		path := redactSensitivePathSegments(r.URL.Path)
+		latency := time.Since(start).Milliseconds()
+
 		logrus.WithFields(logrus.Fields{
 			"route":      route.Prefix,
 			"upstream":   route.Upstream,
 			"method":     r.Method,
-			"path":       redactSensitivePathSegments(r.URL.Path),
+			"path":       path,
 			"status":     rec.status,
-			"latency_ms": time.Since(start).Milliseconds(),
+			"latency_ms": latency,
 			"user_id":    r.Header.Get(HeaderUserID),
 			"request_id": reqID,
 		}).Info("gateway: access")
+
+		// After auth runs, the identity headers reflect the verified
+		// caller; on rejection they are absent and status is 401/403.
+		decision := "allow"
+		if rec.status == http.StatusUnauthorized || rec.status == http.StatusForbidden {
+			decision = "deny"
+		}
+		audit.Record(AuditEvent{
+			Time:         start.UTC().Format(time.RFC3339Nano),
+			RequestID:    reqID,
+			Route:        route.Prefix,
+			Upstream:     route.Upstream,
+			Method:       r.Method,
+			Path:         path,
+			Status:       rec.status,
+			LatencyMS:    latency,
+			ClientIP:     clientIP(r),
+			UserID:       r.Header.Get(HeaderUserID),
+			Username:     r.Header.Get(HeaderUsername),
+			Roles:        r.Header.Get(HeaderRoles),
+			IsAdmin:      r.Header.Get(HeaderIsAdmin),
+			AuthType:     r.Header.Get(HeaderAuthType),
+			AuthDecision: decision,
+		}, isMutating(r.Method))
 	})
 }

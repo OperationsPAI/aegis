@@ -22,7 +22,7 @@ spec:
             - {{ .Values.binaryName | default "aegis-gateway" }}
             - serve
             - --conf
-            - {{ dig "configmap" "configDir" "/etc/rcabench" (.Values.global | default dict) }}
+            - {{ if .Values.standalone.enabled }}/etc/aegis{{ else }}{{ dig "configmap" "configDir" "/etc/rcabench" (.Values.global | default dict) }}{{ end }}
             - --port
             - {{ .Values.httpPort | quote }}
           ports:
@@ -41,11 +41,25 @@ spec:
           env:
             - name: ENV
               value: {{ .Values.env.ENV | quote }}
+            {{- if or (not .Values.standalone.enabled) .Values.auth.jwtSecretRef.name }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.auth.jwtSecretRef.name | default (printf "%s-auth" .Release.Name) }}
                   key: {{ .Values.auth.jwtSecretRef.key | default "jwt_secret" }}
+                  optional: {{ .Values.standalone.enabled }}
+            {{- end }}
+            {{- if .Values.standalone.enabled }}
+            {{- /* No parent global.ssoclient: the gateway gets its JWKS
+                   verifier wiring straight from standalone.sso. This is the
+                   loose coupling to aegis-sso — config, not a chart dep. */}}
+            - name: SSO_BASE_URL
+              value: {{ .Values.standalone.sso.baseURL | quote }}
+            - name: SSO_JWKS_URL
+              value: {{ .Values.standalone.sso.jwksURL | quote }}
+            - name: SSO_CLIENT_ID
+              value: {{ .Values.standalone.sso.clientID | quote }}
+            {{- else }}
             {{- with dig "ssoclient" dict (.Values.global | default dict) }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
@@ -64,6 +78,14 @@ spec:
               value: {{ $.Values.ssoClient.secretFilePath | quote }}
             {{- end }}
             {{- end }}
+            {{- end }}
+            {{- range .Values.upstreamSecrets }}
+            - name: {{ .envVar }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
             {{- range .Values.extraEnv }}
             - {{ toYaml . | nindent 14 | trim }}
             {{- end }}
@@ -77,10 +99,23 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}
+              mountPath: {{ if .Values.standalone.enabled }}/etc/aegis/config.prod.toml{{ else }}{{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}{{ end }}
               subPath: config.prod.toml
+            {{- if .Values.audit.enabled }}
+            - name: audit-logs
+              mountPath: {{ .Values.audit.mountPath }}
+            {{- end }}
       volumes:
         - name: config
           configMap:
-            name: {{ .Values.configMap.name | default (printf "%s-rcabench-config" .Release.Name) }}
+            name: {{ if .Values.standalone.enabled }}{{ include "gateway.fullname" . }}-config{{ else }}{{ .Values.configMap.name | default (printf "%s-rcabench-config" .Release.Name) }}{{ end }}
+        {{- if .Values.audit.enabled }}
+        - name: audit-logs
+          {{- if .Values.audit.volume.persistentVolumeClaim.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.audit.volume.persistentVolumeClaim.existingClaim | default (printf "%s-audit" (include "gateway.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
 {{- end }}
