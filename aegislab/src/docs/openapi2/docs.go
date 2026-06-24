@@ -17681,7 +17681,7 @@ const docTemplate = `{
         },
         "/token": {
             "post": {
-                "description": "OIDC token endpoint. Authenticates the client via Basic auth or ` + "`" + `client_id` + "`" + `/` + "`" + `client_secret` + "`" + ` form fields and dispatches on ` + "`" + `grant_type` + "`" + ` (` + "`" + `authorization_code` + "`" + `, ` + "`" + `refresh_token` + "`" + `, ` + "`" + `client_credentials` + "`" + `, ` + "`" + `password` + "`" + `).",
+                "description": "OIDC token endpoint. Authenticates the client via Basic auth or ` + "`" + `client_id` + "`" + `/` + "`" + `client_secret` + "`" + ` form fields and dispatches on ` + "`" + `grant_type` + "`" + ` (` + "`" + `authorization_code` + "`" + `, ` + "`" + `refresh_token` + "`" + `, ` + "`" + `client_credentials` + "`" + `).",
                 "consumes": [
                     "application/x-www-form-urlencoded"
                 ],
@@ -17723,18 +17723,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Refresh token (for ` + "`" + `refresh_token` + "`" + `)",
                         "name": "refresh_token",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Username (for ` + "`" + `password` + "`" + `)",
-                        "name": "username",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Password (for ` + "`" + `password` + "`" + `)",
-                        "name": "password",
                         "in": "formData"
                     },
                     {

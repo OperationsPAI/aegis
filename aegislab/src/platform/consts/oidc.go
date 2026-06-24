@@ -5,7 +5,6 @@ const (
 	OIDCGrantAuthorizationCode = "authorization_code"
 	OIDCGrantRefreshToken      = "refresh_token"
 	OIDCGrantClientCredentials = "client_credentials"
-	OIDCGrantPassword          = "password"
 )
 
 // OIDCGrantsSupported is the canonical list returned by the discovery endpoint

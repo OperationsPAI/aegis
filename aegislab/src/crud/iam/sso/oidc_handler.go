@@ -276,7 +276,7 @@ func buildRedirect(redirectURI, code, state string) (string, error) {
 // token implements the OIDC token endpoint.
 //
 //	@Summary		OIDC token endpoint
-//	@Description	OIDC token endpoint. Authenticates the client via Basic auth or `client_id`/`client_secret` form fields and dispatches on `grant_type` (`authorization_code`, `refresh_token`, `client_credentials`, `password`).
+//	@Description	OIDC token endpoint. Authenticates the client via Basic auth or `client_id`/`client_secret` form fields and dispatches on `grant_type` (`authorization_code`, `refresh_token`, `client_credentials`).
 //	@Tags			OIDC
 //	@ID				oidc_token
 //	@Accept			x-www-form-urlencoded
@@ -286,8 +286,6 @@ func buildRedirect(redirectURI, code, state string) (string, error) {
 //	@Param			redirect_uri	formData	string	false	"Redirect URI used at /authorize"
 //	@Param			code_verifier	formData	string	false	"PKCE code verifier"
 //	@Param			refresh_token	formData	string	false	"Refresh token (for `refresh_token`)"
-//	@Param			username		formData	string	false	"Username (for `password`)"
-//	@Param			password		formData	string	false	"Password (for `password`)"
 //	@Param			client_id		formData	string	false	"Client id (when not using Basic auth)"
 //	@Param			client_secret	formData	string	false	"Client secret (when not using Basic auth)"
 //	@Success		200	{object}	tokenResp	"Token response"

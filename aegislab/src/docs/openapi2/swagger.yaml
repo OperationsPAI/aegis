@@ -21298,7 +21298,7 @@ paths:
       - application/x-www-form-urlencoded
       description: OIDC token endpoint. Authenticates the client via Basic auth or
         `client_id`/`client_secret` form fields and dispatches on `grant_type` (`authorization_code`,
-        `refresh_token`, `client_credentials`, `password`).
+        `refresh_token`, `client_credentials`).
       operationId: oidc_token
       parameters:
       - description: OAuth2 grant type
@@ -21321,14 +21321,6 @@ paths:
       - description: Refresh token (for `refresh_token`)
         in: formData
         name: refresh_token
-        type: string
-      - description: Username (for `password`)
-        in: formData
-        name: username
-        type: string
-      - description: Password (for `password`)
-        in: formData
-        name: password
         type: string
       - description: Client id (when not using Basic auth)
         in: formData

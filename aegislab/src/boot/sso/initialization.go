@@ -147,7 +147,7 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 		Name:             "Aegis Backend",
 		Service:          "aegis-backend",
 		RedirectURIs:     []string{redirectURI},
-		Grants:           []string{"authorization_code", "refresh_token", "client_credentials", "password"},
+		Grants:           []string{"authorization_code", "refresh_token", "client_credentials"},
 		Scopes:           []string{"openid", "profile", "email"},
 		IsConfidential:   true,
 		Status:           consts.CommonEnabled,
@@ -285,11 +285,15 @@ func seedConsoleOIDCClient(_ context.Context, db *gorm.DB) error {
 	return nil
 }
 
-// seedCLIOIDCClient ensures a public `aegis-cli` OIDC client exists so
-// the aegisctl binary can do `grant_type=password` (and refresh_token)
-// against /token without shipping a client_secret. Public client
-// (IsConfidential=false) → VerifySecret short-circuits the bcrypt check
-// in crud/iam/sso/service.go.
+// seedCLIOIDCClient ensures a public `aegis-cli` OIDC client exists as a
+// reserved public-client identity for a future authorization_code + PKCE
+// browser flow. Public client (IsConfidential=false) → VerifySecret
+// short-circuits the bcrypt check in crud/iam/sso/service.go.
+//
+// NOTE: aegisctl does NOT use this OIDC client — it authenticates via the
+// unified backend endpoint `/api/v2/auth/login` (and `/auth/api-key/token`)
+// per RFC #550. The deprecated ROPC `password` grant was removed (aegis#585):
+// it was advertised here but never implemented in the /token handler.
 func seedCLIOIDCClient(_ context.Context, db *gorm.DB) error {
 	desired := &model.OIDCClient{
 		ClientID:         "aegis-cli",
@@ -297,7 +301,7 @@ func seedCLIOIDCClient(_ context.Context, db *gorm.DB) error {
 		Name:             "Aegis CLI",
 		Service:          "aegis-cli",
 		RedirectURIs:     []string{},
-		Grants:           []string{"password", "refresh_token"},
+		Grants:           []string{"authorization_code", "refresh_token"},
 		Scopes:           []string{"openid", "profile", "email"},
 		IsConfidential:   false,
 		Status:           consts.CommonEnabled,
