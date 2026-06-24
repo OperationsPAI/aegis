@@ -25,6 +25,13 @@ global:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
       tag: byte-20260605-duckdbquery
       pullPolicy: IfNotPresent
+    # Caddy image for the edge-proxy subchart. Mirrored
+    # docker.io/library/caddy:2-alpine -> docker.io/opspai/caddy:2-alpine on
+    # 2026-05-01; volces auto-mirror serves it as pair-cn-shanghai/opspai/caddy.
+    caddy:
+      name: pair-cn-shanghai.cr.volces.com/opspai/caddy
+      tag: "2-alpine"
+      pullPolicy: IfNotPresent
 
 # Dev intercept anchors. Enabled on byte-cluster so developers can run
 # `telepresence intercept rcabench-dev-frontend --port 3323:80` and the
@@ -41,12 +48,6 @@ images:
   buildkit:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/buildkit
     tag: buildx-stable-1
-    pullPolicy: IfNotPresent
-  caddy:
-    # Mirrored docker.io/library/caddy:2-alpine -> docker.io/opspai/caddy:2-alpine
-    # on 2026-05-01; volces auto-mirror serves it as pair-cn-shanghai/opspai/caddy.
-    name: pair-cn-shanghai.cr.volces.com/opspai/caddy
-    tag: "2-alpine"
     pullPolicy: IfNotPresent
 
 # In-namespace otel-collector. The chart-default image is docker.io/otel/*
@@ -225,6 +226,16 @@ edgeProxy:
     enabled: true
     port: 80
     upstream: "arl-edge-gateway.exp.svc.cluster.local:80"
+  # The edge-proxy subchart can't read the top-level `frontend.enabled` /
+  # `devAnchors.enabled` toggles, so mirror them here so the Caddyfile
+  # path-splits to the frontend Service and renders the /dev intercept
+  # routes. aegis-api / gateway / sso ports already match the subchart
+  # defaults, so they're omitted.
+  backends:
+    frontend:
+      enabled: true
+    devAnchors:
+      enabled: true
 
 # aegis-gateway refuses to start in `env=prod` without a non-empty
 # `gateway.trusted_header_key`. Set a stable cluster-internal value

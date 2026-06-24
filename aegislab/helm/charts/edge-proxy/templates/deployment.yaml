@@ -1,0 +1,68 @@
+{{- if .Values.enabled }}
+# Edge proxy: stable Service to anchor the external LoadBalancer EIP.
+# The LB controller annotations live here (not on the aegis-api Service)
+# so routine aegis-api upgrades don't churn the EIP.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "edge-proxy.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "edge-proxy.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "edge-proxy.fullname" . }}
+      annotations:
+        # Re-render this template's hash so a Caddyfile change in the
+        # ConfigMap above triggers a pod rollout — Caddy has no SIGHUP
+        # config-watcher in this image.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      containers:
+        - name: caddy
+          image: {{ include "edge-proxy.image" . }}
+          imagePullPolicy: "{{ include "edge-proxy.imagePullPolicy" . }}"
+          args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ .Release.Name }}-otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_SERVICE_NAME
+              value: "aegis-edge-proxy"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.scope=aegis"
+          ports:
+            - name: http
+              containerPort: {{ .Values.backends.aegisApi.httpPort }}
+            - name: intake-grpc
+              containerPort: {{ .Values.backends.aegisApi.intakeGrpcPort | default 9096 }}
+            {{- if .Values.arl.enabled }}
+            - name: arl-http
+              containerPort: {{ .Values.arl.port | default 80 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy
+            {{- if .Values.tls.secretName }}
+            - name: tls
+              mountPath: /etc/caddy/tls
+              readOnly: true
+            {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "edge-proxy.fullname" . }}-config
+        {{- if .Values.tls.secretName }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.secretName }}
+        {{- end }}
+{{- end }}

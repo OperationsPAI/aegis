@@ -1,0 +1,69 @@
+# edge-proxy subchart defaults.
+#
+# Self-contained values for the Caddy edge-proxy that anchors the external
+# LoadBalancer EIP and reverse-proxies into the aegis stack. The parent
+# rcabench chart drives this subchart via top-level `edgeProxy:` overrides
+# (the dependency is aliased to `edgeProxy`).
+#
+# NOTE on backends: subcharts cannot read sibling-subchart or parent values,
+# so the upstream ports/toggles the Caddyfile needs (aegis-api, gateway,
+# frontend, sso, dev anchors) are duplicated here under `backends:`. The
+# umbrella forwards the real values via its top-level `edgeProxy.backends:`
+# block — keep the two in sync. Backend Service NAMES are derived from
+# `.Release.Name` (same release as the upstreams under the umbrella).
+
+# Toggle the whole edge-proxy (Deployment + Service + ConfigMap).
+enabled: true
+replicaCount: 1
+
+tls:
+  # Flip on to make Caddy terminate TLS. Required when the SPA is loaded
+  # over a non-localhost origin and needs `crypto.subtle.*` for PKCE.
+  enabled: false
+  # When set, Caddy serves `tls.crt` + `tls.key` from this Secret (mounted
+  # at /etc/caddy/tls) instead of Caddy's `tls internal` auto-CA.
+  secretName: ""
+
+service:
+  type: ClusterIP
+  # Cloud LB / EIP annotations (e.g. Volcengine LB controller).
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Optional extra listener that reuses this edge EIP to front a standalone
+# arl-edge gateway (the JWT front door for the agent-env/arl operator).
+# Off by default so non-arl installs render identically.
+arl:
+  enabled: false
+  port: 80
+  upstream: ""
+
+# Upstream ports/toggles the Caddyfile routes to. Duplicated from the
+# umbrella's microservices / gateway / frontend / sso / devAnchors values
+# because subcharts can't read sibling values (see header note).
+backends:
+  aegisApi:
+    httpPort: 8082
+    intakeGrpcPort: 9096
+  gateway:
+    enabled: true
+    httpPort: 8086
+  frontend:
+    enabled: false
+    port: 80
+  sso:
+    port: 8083
+  devAnchors:
+    enabled: false
+
+# `global` is inherited from the umbrella (imageRegistry, publicBaseURL,
+# additionalSiteAddresses, images.caddy). Declared empty so standalone
+# `helm template` of this subchart doesn't error on missing `.Values.global`.
+global: {}

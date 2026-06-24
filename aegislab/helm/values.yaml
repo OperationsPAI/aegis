@@ -38,6 +38,12 @@ global:
       name: opspai/rcabench
       tag: latest
       pullPolicy: Always
+    # Caddy image for the edge-proxy subchart. Lives under `global.images`
+    # because `global` is the only value the edge-proxy subchart can read.
+    caddy:
+      name: caddy
+      tag: "2-alpine"
+      pullPolicy: IfNotPresent
   # SSO client config consumed by the backend (module/ssoclient).
   # Rendered as AEGIS_SSO_* env vars on the aegis-api pod so config.toml
   # template strings can pick them up. Bootstrap client secret is read
@@ -79,10 +85,6 @@ images:
   buildkit:
     name: moby/buildkit
     tag: buildx-stable-1
-    pullPolicy: IfNotPresent
-  caddy:
-    name: caddy
-    tag: "2-alpine"
     pullPolicy: IfNotPresent
 
 # Edge proxy: thin reverse-proxy Service that anchors the external LB EIP.
@@ -151,6 +153,24 @@ edgeProxy:
     enabled: false
     port: 80
     upstream: ""
+  # Upstream ports/toggles the edge-proxy Caddyfile routes to. Duplicated
+  # here because the edge-proxy subchart can't read sibling-subchart or
+  # parent values — keep these in sync with `microservices.aegisApi.*`,
+  # `gateway.*`, `frontend.*`, `sso.service.port`, and `devAnchors.enabled`.
+  backends:
+    aegisApi:
+      httpPort: 8082
+      intakeGrpcPort: 9096
+    gateway:
+      enabled: true
+      httpPort: 8086
+    frontend:
+      enabled: false
+      port: 80
+    sso:
+      port: 8083
+    devAnchors:
+      enabled: false
 
 buildkit:
   enabled: true

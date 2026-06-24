@@ -1,16 +1,16 @@
-{{- if .Values.edgeProxy.enabled }}
+{{- if .Values.enabled }}
 # Caddyfile ConfigMap for the edge-proxy Deployment. Lives in its own
 # template file so the Deployment can `include` this path to compute a
 # checksum/config annotation without recursing on itself.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-edge-proxy-config
+  name: {{ include "edge-proxy.fullname" . }}-config
 data:
   Caddyfile: |
     {
         admin off
-        {{- if not .Values.edgeProxy.tls.enabled }}
+        {{- if not .Values.tls.enabled }}
         auto_https off
         {{- else }}
         # auto_https stays on so `tls internal` actually binds TLS to the
@@ -42,9 +42,9 @@ data:
       / DNS name the browser uses. Falls back to bare `:port` for plain
       HTTP installs (kind / in-cluster only).
     */}}
-    {{- $port := int .Values.microservices.aegisApi.httpPort -}}
+    {{- $port := int .Values.backends.aegisApi.httpPort -}}
     {{- $siteAddr := printf ":%d" $port -}}
-    {{- if .Values.edgeProxy.tls.enabled -}}
+    {{- if .Values.tls.enabled -}}
       {{- $pub := .Values.global.publicBaseURL | default "" -}}
       {{- $host := regexReplaceAll "^https?://([^/:]+).*$" $pub "${1}" -}}
       {{- if $host -}}
@@ -59,9 +59,9 @@ data:
         tracing {
             span aegis-edge-proxy
         }
-        {{- if .Values.edgeProxy.tls.enabled }}
-        {{- if .Values.edgeProxy.tls.secretName }}
-        # Cert + key from `{{ .Values.edgeProxy.tls.secretName }}` Secret
+        {{- if .Values.tls.enabled }}
+        {{- if .Values.tls.secretName }}
+        # Cert + key from `{{ .Values.tls.secretName }}` Secret
         # (mounted at /etc/caddy/tls). Trust on clients by installing the
         # corresponding root CA — avoids the "Not Secure" warning that
         # blocks browser password managers from saving credentials.
@@ -74,11 +74,11 @@ data:
         tls internal
         {{- end }}
         {{- end }}
-        {{- $apiBackend := printf "%s-aegis-api:%d" .Release.Name (int .Values.microservices.aegisApi.httpPort) }}
-        {{- if .Values.gateway.enabled }}
-        {{- $apiBackend = printf "%s-gateway:%d" .Release.Name (int (.Values.gateway.httpPort | default 8086)) }}
+        {{- $apiBackend := printf "%s-aegis-api:%d" .Release.Name (int .Values.backends.aegisApi.httpPort) }}
+        {{- if .Values.backends.gateway.enabled }}
+        {{- $apiBackend = printf "%s-gateway:%d" .Release.Name (int (.Values.backends.gateway.httpPort | default 8086)) }}
         {{- end }}
-        {{- if .Values.frontend.enabled }}
+        {{- if .Values.backends.frontend.enabled }}
         # SSO public OIDC endpoints live at the SSO service root (not under
         # /api/v2). Route them directly so the browser's OAuth2 code-flow
         # redirect lands on the real handler instead of the SPA shell.
@@ -94,7 +94,7 @@ data:
             path /authorize /token /userinfo /login /v1/* /.well-known/openid-configuration /.well-known/jwks.json /auth/providers /auth/federated/* /auth/callback/*
         }
         handle @sso {
-            reverse_proxy {{ .Release.Name }}-sso:{{ .Values.sso.service.port | default 8083 }}
+            reverse_proxy {{ .Release.Name }}-sso:{{ .Values.backends.sso.port | default 8083 }}
         }
         # Presigned-URL passthrough for rustfs (in-cluster S3 backend).
         # aegis-blob signs URLs against this edge host (see each
@@ -112,7 +112,7 @@ data:
                 header_up Host {http.request.hostport}
             }
         }
-        {{- if .Values.devAnchors.enabled }}
+        {{- if .Values.backends.devAnchors.enabled }}
         # Dev intercept passthrough. `/dev/api/*` routes to the dev-api
         # anchor Service, `/dev/*` to the dev-frontend anchor. With no
         # active `telepresence intercept` these anchors serve a 503
@@ -144,7 +144,7 @@ data:
             reverse_proxy {{ $apiBackend }}
         }
         handle {
-            reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.frontend.service.port | default 80 }}
+            reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.backends.frontend.port | default 80 }}
         }
         {{- else }}
         reverse_proxy {{ $apiBackend }}
@@ -152,22 +152,22 @@ data:
     }
     # gRPC intake stays direct: gateway is HTTP-only, intake speaks raw gRPC
     # to aegis-api on a dedicated port.
-    :{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }} {
+    :{{ .Values.backends.aegisApi.intakeGrpcPort | default 9096 }} {
         tracing {
             span aegis-edge-proxy-grpc
         }
-        reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
+        reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.backends.aegisApi.intakeGrpcPort | default 9096 }}
     }
-    {{- if .Values.edgeProxy.arl.enabled }}
+    {{- if .Values.arl.enabled }}
     # arl front door: reuse this edge EIP on a dedicated port to reach the
     # standalone arl-edge gateway (JWT verify + inject arl upstream cred),
     # which forwards into the arl namespace. Plain HTTP listener — the
     # arl-edge gateway does its own auth; clients hit `<edge-eip>:{port}`.
-    :{{ .Values.edgeProxy.arl.port | default 80 }} {
+    :{{ .Values.arl.port | default 80 }} {
         tracing {
             span aegis-edge-proxy-arl
         }
-        reverse_proxy {{ required "edgeProxy.arl.upstream is required when edgeProxy.arl.enabled" .Values.edgeProxy.arl.upstream }}
+        reverse_proxy {{ required "arl.upstream is required when arl.enabled" .Values.arl.upstream }}
     }
     {{- end }}
 {{- end }}
