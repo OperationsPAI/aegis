@@ -13,7 +13,7 @@ dependencies:
   version: 0.1.0
 - name: gateway
   repository: ""
-  version: 0.2.0
+  version: 0.2.1
 - name: configcenter
   repository: ""
   version: 0.1.0
@@ -32,5 +32,5 @@ dependencies:
 - name: chaos
   repository: ""
   version: 0.1.0
-digest: sha256:a66818e45a6a2d74e3ee3b4a4e907cac5b00a44afebca723fec93a75663bd83c
-generated: "2026-06-24T14:22:46.155078421+01:00"
+digest: sha256:bb2c4bc2acdd3d5b9928e847675c4e4c7e9e6a2fa56d48a51ae7996b2dc72058
+generated: "2026-06-24T15:22:53.337949571+01:00"

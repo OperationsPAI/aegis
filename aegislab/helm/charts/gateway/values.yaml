@@ -27,6 +27,10 @@ serviceAccount:
   name: ""
 
 # JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+# JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+# NOTE: the binary requires AEGIS_JWT_SECRET (API-key KEK) even in verify-only
+# mode, so in standalone mode this MUST point at a Secret holding `jwt_secret`
+# (use the same value the rest of the aegis stack uses, e.g. <stack>-auth).
 auth:
   jwtSecretRef:
     name: ""

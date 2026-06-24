@@ -12,10 +12,32 @@ metadata:
 data:
   config.prod.toml: |
     name = "aegis-gateway"
+    version = "{{ .Values.standalone.version | default "1.0.0" }}"
     port = {{ .Values.httpPort }}
+    workspace = "{{ .Values.standalone.workspace | default "/app" }}"
 
     [system]
     timezone = "{{ .Values.standalone.timezone | default "UTC" }}"
+
+    {{- /*
+      The shared aegis config validator (platform/config) requires these
+      sections for every binary. The stateless gateway never opens a DB,
+      Redis or k8s client, so placeholder values just satisfy validation.
+    */}}
+    [database.mysql]
+    host = "unused"
+    port = "3306"
+    user = "unused"
+    password = "unused"
+    db = "unused"
+
+    [redis]
+    host = "unused:6379"
+
+    [k8s]
+    namespace = "{{ .Values.standalone.k8sNamespace | default .Release.Namespace }}"
+    [k8s.job.service_account]
+    name = "{{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
 
     [tracing]
     endpoint = "{{ .Values.standalone.tracing.endpoint }}"
