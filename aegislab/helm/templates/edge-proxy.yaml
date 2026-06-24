@@ -40,6 +40,10 @@ spec:
               containerPort: {{ .Values.microservices.aegisApi.httpPort }}
             - name: intake-grpc
               containerPort: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
+            {{- if .Values.edgeProxy.arl.enabled }}
+            - name: arl-http
+              containerPort: {{ .Values.edgeProxy.arl.port | default 80 }}
+            {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/caddy
@@ -81,4 +85,9 @@ spec:
     - name: intake-grpc
       port: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
       targetPort: intake-grpc
+    {{- if .Values.edgeProxy.arl.enabled }}
+    - name: arl-http
+      port: {{ .Values.edgeProxy.arl.port | default 80 }}
+      targetPort: arl-http
+    {{- end }}
 {{- end }}

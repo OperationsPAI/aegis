@@ -218,6 +218,13 @@ edgeProxy:
     minReplicas: 2
     maxReplicas: 4
     targetCPUUtilizationPercentage: 70
+  # Reuse this edge EIP (118.196.98.178) on :80 to front the standalone
+  # arl-edge gateway (JWT front door for the agent-env/arl operator).
+  # Keeps a single EIP for both rcabench (:8082) and arl (:80).
+  arl:
+    enabled: true
+    port: 80
+    upstream: "arl-edge-gateway.exp.svc.cluster.local:80"
 
 # aegis-gateway refuses to start in `env=prod` without a non-empty
 # `gateway.trusted_header_key`. Set a stable cluster-internal value

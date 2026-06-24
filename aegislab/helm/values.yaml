@@ -143,6 +143,14 @@ edgeProxy:
     limits:
       cpu: 500m
       memory: 256Mi
+  # Optional extra listener that reuses this edge EIP to front a standalone
+  # arl-edge gateway (the JWT front door for the agent-env/arl operator).
+  # Off by default so non-arl installs render identically; byte-cluster
+  # turns it on. The upstream is the in-cluster arl-edge Service.
+  arl:
+    enabled: false
+    port: 80
+    upstream: ""
 
 buildkit:
   enabled: true
