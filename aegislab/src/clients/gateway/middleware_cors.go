@@ -19,7 +19,11 @@ func CORSMiddleware(cfg CORSConfig, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if origin != "" && (allowAll || allowedOrigins[origin]) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			if cfg.AllowCredentials {
+			// Never combine credentialed CORS with a wildcard allow-list:
+			// reflecting an arbitrary Origin *and* allowing credentials lets
+			// any site make authenticated cross-origin requests. Credentials
+			// are only safe when the Origin is on an explicit allow-list.
+			if cfg.AllowCredentials && !allowAll {
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
 			if methods != "" {

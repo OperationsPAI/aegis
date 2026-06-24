@@ -95,12 +95,15 @@ func seedDefaultAdmin(db *gorm.DB) error {
 		return nil
 	}
 
-	logrus.Warnf("Seeded default SSO admin user. ONE-TIME PASSWORD: %s", password)
 	dumpPath := config.GetString("sso.seed_secret_dump_path")
 	if dumpPath == "" {
 		dumpPath = "/var/lib/sso/.first-boot-secret"
 	}
 	adminDumpPath := dumpPath + ".admin"
+	// Do NOT log the plaintext password — log lines are shipped to central
+	// aggregators where one-time bootstrap secrets become permanent. Point
+	// the operator at the 0600 dump file instead.
+	logrus.Warnf("Seeded default SSO admin user with a generated one-time password; recover it from %s (NOT logged)", adminDumpPath)
 	if _, err := os.Stat(adminDumpPath); os.IsNotExist(err) {
 		if mkErr := os.MkdirAll(filepath.Dir(adminDumpPath), 0o700); mkErr != nil {
 			logrus.WithError(mkErr).Warn("could not create dir for admin password dump")
@@ -114,9 +117,10 @@ func seedDefaultAdmin(db *gorm.DB) error {
 }
 
 // seedDefaultOIDCClient creates the canonical `aegis-backend` client on
-// first boot. The plaintext secret is logged once and (when configured)
-// written to `[sso] seed_secret_dump_path` so operators can recover it
-// without DB access. On subsequent boots the seed is a no-op.
+// first boot. The plaintext secret is NOT logged (it would persist in log
+// storage); it is written to `[sso] seed_secret_dump_path` (0600) and
+// mirrored into a K8s Secret so operators can recover it without DB access.
+// On subsequent boots the seed is a no-op.
 func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) error {
 	var existing model.OIDCClient
 	err := db.Where("client_id = ?", "aegis-backend").First(&existing).Error
@@ -156,13 +160,16 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 		return err
 	}
 
-	logrus.WithFields(logrus.Fields{"client_id": "aegis-backend"}).
-		Warnf("Seeded default OIDC client. ONE-TIME SECRET: %s", secret)
-
 	dumpPath := config.GetString("sso.seed_secret_dump_path")
 	if dumpPath == "" {
 		dumpPath = "/var/lib/sso/.first-boot-secret"
 	}
+	// Do NOT log the plaintext client secret (central log retention turns a
+	// one-time secret permanent). Recover from the 0600 dump file or the
+	// mirrored K8s Secret below.
+	logrus.WithFields(logrus.Fields{"client_id": "aegis-backend"}).
+		Warnf("Seeded default OIDC client with a generated one-time secret; recover it from %s or the mirrored K8s Secret (NOT logged)", dumpPath)
+
 	if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
 		if mkErr := os.MkdirAll(filepath.Dir(dumpPath), 0o700); mkErr != nil {
 			logrus.WithError(mkErr).Warn("could not create dir for seed-secret dump")
