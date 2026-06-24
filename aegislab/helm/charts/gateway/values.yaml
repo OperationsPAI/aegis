@@ -20,6 +20,11 @@ binaryName: "aegis-gateway"
 
 service:
   type: ClusterIP
+  # Service port exposed to clients/LB. Defaults to httpPort when unset, so the
+  # container can keep an unprivileged listen port (httpPort) while the Service
+  # fronts it on e.g. 80 for a LoadBalancer.
+  # port: 80
+  # annotations: {}            # e.g. cloud LB / EIP annotations
   # nodePort: 30086   # only honored when service.type == NodePort
 
 # ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`.
