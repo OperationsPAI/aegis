@@ -29,6 +29,26 @@ func limitRequestBody() gin.HandlerFunc {
 	}
 }
 
+// requireChaosPrincipal closes the /v1beta exposure surface: the chaos
+// endpoints are service-to-service, but the upstream auth chain
+// (RequireServiceAccount → NewChaosAuthFromEnv → TrustedHeaderAuth/JWTAuth)
+// falls through to ordinary user-JWT auth, so any authenticated user could
+// otherwise create/delete injections cluster-wide (there is no scope gate on
+// the handlers). This runs last and admits only a service token (the
+// chaos-client SA or the static inbound bearer — both set IsServiceToken) or
+// an admin; ordinary/default users get 403, anonymous is already 401 upstream.
+func requireChaosPrincipal() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if middleware.IsServiceToken(c) || middleware.IsCurrentUserAdmin(c) {
+			c.Next()
+			return
+		}
+		dto.ErrorResponse(c, http.StatusForbidden,
+			"Forbidden: chaos endpoints are restricted to service accounts")
+		c.Abort()
+	}
+}
+
 // Routes mounts the §5 surface under /v1beta. Step 1 wires systems,
 // points/import, singleton injections, capabilities, manifest-schema;
 // other endpoints return 501 until later steps.
@@ -57,7 +77,12 @@ func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.Route
 			// path so kubectl smoke-tests with CHAOS_INBOUND_BEARER keep
 			// working through the cutover.
 			g.Use(middleware.RequireServiceAccount(db, verifier.Resolve, "chaos-client"))
-			auth := g.Group("", NewChaosAuthFromEnv())
+			// requireChaosPrincipal runs LAST in the auth chain: the /v1beta
+			// chaos surface is service-to-service, so reject ordinary/default
+			// users that authenticate via the TrustedHeaderAuth/JWTAuth
+			// fallthrough. Only a service token (chaos-client SA or the static
+			// inbound bearer, both set IsServiceToken) or an admin is allowed.
+			auth := g.Group("", NewChaosAuthFromEnv(), requireChaosPrincipal())
 
 			auth.PUT("/systems/:sys", h.PutSystem)
 			auth.GET("/systems/:sys", h.GetSystem)
