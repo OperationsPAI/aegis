@@ -18,10 +18,11 @@ type Config struct {
 
 // Context represents a named connection context.
 //
-// Username and Password are optional, plaintext stored credentials used for
-// unattended re-login when the bearer token expires. They mirror the existing
-// KeyID / key-secret env-var workflow and have the same security posture as
-// any other secret in this file.
+// Username and Password are optional, plaintext stored credentials. Password
+// is NOT persisted by default any more (it leaves a plaintext credential on
+// disk); pass `auth login --save-password` to opt in. For unattended re-login
+// prefer the saved token (+ refresh) or supply the password at run time via
+// AEGIS_PASSWORD / --password-file / --password-stdin.
 type Context struct {
 	Server         string    `yaml:"server"`
 	Token          string    `yaml:"token,omitempty"`

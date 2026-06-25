@@ -189,6 +189,8 @@ func TestAuthLoginWithoutFlagsUsesStoredCredentials(t *testing.T) {
 	}}
 	flagOutput = "json"
 	authLoginServer = "http://127.0.0.1:8082"
+	// This scenario implies a saved-password context; keep it persisted.
+	authLoginSavePassword = true
 
 	var calledWith struct {
 		username string
@@ -246,6 +248,8 @@ func TestAuthLoginFlagsOverrideAndUpdateStoredCredentials(t *testing.T) {
 	authLoginServer = "http://127.0.0.1:8082"
 	authLoginUsername = "new-user"
 	authLoginPasswordStdin = true
+	// Asserts the flag-supplied password is persisted — requires opt-in.
+	authLoginSavePassword = true
 	authLoginCmd.SetIn(strings.NewReader("new-secret\n"))
 
 	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
@@ -312,6 +316,8 @@ func TestAuthLoginPreservesStoredCredentialsAcrossTokenRefresh(t *testing.T) {
 	authLoginServer = "http://127.0.0.1:8082"
 	authLoginUsername = "admin"
 	authLoginPasswordStdin = true
+	// Persisting the plaintext password now requires explicit opt-in.
+	authLoginSavePassword = true
 	authLoginCmd.SetIn(strings.NewReader("stored-secret\n"))
 
 	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
@@ -335,13 +341,82 @@ func TestAuthLoginPreservesStoredCredentialsAcrossTokenRefresh(t *testing.T) {
 	}
 	ctx := final.Contexts["default"]
 	if ctx.Username != "admin" || ctx.Password != "stored-secret" {
-		t.Fatalf("stored creds dropped after re-login: %+v", ctx)
+		t.Fatalf("stored creds dropped after re-login with --save-password: %+v", ctx)
 	}
 	if ctx.Token != "refreshed-jwt" {
 		t.Fatalf("token not refreshed: %+v", ctx)
 	}
 	if ctx.DefaultProject != "pair_diagnosis" {
 		t.Fatalf("default-project lost: %+v", ctx)
+	}
+}
+
+// TestAuthLoginDoesNotPersistPasswordByDefault is the security-default
+// companion: without --save-password, a password re-login must NOT leave the
+// plaintext password on disk (the token is saved for re-auth instead), and it
+// clears any previously stored password.
+func TestAuthLoginDoesNotPersistPasswordByDefault(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() { passwordLoginFunc = prev })
+
+	t.Setenv("HOME", t.TempDir())
+	seedCfg := &config.Config{
+		CurrentContext: "default",
+		Contexts: map[string]config.Context{
+			"default": {
+				Server:   "http://127.0.0.1:8082",
+				Token:    "old-jwt",
+				AuthType: "password",
+				Username: "admin",
+				Password: "legacy-stored-secret",
+			},
+		},
+	}
+	if err := config.SaveConfig(seedCfg); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	loaded, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("reload seed: %v", err)
+	}
+	cfg = loaded
+
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+	authLoginUsername = "admin"
+	authLoginPasswordStdin = true
+	// authLoginSavePassword stays false (reset default).
+	authLoginCmd.SetIn(strings.NewReader("typed-secret\n"))
+
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
+		return &client.LoginResult{
+			Token:     "refreshed-jwt",
+			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			AuthType:  "password",
+			Username:  username,
+		}, nil
+	}
+
+	if _, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	}); err != nil {
+		t.Fatalf("auth login returned error: %v", err)
+	}
+
+	final, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("load final config: %v", err)
+	}
+	ctx := final.Contexts["default"]
+	if ctx.Password != "" {
+		t.Fatalf("password persisted without --save-password: %q", ctx.Password)
+	}
+	if ctx.Token != "refreshed-jwt" {
+		t.Fatalf("token not saved for re-auth: %+v", ctx)
+	}
+	if ctx.Username != "admin" {
+		t.Fatalf("username should be preserved: %+v", ctx)
 	}
 }
 
@@ -400,6 +475,7 @@ func resetAuthLoginState(t *testing.T) {
 	authLoginUsername = ""
 	authLoginPasswordFile = ""
 	authLoginPasswordStdin = false
+	authLoginSavePassword = false
 	authLoginContext = ""
 	authLoginCmd.SetIn(bytes.NewReader(nil))
 }

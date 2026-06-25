@@ -27,6 +27,7 @@ var authLoginKeySecret string
 var authLoginUsername string
 var authLoginPasswordFile string
 var authLoginPasswordStdin bool
+var authLoginSavePassword bool
 var authLoginContext string
 
 var (
@@ -255,8 +256,16 @@ func saveLoginContext(ctxName, server, mode, username, password string, result *
 		if username != "" {
 			ctx.Username = username
 		}
-		if password != "" {
+		// By default do NOT persist the plaintext password to ~/.aegisctl —
+		// re-auth uses the saved token (+ refresh); for unattended re-login
+		// supply the password via --password-stdin, --password-file, or
+		// AEGIS_PASSWORD. Opt in with --save-password to keep the legacy
+		// behaviour. When not opted in, clear any previously stored password
+		// so the default state leaves no plaintext credential on disk.
+		if authLoginSavePassword {
 			ctx.Password = password
+		} else {
+			ctx.Password = ""
 		}
 	case "api_key":
 		if result.KeyID != "" {
@@ -558,6 +567,7 @@ func init() {
 	authLoginCmd.Flags().StringVar(&authLoginUsername, "username", "", "Username (env: AEGIS_USERNAME)")
 	authLoginCmd.Flags().BoolVar(&authLoginPasswordStdin, "password-stdin", false, "Read password from stdin")
 	authLoginCmd.Flags().StringVar(&authLoginPasswordFile, "password-file", "", "Read password from file (env: AEGIS_PASSWORD_FILE)")
+	authLoginCmd.Flags().BoolVar(&authLoginSavePassword, "save-password", false, "Persist the plaintext password to ~/.aegisctl for unattended re-login (default: token-only; prefer AEGIS_PASSWORD/--password-file)")
 	authLoginCmd.Flags().StringVar(&authLoginContext, "context", "", "Context name to save credentials under (default: \"default\")")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeyID, "key-id", "", "Key ID (env: AEGIS_KEY_ID)")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeySecret, "key-secret", "", "Key secret (env: AEGIS_KEY_SECRET)")
