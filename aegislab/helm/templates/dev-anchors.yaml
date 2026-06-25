@@ -41,8 +41,8 @@ spec:
     spec:
       containers:
         - name: caddy
-          image: {{ include "helm.image" (dict "imageConfig" $.Values.images.caddy "global" $.Values.global) }}
-          imagePullPolicy: "{{ $.Values.images.caddy.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" $.Values.global.images.caddy "global" $.Values.global) }}
+          imagePullPolicy: "{{ $.Values.global.images.caddy.pullPolicy }}"
           args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
           ports:
             - name: http
