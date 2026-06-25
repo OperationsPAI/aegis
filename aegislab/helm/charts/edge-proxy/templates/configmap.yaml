@@ -159,10 +159,11 @@ data:
         reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.backends.aegisApi.intakeGrpcPort | default 9096 }}
     }
     {{- if .Values.arl.enabled }}
-    # arl front door: reuse this edge EIP on a dedicated port to reach the
-    # standalone arl-edge gateway (JWT verify + inject arl upstream cred),
-    # which forwards into the arl namespace. Plain HTTP listener — the
-    # arl-edge gateway does its own auth; clients hit `<edge-eip>:{port}`.
+    # arl passthrough: reuse this edge EIP on a dedicated port to reach the
+    # agent-env/arl gateway directly. No SSO at the edge — arl runs its own
+    # fail-closed API-key auth, so clients present an arl API key
+    # (Authorization: Bearer <arl-key>). Plain HTTP listener; the upstream is
+    # set via `arl.upstream` (e.g. arl-operator-gateway.arl.svc:8080).
     :{{ .Values.arl.port | default 80 }} {
         tracing {
             span aegis-edge-proxy-arl

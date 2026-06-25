@@ -16,7 +16,7 @@ dependencies:
   version: 0.2.3
 - name: edge-proxy
   repository: ""
-  version: 0.1.0
+  version: 0.1.1
 - name: configcenter
   repository: ""
   version: 0.1.0
@@ -35,5 +35,5 @@ dependencies:
 - name: chaos
   repository: ""
   version: 0.1.0
-digest: sha256:69945e1381fe05786b205f93404794f1e355d4b2bcded25e9369cb12a15e6617
-generated: "2026-06-24T22:48:32.047341627+01:00"
+digest: sha256:5c604c7c74fa42cd21506eb8ed480002bb3e1e439cb72462f6f37d3d9f2a56da
+generated: "2026-06-25T07:32:07.720110538+01:00"

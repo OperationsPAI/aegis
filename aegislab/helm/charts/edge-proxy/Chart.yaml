@@ -2,5 +2,5 @@ apiVersion: v2
 name: edge-proxy
 description: Aegis edge-proxy (Caddy reverse-proxy fronting the external LB EIP, extracted from rcabench monolith chart)
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "1.0.0"
