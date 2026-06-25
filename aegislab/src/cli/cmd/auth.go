@@ -54,7 +54,10 @@ var authLoginCmd = &cobra.Command{
 			server = flagServer
 		}
 		if server == "" {
-			return usageErrorf("--server is required for login")
+			server = strings.TrimSpace(os.Getenv("AEGIS_SERVER"))
+		}
+		if server == "" {
+			return usageErrorf("--server is required for login (or set AEGIS_SERVER)")
 		}
 
 		ctxName := resolveAuthLoginContextName()
