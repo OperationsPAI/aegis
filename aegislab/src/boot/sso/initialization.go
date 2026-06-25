@@ -164,17 +164,22 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 	if dumpPath == "" {
 		dumpPath = "/var/lib/sso/.first-boot-secret"
 	}
-	// Do NOT log the plaintext client secret (central log retention turns a
-	// one-time secret permanent). Recover from the 0600 dump file or the
-	// mirrored K8s Secret below.
-	logrus.WithFields(logrus.Fields{"client_id": "aegis-backend"}).
-		Warnf("Seeded default OIDC client with a generated one-time secret; recover it from %s or the mirrored K8s Secret (NOT logged)", dumpPath)
-
-	if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
-		if mkErr := os.MkdirAll(filepath.Dir(dumpPath), 0o700); mkErr != nil {
-			logrus.WithError(mkErr).Warn("could not create dir for seed-secret dump")
-		} else if writeErr := os.WriteFile(dumpPath, []byte(secret+"\n"), 0o600); writeErr != nil {
-			logrus.WithError(writeErr).Warn("could not write seed-secret dump file")
+	// In-cluster the K8s Secret mirror below is the recovery path, so do NOT
+	// also persist the plaintext to the PVC dump file (a one-time secret would
+	// otherwise live forever on disk). Only fall back to the 0600 dump when
+	// running outside K8s, where the mirror can't run.
+	if inKubernetes() {
+		logrus.WithFields(logrus.Fields{"client_id": "aegis-backend"}).
+			Warn("Seeded default OIDC client with a generated one-time secret; recover it from the mirrored K8s Secret (NOT logged, not dumped to disk in-cluster)")
+	} else {
+		logrus.WithFields(logrus.Fields{"client_id": "aegis-backend"}).
+			Warnf("Seeded default OIDC client with a generated one-time secret; recover it from %s (NOT logged)", dumpPath)
+		if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
+			if mkErr := os.MkdirAll(filepath.Dir(dumpPath), 0o700); mkErr != nil {
+				logrus.WithError(mkErr).Warn("could not create dir for seed-secret dump")
+			} else if writeErr := os.WriteFile(dumpPath, []byte(secret+"\n"), 0o600); writeErr != nil {
+				logrus.WithError(writeErr).Warn("could not write seed-secret dump file")
+			}
 		}
 	}
 
@@ -183,6 +188,12 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 	// the SSO PVC. Best-effort — silently no-op when running outside of K8s.
 	upsertBootstrapK8sSecret(ctx, secret)
 	return nil
+}
+
+// inKubernetes reports whether the process is running inside a K8s pod (the
+// API server is always advertised via this env var by the kubelet).
+func inKubernetes() bool {
+	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
 }
 
 func upsertBootstrapK8sSecret(ctx context.Context, plaintext string) {

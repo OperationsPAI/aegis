@@ -12,6 +12,16 @@ image:
   tag: "8.0-M02-alpine3.20"
   pullPolicy: IfNotPresent
 
+# Authentication. Off by default to preserve existing installs (Redis runs
+# open within the namespace). To harden: set auth.enabled=true and supply a
+# password (or existingSecret), and wire the SAME value into the parent
+# `[redis].password` so clients authenticate.
+auth:
+  enabled: false
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: "redis-password"
+
 service:
   type: ClusterIP
   port: 6379

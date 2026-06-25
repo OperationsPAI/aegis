@@ -22,11 +22,31 @@ spec:
         - name: redis
           image: {{ include "redis.image" . }}
           imagePullPolicy: "{{ include "redis.imagePullPolicy" . }}"
+          {{- if .Values.auth.enabled }}
+          # `$(REDIS_PASSWORD)` is expanded by the kubelet from the env var
+          # below. Without auth Redis is reachable unauthenticated by anything
+          # in the namespace; enable + wire the parent `[redis]` password to
+          # close that. Off by default to preserve existing installs.
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          {{- end }}
           ports:
             - containerPort: {{ .Values.service.port | default 6379 }}
-          {{- with .Values.extraEnv }}
+          {{- if or .Values.auth.enabled .Values.extraEnv }}
           env:
+            {{- if .Values.auth.enabled }}
+            - name: REDIS_PASSWORD
+              {{- if .Values.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.existingSecretPasswordKey | default "redis-password" }}
+              {{- else }}
+              value: {{ required "redis.auth.password or redis.auth.existingSecret is required when redis.auth.enabled" .Values.auth.password | quote }}
+              {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
           {{- if not .Values.persistence.enabled }}
           resources:

@@ -25,15 +25,15 @@ dependencies:
   version: 0.1.0
 - name: mysql
   repository: ""
-  version: 0.1.0
+  version: 0.2.0
 - name: redis
   repository: ""
-  version: 0.1.0
+  version: 0.2.0
 - name: etcd
   repository: ""
   version: 0.1.0
 - name: chaos
   repository: ""
   version: 0.1.0
-digest: sha256:5c604c7c74fa42cd21506eb8ed480002bb3e1e439cb72462f6f37d3d9f2a56da
-generated: "2026-06-25T07:32:07.720110538+01:00"
+digest: sha256:132f5e63547d006fd8f14edd335f3f85878734508fd6772587bbfdc869f0064f
+generated: "2026-06-25T07:44:08.526785442+01:00"

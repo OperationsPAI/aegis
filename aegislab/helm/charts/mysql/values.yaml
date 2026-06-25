@@ -18,7 +18,12 @@ image:
 # parent's `[database.mysql]` ConfigMap section stay in sync.
 auth:
   db: "rcabench"
+  # Default kept for back-compat; OVERRIDE in prod. Prefer existingSecret:
+  # point it at a Secret holding the root password and wire the SAME value
+  # into the parent `[database.mysql].password` so the backend connects.
   rootPassword: "yourpassword"
+  existingSecret: ""
+  existingSecretPasswordKey: "mysql-root-password"
 
 service:
   # `staging` env_mode is treated specially below so the existing

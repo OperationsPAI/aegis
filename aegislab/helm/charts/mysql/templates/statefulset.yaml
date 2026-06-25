@@ -34,7 +34,14 @@ spec:
             - name: MYSQL_DATABASE
               value: "{{ .Values.auth.db }}"
             - name: MYSQL_ROOT_PASSWORD
+              {{- if .Values.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.existingSecretPasswordKey | default "mysql-root-password" }}
+              {{- else }}
               value: "{{ .Values.auth.rootPassword }}"
+              {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
