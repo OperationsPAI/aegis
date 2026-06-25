@@ -181,6 +181,81 @@ func TestHandler_Delete_LegacyObject_AllowedForAdmin(t *testing.T) {
 	}
 }
 
+// ---- S2b: per-key ACL on batch / copy paths ----
+
+// TestHandler_CopyObject_DeniesUnreadableSource is the regression guard for the
+// cross-tenant copy bypass: CopyObject checked only bucket-level CanWrite, so a
+// user who can write (empty write_roles → CanWrite true for everyone) but cannot
+// read (role-restricted, not the owner) could copy out — i.e. read — another
+// tenant's object. The per-key read ACL on the source must now deny it.
+func TestHandler_CopyObject_DeniesUnreadableSource(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	// write_roles empty -> any authenticated user CanWrite.
+	// read_roles restricted -> only admin-role / the owner CanRead.
+	cfg := BucketConfig{Name: "mixed", WriteRoles: []string{}, ReadRoles: []string{"admin-role"}}
+	h, drv, repo := newACLHarness(t, cfg)
+
+	ownerID := 7
+	ctx := context.Background()
+	if _, err := drv.Put(ctx, "secret.txt", strings.NewReader("classified"), PutOpts{ContentType: "text/plain"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Create(ctx, &ObjectRecord{
+		Bucket: "mixed", StorageKey: "secret.txt", SizeBytes: 10,
+		ContentType: "text/plain", UploadedBy: &ownerID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/",
+		strings.NewReader(`{"src":"secret.txt","dst":"stolen.txt"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "bucket", Value: "mixed"}}
+	setUserCtx(c, 42, false, []string{}) // can write (empty roles), cannot read
+
+	h.CopyObject(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("CopyObject unreadable src: expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestHandler_CopyObject_AllowsOwnerReadableSource is the companion: the object
+// owner (CanRead via uploader match) can still copy their own object.
+func TestHandler_CopyObject_AllowsOwnerReadableSource(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := BucketConfig{Name: "mixed2", WriteRoles: []string{}, ReadRoles: []string{"admin-role"}}
+	h, drv, repo := newACLHarness(t, cfg)
+
+	ownerID := 7
+	ctx := context.Background()
+	if _, err := drv.Put(ctx, "mine.txt", strings.NewReader("data"), PutOpts{ContentType: "text/plain"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Create(ctx, &ObjectRecord{
+		Bucket: "mixed2", StorageKey: "mine.txt", SizeBytes: 4,
+		ContentType: "text/plain", UploadedBy: &ownerID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/",
+		strings.NewReader(`{"src":"mine.txt","dst":"copy.txt"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "bucket", Value: "mixed2"}}
+	setUserCtx(c, ownerID, false, []string{}) // owner: CanWrite + CanRead(own)
+
+	h.CopyObject(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("CopyObject own object: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 // ---- S3: Raw PUT content-type / size enforcement ----
 
 func newRawHarness(t *testing.T, cfg BucketConfig) (*Handler, *LocalFSDriver) {

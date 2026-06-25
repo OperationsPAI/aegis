@@ -34,6 +34,45 @@ func (h *Handler) lookupUploaderForACL(c *gin.Context, bucket, key string) (*int
 	return nil, false, err
 }
 
+// authorizeKeyRead enforces the per-key, uploader-aware read ACL — the same
+// check ZipObjects applies in its loop. Bucket-level CanRead alone is not
+// enough: an empty read_roles list grants read to every authenticated user,
+// so batch/query paths that take caller-supplied keys MUST re-check each key
+// or they leak other tenants' objects. Writes the 403/error response and
+// returns false on denial.
+func (h *Handler) authorizeKeyRead(c *gin.Context, cfg *BucketConfig, sub Subject, bucket, key string) bool {
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
+	if err != nil {
+		return false
+	}
+	if h.driverOnlyReadDenied(c, cfg, recordExists) || !h.auth.CanRead(cfg, sub, uploadedBy) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return false
+	}
+	return true
+}
+
+// authorizeKeyWrite enforces the per-key, uploader-aware write/delete ACL —
+// the same check single-object Delete applies. Batch paths that take
+// caller-supplied keys MUST re-check each key or any authenticated user can
+// delete other tenants' objects on a bucket with empty write_roles. Writes
+// the 403/error response and returns false on denial.
+func (h *Handler) authorizeKeyWrite(c *gin.Context, cfg *BucketConfig, sub Subject, bucket, key string) bool {
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
+	if err != nil {
+		return false
+	}
+	if !recordExists && !middleware.IsCurrentUserAdmin(c) && !sub.IsService {
+		dto.ErrorResponse(c, http.StatusForbidden, "delete of legacy object requires admin")
+		return false
+	}
+	if !h.auth.CanWrite(cfg, sub) && (uploadedBy == nil || *uploadedBy != sub.UserID) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return false
+	}
+	return true
+}
+
 // proxyPresign rewrites a PresignedRequest to point at the same-origin
 // /api/v2/blob/raw/<token> proxy endpoint. The browser then PUTs/GETs
 // bytes through aegis-blob which streams to the underlying driver
@@ -878,8 +917,14 @@ func (h *Handler) CopyObject(c *gin.Context) {
 		return
 	}
 	sub := subjectFromContext(c)
+	// Write ACL covers the destination; the source must pass the per-key READ
+	// ACL too, or a caller could copy out objects they cannot read (and, with
+	// DeleteSrc, move other tenants' objects).
 	if !h.auth.CanWrite(&b.Config, sub) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
+	if !h.authorizeKeyRead(c, &b.Config, sub, bucket, req.Src) {
 		return
 	}
 	meta, copyErr := h.svc.Copy(c.Request.Context(), bucket, req.Src, req.Dst, req.DeleteSrc)
@@ -937,9 +982,14 @@ func (h *Handler) BatchDelete(c *gin.Context) {
 		return
 	}
 	sub := subjectFromContext(c)
-	if !h.auth.CanWrite(&b.Config, sub) {
-		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
-		return
+	// Per-key write/delete ACL (not just bucket-level): an empty write_roles
+	// bucket grants write to every authenticated user, so without this any
+	// caller could delete other tenants' objects in one batch. All-or-nothing,
+	// matching single-object Delete + ZipObjects.
+	for _, key := range req.Keys {
+		if !h.authorizeKeyWrite(c, &b.Config, sub, bucket, key) {
+			return
+		}
 	}
 	res, err := h.svc.BatchDelete(c.Request.Context(), bucket, req.Keys)
 	if err != nil {

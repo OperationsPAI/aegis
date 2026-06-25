@@ -75,6 +75,22 @@ func (h *Handler) QueryBucket(c *gin.Context) {
 	if !h.authorizeBucketRead(c, bucket) {
 		return
 	}
+	// Caller-supplied keys bypass the bucket-level read check (which can't see
+	// individual uploaders), so re-check each requested key under the per-key
+	// read ACL — otherwise a user could query/exfiltrate other tenants' rows.
+	if len(req.Keys) > 0 {
+		b, err := h.svc.Registry().Lookup(bucket)
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+			return
+		}
+		sub := subjectFromContext(c)
+		for _, key := range req.Keys {
+			if !h.authorizeKeyRead(c, &b.Config, sub, bucket, key) {
+				return
+			}
+		}
+	}
 	// Reject bad SQL before resolving sources / minting presigns.
 	if _, err := duckdbquery.ValidateSQL(req.SQL); err != nil {
 		h.writeQueryError(c, err)
