@@ -3,7 +3,7 @@ entries:
   rcabench:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-06-25T06:32:32.476388943Z"
+    created: "2026-06-25T06:56:44.033429117Z"
     dependencies:
     - condition: notify.enabled
       name: notify
@@ -42,11 +42,11 @@ entries:
     - condition: mysql.enabled
       name: mysql
       repository: ""
-      version: 0.1.0
+      version: 0.2.0
     - condition: redis.enabled
       name: redis
       repository: ""
-      version: 0.1.0
+      version: 0.2.0
     - condition: etcd.enabled
       name: etcd
       repository: ""
@@ -56,10 +56,10 @@ entries:
       repository: ""
       version: 0.1.0
     description: A Helm chart for Kubernetes
-    digest: bd26cfc9b604a1d32f53d81ec6a297ce8a21290957e2c3235b2d0d033e9bba13
+    digest: a02ddb07550ff90c6ce925041452676d310b3cb6a34240935673fa40dcb7f35e
     name: rcabench
     type: application
     urls:
-    - https://operationspai.github.io/aegis/rcabench-0.2.6.tgz
-    version: 0.2.6
-generated: "2026-06-25T06:32:32.471561811Z"
+    - https://operationspai.github.io/aegis/rcabench-0.2.9.tgz
+    version: 0.2.9
+generated: "2026-06-25T06:56:44.028555588Z"
