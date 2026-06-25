@@ -3,7 +3,7 @@ entries:
   rcabench:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-06-24T21:52:50.677019287Z"
+    created: "2026-06-25T06:32:32.476388943Z"
     dependencies:
     - condition: notify.enabled
       name: notify
@@ -29,7 +29,7 @@ entries:
       condition: edgeProxy.enabled
       name: edge-proxy
       repository: ""
-      version: 0.1.0
+      version: 0.1.1
     - condition: configcenter.enabled
       name: configcenter
       repository: ""
@@ -56,10 +56,10 @@ entries:
       repository: ""
       version: 0.1.0
     description: A Helm chart for Kubernetes
-    digest: b2feb5823a836ec438864da68fcbcd0afecae3d2fdf2ae892e37427d18e81dd1
+    digest: bd26cfc9b604a1d32f53d81ec6a297ce8a21290957e2c3235b2d0d033e9bba13
     name: rcabench
     type: application
     urls:
-    - https://operationspai.github.io/aegis/rcabench-0.2.5.tgz
-    version: 0.2.5
-generated: "2026-06-24T21:52:50.672182037Z"
+    - https://operationspai.github.io/aegis/rcabench-0.2.6.tgz
+    version: 0.2.6
+generated: "2026-06-25T06:32:32.471561811Z"
