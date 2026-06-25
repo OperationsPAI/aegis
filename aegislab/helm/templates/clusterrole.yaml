@@ -7,7 +7,53 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+# Least-privilege rule set derived from the backend's actual k8s API usage
+# (typed clientset calls + chaos-mesh dynamic GVRs). Replaces the previous
+# cluster-admin `*/*/*` grant, which turned any backend RCE/SSRF — or the
+# cross-tenant chaos/blob gaps — into full cluster takeover. If a code path
+# hits an RBAC `forbidden`, add the specific resource/verb here rather than
+# widening back to a wildcard.
 rules:
-  - apiGroups: ["*"]
+  # Pods: read + exec into target pods + read their logs (chaos injection,
+  # diagnostics). No pod mutation.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  # Namespaces: per-experiment namespace lifecycle.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  # Workload-support objects the orchestrator creates/updates.
+  - apiGroups: [""]
+    resources: ["configmaps", "serviceaccounts", "persistentvolumeclaims", "services", "events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Secrets: the SSO bootstrap mirror + per-job credentials. (Namespace-wide
+  # read is unavoidable for a ClusterRole; far narrower than the old wildcard.)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Chaos targets deployments/statefulsets/daemonsets (read + patch for
+  # mutator injection); no create/delete of workloads.
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  # Chaos-mesh CRDs the controller drives.
+  - apiGroups: ["chaos-mesh.org"]
     resources: ["*"]
-    verbs: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  # Read-only introspection of cluster RBAC (capability checks).
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    verbs: ["get", "list"]
