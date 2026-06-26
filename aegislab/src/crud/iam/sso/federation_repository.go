@@ -67,8 +67,23 @@ func (r *FederationRepository) FindIdentity(ctx context.Context, provider, exter
 	return &ui, nil
 }
 
+func (r *FederationRepository) FindIdentityByUserAndProvider(ctx context.Context, userID int, provider string) (*UserIdentity, error) {
+	var ui UserIdentity
+	if err := r.db.WithContext(ctx).Where("user_id = ? AND provider = ?", userID, provider).First(&ui).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, consts.ErrNotFound
+		}
+		return nil, err
+	}
+	return &ui, nil
+}
+
 func (r *FederationRepository) LinkIdentity(ctx context.Context, identity *UserIdentity) error {
 	return r.db.WithContext(ctx).Create(identity).Error
+}
+
+func (r *FederationRepository) UpdateIdentityMetadata(ctx context.Context, id int64, metadata string) error {
+	return r.db.WithContext(ctx).Model(&UserIdentity{}).Where("id = ?", id).Update("metadata", metadata).Error
 }
 
 func (r *FederationRepository) UpdateLastUsed(ctx context.Context, id int64) error {

@@ -196,6 +196,19 @@ func (h *FederationHandler) Callback(c *gin.Context) {
 		return
 	}
 
+	// Persist the provider access token so authenticated proxy endpoints
+	// (e.g. the GitHub repo proxy) can call the provider API on the user's
+	// behalf. Best-effort: the identity exists for both freshly-provisioned
+	// and returning users at this point, and a storage failure must not fail
+	// the login.
+	if meta, mErr := marshalTokenMetadata(token); mErr == nil {
+		if identity, fErr := h.repo.FindIdentity(c.Request.Context(), providerName, sub); fErr == nil {
+			if uErr := h.repo.UpdateIdentityMetadata(c.Request.Context(), identity.ID, meta); uErr != nil {
+				logrus.WithError(uErr).Warn("federation: failed to persist provider token metadata")
+			}
+		}
+	}
+
 	if fs.ClientID != "" {
 		authCode, err := randomToken(24)
 		if err != nil {
@@ -236,6 +249,28 @@ func (h *FederationHandler) Callback(c *gin.Context) {
 		"token_type":   consts.TokenTypeBearer,
 		"expires_in":   expiresIn,
 	})
+}
+
+// federatedTokenMetadata is the JSON shape persisted in UserIdentity.Metadata
+// for oauth2 providers. The GitHub proxy handler reads AccessToken back out.
+type federatedTokenMetadata struct {
+	AccessToken  string    `json:"access_token"`
+	TokenType    string    `json:"token_type"`
+	RefreshToken string    `json:"refresh_token,omitempty"`
+	Expiry       time.Time `json:"expiry"`
+}
+
+func marshalTokenMetadata(token *oauth2.Token) (string, error) {
+	b, err := json.Marshal(federatedTokenMetadata{
+		AccessToken:  token.AccessToken,
+		TokenType:    token.TokenType,
+		RefreshToken: token.RefreshToken,
+		Expiry:       token.Expiry,
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func (h *FederationHandler) buildOAuth2Config(idp *IdentityProvider, r *http.Request) *oauth2.Config {

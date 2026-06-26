@@ -31,12 +31,14 @@ var Module = fx.Module("sso",
 		NewServiceAccountHandler,
 		NewFederationRepository,
 		NewFederationHandler,
+		NewGitHubProxyHandler,
 		NewIdentityProviderRepository,
 		NewFederationAdminHandler,
 		newRevocationStore,
 	),
 	fx.Provide(
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
+		fx.Annotate(RoutesGitHubProxy, fx.ResultTags(`group:"routes"`)),
 	),
 	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, fed *FederationHandler, fedAdmin *FederationAdminHandler, rbacRepo *rbac.Repository) {
 		SetAdminScopeResolver(rbacRepo)
