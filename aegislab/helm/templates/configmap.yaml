@@ -280,6 +280,11 @@ data:
     strip_prefix = true
 
     [[gateway.routes]]
+    prefix   = "/api/v2/github/"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
     prefix   = "/api/v2/auth/"
     upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
     auth     = "none"

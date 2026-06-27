@@ -38,9 +38,8 @@ var Module = fx.Module("sso",
 	),
 	fx.Provide(
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
-		fx.Annotate(RoutesGitHubProxy, fx.ResultTags(`group:"routes"`)),
 	),
-	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, fed *FederationHandler, fedAdmin *FederationAdminHandler, rbacRepo *rbac.Repository) {
+	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, fed *FederationHandler, fedAdmin *FederationAdminHandler, ghProxy *GitHubProxyHandler, rbacRepo *rbac.Repository) {
 		SetAdminScopeResolver(rbacRepo)
 		RegisterAdminRoutes(engine, admin)
 		RegisterClientRoutes(engine, client)
@@ -48,5 +47,6 @@ var Module = fx.Module("sso",
 		RegisterServiceAccountRoutes(engine, sa)
 		RegisterFederationRoutes(engine, fed)
 		RegisterFederationAdminRoutes(engine, fedAdmin)
+		RegisterGitHubProxyRoutes(engine, ghProxy)
 	}),
 )

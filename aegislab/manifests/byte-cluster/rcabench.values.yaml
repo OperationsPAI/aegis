@@ -23,7 +23,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260605-duckdbquery
+      tag: d6e9d7df
       pullPolicy: IfNotPresent
     # Caddy image for the edge-proxy subchart. Mirrored
     # docker.io/library/caddy:2-alpine -> docker.io/opspai/caddy:2-alpine on
@@ -362,7 +362,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260605-duckdbquery
+    tag: d6e9d7df
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench

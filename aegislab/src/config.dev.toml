@@ -217,6 +217,11 @@ auth         = "jwt"
 strip_prefix = true
 
 [[gateway.routes]]
+prefix   = "/api/v2/github/"
+upstream = "sso:8083"
+auth     = "jwt"
+
+[[gateway.routes]]
 prefix   = "/api/v2/auth/"
 upstream = "sso:8083"
 auth     = "none"

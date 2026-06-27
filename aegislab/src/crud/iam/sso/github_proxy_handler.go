@@ -10,7 +10,6 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	"aegis/platform/framework"
 	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -121,15 +120,9 @@ func accessTokenFromMetadata(metadata string) string {
 	return t.AccessToken
 }
 
-// RoutesGitHubProxy mounts the authenticated GitHub proxy under /api/v2/github.
-func RoutesGitHubProxy(handler *GitHubProxyHandler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudiencePortal,
-		Name:     "sso.github-proxy",
-		Register: func(v2 *gin.RouterGroup) {
-			g := v2.Group("/github", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
-			g.GET("/repos/:owner/:repo/git/trees/:sha", handler.ProxyTrees)
-			g.GET("/repos/:owner/:repo/contents/*path", handler.ProxyContents)
-		},
-	}
+// RegisterGitHubProxyRoutes mounts the authenticated GitHub proxy under /api/v2/github.
+func RegisterGitHubProxyRoutes(engine *gin.Engine, handler *GitHubProxyHandler) {
+	g := engine.Group("/api/v2/github", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
+	g.GET("/repos/:owner/:repo/git/trees/:sha", handler.ProxyTrees)
+	g.GET("/repos/:owner/:repo/contents/*path", handler.ProxyContents)
 }
