@@ -180,16 +180,18 @@ Don't dump round-level data into `memory.md`; that belongs in `rounds/*.json`. `
 
 ## Diversity
 
-Group faults by chaos_type **family** (the prefix). Within ~50 rounds, target rough evenness:
+Group faults by chaos_type **family**. A family is the underlying chaos mechanism, NOT the specific sub-type — **all network-* sub-types (NetworkDelay, NetworkLoss, NetworkPartition, NetworkCorrupt, NetworkBandwidth, NetworkDuplicate) count as ONE family: `network`**. Switching from NetworkDelay to NetworkLoss is NOT diversification — it's the same family exercising the same RCA shape. The families are:
 
-- pod-* (PodFailure, PodKill, ContainerKill) — ≤ 20%, bias low
-- network-* (NetworkDelay/Loss/Partition/Bandwidth) — 20–25%
-- jvm-* (JVMLatency/Exception/Return/Stress) — 20–25%
-- http-* (HTTPDelay/Abort/Replace/StatusCode) — 15–20%
-- db-* / mysql-* (DatabaseLatency/Abort) — 10–15%
-- stress / dns / time-skew / others — ~10% combined as long-tail variety
+| family | chaos_types | HARD CAP |
+|---|---|---|
+| network | NetworkDelay, NetworkLoss, NetworkPartition, NetworkCorrupt, NetworkBandwidth, NetworkDuplicate | **≤ 25%** |
+| pod | PodFailure, PodKill, ContainerKill | ≤ 20% |
+| jvm | JVMLatency, JVMException, JVMMySQLLatency, JVMMySQLException, JVMReturn, JVMCPUStress | ≤ 25% |
+| http | HTTPRequestDelay, HTTPResponseDelay, HTTPRequestAbort, HTTPResponseAbort, HTTPReplace, HTTPStatusCode | ≤ 20% |
+| dns | DNSError, DNSRandom | ≤ 10% |
+| stress | CPUStress, TimeSkew | ≤ 10% |
 
-Targets, not hard limits. The principle: **no family above ~30% in any 50-round window**. Cycling pod variants (PodFailure → PodKill → ContainerKill) is dedup bypass dressed up as diversity — RCA learns the same shape three times.
+**Hard rule: no family above its cap in any 50-injection window.** If the pre-round tally (step 3, or the `FAMILY_TALLY` injected by loop.sh) shows a family at or above its cap, you MUST NOT pick that family this round — pick the most underrepresented one instead. This is NOT a soft target; violating the cap is a round-quality failure that the next round's retro-grade will flag.
 
 Within a family, vary the **target service**. Hammering one service with five JVM-method faults teaches RCA to suspect that service, not to actually reason.
 

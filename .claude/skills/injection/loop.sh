@@ -189,6 +189,37 @@ for i in $(seq 1 "$ROUNDS"); do
     EXTRA_LINE="Additional instruction for this campaign: ${EXTRA_INSTRUCTION}"
   fi
 
+  # Pre-compute the real family tally from the last 100 injections so the
+  # agent sees hard numbers instead of maintaining its own (often wrong)
+  # count. Maps chaos_type → family, then counts per family + computes %.
+  # Falls back to "(tally unavailable)" on any error — the agent still has
+  # step 3 as a backup.
+  FAMILY_TALLY=$("$AEGISCTL_BIN" inject list --project pair_diagnosis --size 100 --page 1 -o ndjson 2>/dev/null \
+    | python3 -c "
+import sys, json
+FAMILY = {
+    'NetworkDelay':'network','NetworkLoss':'network','NetworkPartition':'network',
+    'NetworkCorrupt':'network','NetworkBandwidth':'network','NetworkDuplicate':'network',
+    'PodFailure':'pod','PodKill':'pod','ContainerKill':'pod',
+    'JVMLatency':'jvm','JVMException':'jvm','JVMMySQLLatency':'jvm',
+    'JVMMySQLException':'jvm','JVMReturn':'jvm','JVMCPUStress':'jvm',
+    'HTTPRequestDelay':'http','HTTPResponseDelay':'http','HTTPRequestAbort':'http',
+    'HTTPResponseAbort':'http','HTTPReplace':'http','HTTPStatusCode':'http',
+    'DNSError':'dns','DNSRandom':'dns',
+    'CPUStress':'stress','TimeSkew':'stress','MemoryStress':'stress',
+}
+from collections import Counter
+c = Counter()
+for line in sys.stdin:
+    try:
+        ct = json.loads(line).get('fault_type','')
+        c[FAMILY.get(ct, ct or 'unknown')] += 1
+    except: pass
+total = sum(c.values()) or 1
+parts = [f'{fam}={n}({100*n//total}%)' for fam,n in c.most_common()]
+print('FAMILY_TALLY (last 100 injects): ' + ', '.join(parts) + f'  [total={sum(c.values())}]')
+" 2>/dev/null || echo "(tally unavailable)")
+
   # The prompt is intentionally short; the heavy lifting lives in the
   # `injection` skill, which is loaded by the agent once it triggers on
   # "故障注入" / "injection". Keep this prompt stable so caching stays warm.
@@ -203,9 +234,10 @@ Follow the \`injection\` skill end-to-end this round. The skill body has the ful
 
 1. Read ${STATE_DIR}/metadata.json and ${STATE_DIR}/memory.md (may be empty on first run).
 2. Look at the most recent round file in ${STATE_DIR}/rounds/. If its trace's terminal events have landed in aegisctl by now, retroactively grade it using the multi-source signals (detector verdict + injection-effect inspection + SLO impact at the entrance) and patch the round file's "retro_grade" block. Don't trust the detector alone — it has FPs and FNs; cross-check by pulling the abnormal-window trace data via aegisctl. Leave "pending_offline_rca" untouched (that field is reserved for the future offline RCA-grading query).
-3. Use aegisctl to survey the recent injection distribution for ${SYSTEM} (last ~50–100 leaf injections, batch parents excluded). Tally by chaos_type family + target service.
+3. **Survey (pre-computed for you).** ${FAMILY_TALLY}
+   Cross-check with aegisctl if needed, but the numbers above are authoritative (last 100 injects for ${SYSTEM}). The skill's *Diversity* section defines hard per-family caps — if a family is at or above its cap, you MUST NOT pick it this round.
 4. **Read the system — code AND data, not priors.** This is the round's biggest quality lever; do NOT skip to "I already know queryForTravel/checkout/etc." (a) **Source code:** if a source-dir was given above, run **at least 2 \`Read\` or \`Grep\` calls** under it — find fan-in callers of your candidate, retry/timeout/circuit-breaker/cache-fallback logic, and shared resources. Cite them in the round file's \`code_evidence\` block as \`{file, lines, what}\` triples. Empty \`code_evidence\` when source-dir was provided is an anti-pattern; the next round will mark this round "prior-only" in memory.md. (b) **Live data:** pull recent traces / metrics for the candidate service via aegisctl — actual outbound spans, latency distribution per endpoint, baseline error rates. Cite in \`data_evidence\`. The wire (b) shows what the cluster actually does; the code (a) shows what it's supposed to do; both can lie alone, neither is replaceable by priors. Only after these two evidence streams are gathered do you pick the fault. Optimize for: fine granularity (JVM method / HTTP route+verb / DB table+op / service-pair network — NOT whole-pod) × user-visible SLO breach × long causal chain (≥2 hops, shared resource, retry/cache cascade, or timeout amplifier) × blast radius on a critical-path endpoint.
-5. Diversify against the family/service tally — no chaos_type family above ~30% of the recent window; no single target service dominating.
+5. Diversify against the FAMILY_TALLY above — respect the hard per-family caps in the skill's *Diversity* table (network ≤25%, pod ≤20%, jvm ≤25%, http ≤20%, dns ≤10%, stress ≤10%). If a family is at or above cap, you MUST pick a different one. Also vary target service — no single service dominating.
 6. Submit through aegisctl. A round has TWO independent fan-out dimensions (see the skill's *Per-round shape* section): **K_outer** = parallel traces this round (each its own ts namespace via \`--auto\`, each its own RCA puzzle), and **K_inner** = leaves per trace (the \`--apply --batch\` shape, used when leaves should INTERACT within the same trace's data — mutual masking, co-trigger amplification, multi-root-cause grading). Default to K_outer ≥ 2 for throughput when the namespace pool has slack. Use K_inner ≥ 2 only with a concrete interaction hypothesis. Two unrelated faults on different namespaces are K_outer=2 (good — independent puzzles), NOT K_inner=2 (a confused single batch).
 7. **Verify the fault actually landed.** Pull the trace / abnormal-window data via aegisctl and confirm the chaos perturbed traces or metrics on the targeted scope. If it didn't, mark the round outcome "injection-noop" and investigate (image issue, IPVLAN HTTPChaos, missing observed-pair for network chaos, DNS catalog miss, etc.) — do NOT grade a no-op round as a puzzle.
 8. **Simulate the RCA reasoning.** Walk through how an RCA agent would chase this from entrance symptom to actual fault. Count hops in the inference chain and list plausible decoy hypotheses on the way. Record both in the round file's "simulated_rca" block — be honest, don't pad.
