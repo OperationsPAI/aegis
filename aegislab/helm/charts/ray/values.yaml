@@ -25,11 +25,10 @@ worker:
       memory: 8Gi
 
 s3:
-  endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
   bucket: "aegis-datapack"
   credentialsSecret: "rustfs-admin"
-  accessKeyField: "RUSTFS_ROOT_USER"
-  secretKeyField: "RUSTFS_ROOT_PASSWORD"
+  accessKeyField: "BLOB_S3_DATAPACK_ACCESS_KEY"
+  secretKeyField: "BLOB_S3_DATAPACK_SECRET_KEY"
 
 service:
   type: ClusterIP

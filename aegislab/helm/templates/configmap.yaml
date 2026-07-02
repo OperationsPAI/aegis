@@ -267,10 +267,10 @@ data:
     auth         = "jwt"
     strip_prefix = true
 
-    {{- if index .Values "ray-cluster" "enabled" }}
+    {{- if .Values.ray.enabled }}
     [[gateway.routes]]
     prefix          = "/api/v2/ray/"
-    upstream        = "{{ .Release.Name }}-ray-head:{{ (index .Values "ray-cluster" "service" "dashboardPort") | default 8265 }}"
+    upstream        = "{{ .Release.Name }}-ray-head:{{ .Values.ray.service.dashboardPort | default 8265 }}"
     auth            = "jwt"
     strip_prefix    = true
     timeout_seconds = 600

@@ -22,7 +22,7 @@ Local Python / ray CLI          byte-cluster (exp namespace)
 ```
 
 - **Image**: `opspai/ray-aegis:2.56.0-py313` (pre-installed: pyarrow, boto3, s3fs, fsspec, duckdb, aliyun pip mirror)
-- **Helm subchart**: `aegislab/helm/charts/ray-cluster/` under the rcabench umbrella
+- **Helm subchart**: `aegislab/helm/charts/ray/` under the rcabench umbrella
 - **Gateway route**: `/api/v2/ray/` → `rcabench-ray-head:8265`, auth=jwt, strip_prefix, timeout=600s
 - **S3 storage**: in-cluster rustfs (S3-compatible), bucket `aegis-datapack`
 - **Credentials**: from `rustfs-admin` Secret, injected as `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_ENDPOINT_URL` env vars
@@ -212,7 +212,7 @@ Parquet files are written by ClickHouse (v25.7). PyArrow reads them natively. Sp
 
 ## Helm chart location
 
-- Subchart: `aegislab/helm/charts/ray-cluster/`
-- Values override: `aegislab/manifests/byte-cluster/rcabench.values.yaml` → `ray-cluster:` section
-- Dockerfile: `aegislab/helm/charts/ray-cluster/Dockerfile`
-- Parent chart dependency: `aegislab/helm/Chart.yaml` → `ray-cluster` entry
+- Subchart: `aegislab/helm/charts/ray/`
+- Values override: `aegislab/manifests/byte-cluster/rcabench.values.yaml` → `ray:` section
+- Dockerfile: `aegislab/helm/charts/ray/Dockerfile`
+- Parent chart dependency: `aegislab/helm/Chart.yaml` → `ray` entry

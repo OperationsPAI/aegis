@@ -426,7 +426,7 @@ chaos:
     secretName: rcabench-chaos-sa
     secretKey: token
 
-ray-cluster:
+ray:
   enabled: true
   image:
     name: pair-cn-shanghai.cr.volces.com/opspai/ray-aegis
@@ -449,9 +449,3 @@ ray-cluster:
       limits:
         cpu: "2"
         memory: 8Gi
-  s3:
-    endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-    bucket: "aegis-datapack"
-    credentialsSecret: "rustfs-admin"
-    accessKeyField: "RUSTFS_ROOT_USER"
-    secretKeyField: "RUSTFS_ROOT_PASSWORD"

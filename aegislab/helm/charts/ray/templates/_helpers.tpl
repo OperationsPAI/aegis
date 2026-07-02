@@ -3,6 +3,7 @@
 {{- end -}}
 
 {{- define "ray-cluster.s3-env" -}}
+{{- $rustfsEndpoint := printf "http://%s-rustfs.%s.svc.cluster.local:9000" .Release.Name (include "ray-cluster.namespace" .) -}}
 - name: AWS_ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
@@ -14,7 +15,7 @@
       name: {{ .Values.s3.credentialsSecret }}
       key: {{ .Values.s3.secretKeyField }}
 - name: AWS_ENDPOINT_URL
-  value: {{ .Values.s3.endpoint }}
+  value: {{ $rustfsEndpoint }}
 {{- end -}}
 
 {{- define "ray-cluster.namespace" -}}

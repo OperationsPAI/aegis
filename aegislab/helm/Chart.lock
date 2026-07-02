@@ -35,8 +35,8 @@ dependencies:
 - name: chaos
   repository: ""
   version: 0.1.0
-- name: ray-cluster
+- name: ray
   repository: ""
   version: 0.1.0
-digest: sha256:70c6b56afa1d6d5d1d50a21ea73e45d5623e150ee06e789a1ffb0d67d4c5c89c
-generated: "2026-07-02T16:55:10.601710003+01:00"
+digest: sha256:745492210395aada59649b16cb3a20d232dc01df75cda3543e257d89b0a7c9ff
+generated: "2026-07-02T18:35:24.40521696+01:00"

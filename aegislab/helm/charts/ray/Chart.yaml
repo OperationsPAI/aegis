@@ -1,5 +1,5 @@
 apiVersion: v2
-name: ray-cluster
+name: ray
 description: Ray cluster for distributed analytics and ML over aegis datapacks
 type: application
 version: 0.1.0
