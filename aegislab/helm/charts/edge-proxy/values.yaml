@@ -48,18 +48,32 @@ arl:
 # Upstream ports/toggles the Caddyfile routes to. Duplicated from the
 # umbrella's microservices / gateway / frontend / sso / devAnchors values
 # because subcharts can't read sibling values (see header note).
+aegisAuth:
+  jwksRefreshInterval: "5m"
+
 backends:
   aegisApi:
     httpPort: 8082
     intakeGrpcPort: 9096
   gateway:
-    enabled: true
+    enabled: false
     httpPort: 8086
   frontend:
     enabled: false
     port: 80
   sso:
     port: 8083
+  blob:
+    port: 8085
+  notify:
+    port: 8084
+  chaos:
+    port: 8086
+  clickhouse:
+    upstream: ""
+  ray:
+    enabled: false
+    dashboardPort: 8265
   devAnchors:
     enabled: false
 

@@ -35,6 +35,8 @@ spec:
               value: "aegis-edge-proxy"
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "deployment.scope=aegis"
+            - name: GATEWAY_HMAC_KEY
+              value: "{{ (.Values.global).gatewayTrustedHeaderKey | default "aegis-dev-trusted-header-key-do-not-use-in-prod" }}"
           ports:
             - name: http
               containerPort: {{ .Values.backends.aegisApi.httpPort }}
