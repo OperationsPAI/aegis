@@ -180,7 +180,7 @@ Don't dump round-level data into `memory.md`; that belongs in `rounds/*.json`. `
 
 ## Diversity
 
-Group faults by chaos_type **family**. A family is the underlying chaos mechanism, NOT the specific sub-type — **all network-* sub-types (NetworkDelay, NetworkLoss, NetworkPartition, NetworkCorrupt, NetworkBandwidth, NetworkDuplicate) count as ONE family: `network`**. Switching from NetworkDelay to NetworkLoss is NOT diversification — it's the same family exercising the same RCA shape. The families are:
+Group faults by chaos_type **family**. A family is the underlying chaos mechanism, NOT the specific sub-type — **switching between sub-types within the same family (e.g. NetworkDelay → NetworkLoss, PodFailure → PodKill, HTTPRequestDelay → HTTPResponseAbort, JVMLatency → JVMException) is NOT diversification**. They exercise the same RCA shape; only the family-level count matters. The families are:
 
 | family | chaos_types | HARD CAP |
 |---|---|---|
