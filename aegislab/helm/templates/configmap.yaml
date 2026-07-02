@@ -274,6 +274,9 @@ data:
     auth            = "jwt"
     strip_prefix    = true
     timeout_seconds = 600
+    [gateway.routes.rate_limit]
+    rps   = 20
+    burst = 40
     {{- end }}
 
     [[gateway.routes]]
