@@ -78,3 +78,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: chaos.enabled
+  - name: ray-cluster
+    version: "0.1.0"
+    repository: ""
+    condition: ray-cluster.enabled

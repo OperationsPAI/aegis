@@ -73,7 +73,7 @@ The pre-commit configuration will automatically run the RCABench self-test to en
 Datasets are stored on JuiceFS and must be symlinked:
 
 ```bash
-sudo juicefs mount redis://10.10.10.119:6379/1 /mnt/jfs -d --cache-size=1024
+sudo juicefs mount redis://<REDIS_HOST>:6379/1 /mnt/jfs -d --cache-size=1024
 mkdir -p data && cd data
 ln -s /mnt/jfs/rcabench-platform-v2 ./
 ln -s /mnt/jfs/rcabench_dataset ./
@@ -242,8 +242,8 @@ src/rcabench_platform/v2/
 Three modes in `config.py` (selected via `ENV_MODE` environment variable):
 
 - **debug**: Local development (base_url: `http://127.0.0.1:8082`)
-- **dev**: Development server (base_url: `http://10.10.10.161:8082`)
-- **prod**: Production server (base_url: `http://10.10.10.220:32080`)
+- **dev**: Development server (base_url: `http://<DEV_SERVER>:8082`)
+- **prod**: Production server (base_url: `http://<PROD_SERVER>:32080`)
 
 ## External Dependencies
 

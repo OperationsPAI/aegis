@@ -1,0 +1,146 @@
+{{- if .Values.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ray-cluster.fullname" . }}-head
+  namespace: {{ include "ray-cluster.namespace" . }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "ray-cluster.fullname" . }}-head
+  ports:
+    - name: client
+      port: {{ .Values.service.clientPort }}
+      targetPort: client
+    - name: dashboard
+      port: {{ .Values.service.dashboardPort }}
+      targetPort: dashboard
+    - name: gcs
+      port: 6379
+      targetPort: gcs
+    - name: object-manager
+      port: 8076
+      targetPort: 8076
+    - name: node-manager
+      port: 8077
+      targetPort: 8077
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ray-cluster.fullname" . }}-head
+  namespace: {{ include "ray-cluster.namespace" . }}
+  labels:
+    app: {{ include "ray-cluster.fullname" . }}-head
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "ray-cluster.fullname" . }}-head
+  template:
+    metadata:
+      labels:
+        app: {{ include "ray-cluster.fullname" . }}-head
+        ray-cluster: {{ include "ray-cluster.fullname" . }}
+        ray-node-type: head
+    spec:
+      containers:
+        - name: ray-head
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              ray start --head \
+                --port=6379 \
+                --ray-client-server-port={{ .Values.service.clientPort }} \
+                --dashboard-host=0.0.0.0 \
+                --dashboard-port={{ .Values.service.dashboardPort }} \
+                --block
+          env:
+            - name: RAY_GRAFANA_IFRAME_HOST
+              value: ""
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.credentialsSecret }}
+                  key: {{ .Values.s3.accessKeyField }}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.credentialsSecret }}
+                  key: {{ .Values.s3.secretKeyField }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.s3.endpoint }}
+            - name: S3_ENDPOINT
+              value: {{ .Values.s3.endpoint }}
+          ports:
+            - name: client
+              containerPort: {{ .Values.service.clientPort }}
+            - name: dashboard
+              containerPort: {{ .Values.service.dashboardPort }}
+            - name: gcs
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: client
+            initialDelaySeconds: 120
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: gcs
+            initialDelaySeconds: 300
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.head.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ray-cluster.fullname" . }}-worker
+  namespace: {{ include "ray-cluster.namespace" . }}
+  labels:
+    app: {{ include "ray-cluster.fullname" . }}-worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "ray-cluster.fullname" . }}-worker
+  template:
+    metadata:
+      labels:
+        app: {{ include "ray-cluster.fullname" . }}-worker
+        ray-cluster: {{ include "ray-cluster.fullname" . }}
+        ray-node-type: worker
+    spec:
+      containers:
+        - name: ray-worker
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              ray start \
+                --address={{ include "ray-cluster.fullname" . }}-head:6379 \
+                --block
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.credentialsSecret }}
+                  key: {{ .Values.s3.accessKeyField }}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.credentialsSecret }}
+                  key: {{ .Values.s3.secretKeyField }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.s3.endpoint }}
+            - name: S3_ENDPOINT
+              value: {{ .Values.s3.endpoint }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+{{- end }}

@@ -36,7 +36,7 @@ A merged PR on aegis main does NOT automatically reach the live cluster. The byt
    ```
 4. **Reseed** (only when DB seed `helm_config.values` changed):
    ```bash
-   /tmp/aegisctl --server http://118.196.98.67:8082 system reseed --apply
+   /tmp/aegisctl --server http://<AEGIS_API_ENDPOINT> system reseed --apply
    ```
    Look for `applied`/`backfilled`/`new helm value`. If reseed shows nothing for an entry you expect, see "drift recovery" below.
 5. **Nuke affected helm releases** (only when helm template/chart logic changed and existing releases have the old shape baked in):
@@ -127,6 +127,6 @@ DELETE FROM parameter_configs WHERE config_key='<key>';"
 
 ## EIP recovery (if LB drops)
 
-**There is no kubectl-side recovery.** If `curl http://118.196.98.67:8082` times out, the VKE LB controller has lost the binding and re-applying annotations on `rcabench-edge-proxy` will NOT bring it back. The user must re-bind the EIP **manually in the Volcengine VKE console** (Service → CLB → attach EIP).
+**There is no kubectl-side recovery.** If `curl http://<AEGIS_API_ENDPOINT>` times out, the VKE LB controller has lost the binding and re-applying annotations on `rcabench-edge-proxy` will NOT bring it back. The user must re-bind the EIP **manually in the Volcengine VKE console** (Service → CLB → attach EIP).
 
 Don't waste time trying `kubectl annotate` workarounds — flag the issue to the user and wait for manual cutover. Long-term fix is #342 (split edge-proxy into its own helm release so it's never touched by `helm upgrade rcabench`).

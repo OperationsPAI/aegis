@@ -425,3 +425,33 @@ chaos:
   serviceAccount:
     secretName: rcabench-chaos-sa
     secretKey: token
+
+ray-cluster:
+  enabled: true
+  image:
+    name: pair-cn-shanghai.cr.volces.com/opspai/ray-aegis
+    tag: 2.56.0-py313
+    pullPolicy: IfNotPresent
+  head:
+    resources:
+      requests:
+        cpu: "1"
+        memory: 4Gi
+      limits:
+        cpu: "2"
+        memory: 8Gi
+  worker:
+    replicas: 2
+    resources:
+      requests:
+        cpu: "1"
+        memory: 4Gi
+      limits:
+        cpu: "2"
+        memory: 8Gi
+  s3:
+    endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+    bucket: "aegis-datapack"
+    credentialsSecret: "rustfs-admin"
+    accessKeyField: "RUSTFS_ROOT_USER"
+    secretKeyField: "RUSTFS_ROOT_PASSWORD"

@@ -267,6 +267,15 @@ data:
     auth         = "jwt"
     strip_prefix = true
 
+    {{- if index .Values "ray-cluster" "enabled" }}
+    [[gateway.routes]]
+    prefix          = "/api/v2/ray/"
+    upstream        = "{{ .Release.Name }}-ray-head:{{ (index .Values "ray-cluster" "service" "dashboardPort") | default 8265 }}"
+    auth            = "jwt"
+    strip_prefix    = true
+    timeout_seconds = 600
+    {{- end }}
+
     [[gateway.routes]]
     # Federate aegis-chaos behind the same EIP as aegis-api. The /chaos
     # segment is a gateway-side namespace; the chaos handler registers
