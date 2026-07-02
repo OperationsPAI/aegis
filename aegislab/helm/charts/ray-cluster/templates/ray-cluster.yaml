@@ -63,20 +63,7 @@ spec:
           env:
             - name: RAY_GRAFANA_IFRAME_HOST
               value: ""
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.s3.credentialsSecret }}
-                  key: {{ .Values.s3.accessKeyField }}
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.s3.credentialsSecret }}
-                  key: {{ .Values.s3.secretKeyField }}
-            - name: AWS_ENDPOINT_URL
-              value: {{ .Values.s3.endpoint }}
-            - name: S3_ENDPOINT
-              value: {{ .Values.s3.endpoint }}
+            {{- include "ray-cluster.s3-env" . | nindent 12 }}
           ports:
             - name: client
               containerPort: {{ .Values.service.clientPort }}
@@ -127,20 +114,13 @@ spec:
                 --address={{ include "ray-cluster.fullname" . }}-head:6379 \
                 --block
           env:
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.s3.credentialsSecret }}
-                  key: {{ .Values.s3.accessKeyField }}
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.s3.credentialsSecret }}
-                  key: {{ .Values.s3.secretKeyField }}
-            - name: AWS_ENDPOINT_URL
-              value: {{ .Values.s3.endpoint }}
-            - name: S3_ENDPOINT
-              value: {{ .Values.s3.endpoint }}
+            {{- include "ray-cluster.s3-env" . | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["ray", "status"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
 {{- end }}
