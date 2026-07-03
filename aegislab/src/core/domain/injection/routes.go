@@ -8,9 +8,8 @@ import (
 )
 
 // Routes registers every injection endpoint once. Project-scoped paths
-// gate via RequireProject* perms; the global /injections/* paths are
-// open to any authenticated caller, except cancel which needs
-// RequireTaskStop and observation reads which need RequireProjectRead.
+// gate via RequireProject* perms; global /injections/* paths gate via
+// RequireInjection{Read,Update,Delete,Clone,Download,Upload}.
 func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
@@ -42,29 +41,33 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 
 			injections := v2.Group("/injections")
 			{
-				injections.GET("/systems", handler.GetSystemMapping)
-				injections.GET("/:id", handler.GetInjection)
-				injections.POST("/:id/clone", handler.CloneInjection)
-				injections.GET("/:id/download", handler.DownloadDatapack)
-				injections.GET("/:id/files", handler.ListDatapackFiles)
-				injections.GET("/:id/files/download", handler.DownloadDatapackFile)
-				injections.GET("/:id/files/query", handler.QueryDatapackFile)
-				injections.GET("/:id/datapack-schema", handler.GetDatapackSchema)
-				injections.POST("/:id/datapack-query", handler.QueryDatapack)
-				injections.PATCH("/:id/labels", handler.ManageInjectionCustomLabels)
-				injections.PATCH("/labels/batch", handler.BatchManageInjectionLabels)
-				injections.POST("/batch-delete", handler.BatchDeleteInjections)
-				injections.POST("/upload", handler.UploadDatapack)
-				injections.POST("/:id/cancel", middleware.RequireTaskStop, handler.CancelInjection)
-				injections.PUT("/:id/groundtruth", handler.UpdateGroundtruth)
-
-				observation := injections.Group("", middleware.RequireProjectRead)
+				read := injections.Group("", middleware.RequireInjectionRead)
 				{
-					observation.GET("/:id/logs", handler.GetInjectionLogs)
-					observation.GET("/:id/logs/histogram", handler.GetInjectionLogsHistogram)
-					observation.GET("/:id/timeline", handler.GetInjectionTimeline)
-					observation.GET("/:id/diagnose", handler.DiagnoseDatapack)
+					read.GET("/systems", handler.GetSystemMapping)
+					read.GET("/:id", handler.GetInjection)
+					read.GET("/:id/datapack-schema", handler.GetDatapackSchema)
+					read.GET("/:id/logs", handler.GetInjectionLogs)
+					read.GET("/:id/logs/histogram", handler.GetInjectionLogsHistogram)
+					read.GET("/:id/timeline", handler.GetInjectionTimeline)
+					read.GET("/:id/diagnose", handler.DiagnoseDatapack)
 				}
+
+				download := injections.Group("", middleware.RequireInjectionDownload)
+				{
+					download.GET("/:id/download", handler.DownloadDatapack)
+					download.GET("/:id/files", handler.ListDatapackFiles)
+					download.GET("/:id/files/download", handler.DownloadDatapackFile)
+					download.GET("/:id/files/query", handler.QueryDatapackFile)
+					download.POST("/:id/datapack-query", handler.QueryDatapack)
+				}
+
+				injections.POST("/:id/clone", middleware.RequireInjectionClone, handler.CloneInjection)
+				injections.PATCH("/:id/labels", middleware.RequireInjectionUpdate, handler.ManageInjectionCustomLabels)
+				injections.PATCH("/labels/batch", middleware.RequireInjectionUpdate, handler.BatchManageInjectionLabels)
+				injections.PUT("/:id/groundtruth", middleware.RequireInjectionUpdate, handler.UpdateGroundtruth)
+				injections.POST("/batch-delete", middleware.RequireInjectionDelete, handler.BatchDeleteInjections)
+				injections.POST("/upload", middleware.RequireInjectionUpload, handler.UploadDatapack)
+				injections.POST("/:id/cancel", middleware.RequireTaskStop, handler.CancelInjection)
 			}
 		},
 	}

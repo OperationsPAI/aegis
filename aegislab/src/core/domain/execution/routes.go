@@ -8,10 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Routes registers every execution endpoint once. The shared
-// /executions/* paths gate API-key callers via
-// RequireAPIKeyScopesAny while letting session callers through —
-// matching the prior Portal + SDK contracts on each path.
+// Routes registers every execution endpoint once. Project-scoped paths
+// gate via RequireProject*; global /executions/* paths gate via
+// RequireExecution{Read,Update,Delete}. API-key scope checks are
+// stacked on top for SDK callers.
 func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
@@ -35,12 +35,12 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 
 			executions := v2.Group("/executions")
 			{
-				executions.GET("", handler.ListExecutions)
-				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
-				executions.GET("/:execution_id", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.GetExecution)
-				executions.PATCH("/:execution_id/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsWrite), handler.ManageExecutionCustomLabels)
-				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
-				executions.POST("/compare", handler.CompareExecutions)
+				executions.GET("", middleware.RequireExecutionRead, handler.ListExecutions)
+				executions.GET("/labels", middleware.RequireExecutionRead, middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
+				executions.GET("/:execution_id", middleware.RequireExecutionRead, middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.GetExecution)
+				executions.PATCH("/:execution_id/labels", middleware.RequireExecutionUpdate, middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsWrite), handler.ManageExecutionCustomLabels)
+				executions.POST("/batch-delete", middleware.RequireExecutionDelete, handler.BatchDeleteExecutions)
+				executions.POST("/compare", middleware.RequireExecutionRead, handler.CompareExecutions)
 			}
 
 			runtime := v2.Group("/executions", middleware.RequireServiceTokenAuth())

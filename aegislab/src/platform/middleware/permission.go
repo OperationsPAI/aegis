@@ -556,6 +556,19 @@ var (
 	RequireLabelUpdate = RequireAnyPermission([]consts.PermissionRule{consts.PermLabelUpdateAll})
 	RequireLabelDelete = RequireAnyPermission([]consts.PermissionRule{consts.PermLabelDeleteAll})
 
+	// Injection management permissions (global, cross-project)
+	RequireInjectionRead     = RequireAnyPermission([]consts.PermissionRule{consts.PermInjectionReadAll, consts.PermInjectionReadProject})
+	RequireInjectionUpdate   = RequireAnyPermission([]consts.PermissionRule{consts.PermInjectionUpdateAll, consts.PermInjectionUpdateProject})
+	RequireInjectionDelete   = RequireAnyPermission([]consts.PermissionRule{consts.PermInjectionDeleteAll, consts.PermInjectionDeleteProject})
+	RequireInjectionClone    = RequireAnyPermission([]consts.PermissionRule{consts.PermInjectionCloneAll, consts.PermInjectionCloneProject})
+	RequireInjectionDownload = RequireAnyPermission([]consts.PermissionRule{consts.PermInjectionDownloadAll, consts.PermInjectionDownloadProject})
+	RequireInjectionUpload   = RequirePermission(consts.PermInjectionUploadAll)
+
+	// Execution management permissions (global, cross-project)
+	RequireExecutionRead   = RequireAnyPermission([]consts.PermissionRule{consts.PermExecutionReadAll, consts.PermExecutionReadProject})
+	RequireExecutionUpdate = RequireAnyPermission([]consts.PermissionRule{consts.PermExecutionUpdateAll, consts.PermExecutionUpdateProject})
+	RequireExecutionDelete = RequireAnyPermission([]consts.PermissionRule{consts.PermExecutionDeleteAll, consts.PermExecutionDeleteProject})
+
 	// Task management permissions (execute/stop > update/delete > read)
 	RequireTaskRead    = RequireAnyPermission([]consts.PermissionRule{consts.PermTaskReadAll})
 	RequireTaskCreate  = RequireAnyPermission([]consts.PermissionRule{consts.PermTaskCreateAll, consts.PermTaskExecuteAll})

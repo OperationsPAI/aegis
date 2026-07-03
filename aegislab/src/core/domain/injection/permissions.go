@@ -16,6 +16,12 @@ func Permissions() framework.PermissionRegistrar {
 			consts.PermInjectionExecuteProject,
 			consts.PermInjectionCloneProject,
 			consts.PermInjectionDownloadProject,
+			consts.PermInjectionReadAll,
+			consts.PermInjectionUpdateAll,
+			consts.PermInjectionDeleteAll,
+			consts.PermInjectionCloneAll,
+			consts.PermInjectionDownloadAll,
+			consts.PermInjectionUploadAll,
 		},
 	}
 }
@@ -32,6 +38,24 @@ func RoleGrants() framework.RoleGrantsRegistrar {
 				consts.PermInjectionExecuteProject,
 				consts.PermInjectionCloneProject,
 				consts.PermInjectionDownloadProject,
+				consts.PermInjectionReadAll,
+				consts.PermInjectionUpdateAll,
+				consts.PermInjectionDeleteAll,
+				consts.PermInjectionCloneAll,
+				consts.PermInjectionDownloadAll,
+				consts.PermInjectionUploadAll,
+			},
+			consts.RoleProjectAdmin: {
+				consts.PermInjectionReadAll,
+				consts.PermInjectionDownloadAll,
+				consts.PermInjectionCloneAll,
+			},
+			consts.RoleProjectDataDeveloper: {
+				consts.PermInjectionReadAll,
+				consts.PermInjectionDownloadAll,
+			},
+			consts.RoleProjectViewer: {
+				consts.PermInjectionReadAll,
 			},
 		},
 	}

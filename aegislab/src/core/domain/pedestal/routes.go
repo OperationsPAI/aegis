@@ -36,8 +36,11 @@ func Routes(handler *Handler, runtime *RuntimeHandler) framework.RouteRegistrar 
 			{
 				helm := pedestal.Group("/helm")
 				{
-					helm.GET("/:container_version_id", handler.GetPedestalHelmConfig)
-					helm.POST("/:container_version_id/verify", handler.VerifyPedestalHelmConfig)
+					helmRead := helm.Group("", middleware.RequirePedestalRead)
+					{
+						helmRead.GET("/:container_version_id", handler.GetPedestalHelmConfig)
+						helmRead.POST("/:container_version_id/verify", handler.VerifyPedestalHelmConfig)
+					}
 					helm.PUT("/:container_version_id", middleware.RequireContainerVersionUpload, handler.UpsertPedestalHelmConfig)
 					helm.POST("/:container_version_id/reseed", middleware.RequireContainerVersionUpload, handler.ReseedPedestalHelmConfig)
 				}

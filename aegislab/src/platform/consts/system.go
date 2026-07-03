@@ -376,7 +376,7 @@ var (
 	PermLabelUpdateAll = PermissionRule{Resource: ResourceLabel, Action: ActionUpdate, Scope: ScopeAll}
 	PermLabelDeleteAll = PermissionRule{Resource: ResourceLabel, Action: ActionDelete, Scope: ScopeAll}
 
-	// Injection permissions
+	// Injection permissions (project-scoped)
 	PermInjectionReadProject     = PermissionRule{Resource: ResourceInjection, Action: ActionRead, Scope: ScopeProject}
 	PermInjectionCreateProject   = PermissionRule{Resource: ResourceInjection, Action: ActionCreate, Scope: ScopeProject}
 	PermInjectionUpdateProject   = PermissionRule{Resource: ResourceInjection, Action: ActionUpdate, Scope: ScopeProject}
@@ -385,13 +385,26 @@ var (
 	PermInjectionCloneProject    = PermissionRule{Resource: ResourceInjection, Action: ActionClone, Scope: ScopeProject}
 	PermInjectionDownloadProject = PermissionRule{Resource: ResourceInjection, Action: ActionDownload, Scope: ScopeProject}
 
-	// Execution permissions
+	// Injection permissions (global)
+	PermInjectionReadAll     = PermissionRule{Resource: ResourceInjection, Action: ActionRead, Scope: ScopeAll}
+	PermInjectionUpdateAll   = PermissionRule{Resource: ResourceInjection, Action: ActionUpdate, Scope: ScopeAll}
+	PermInjectionDeleteAll   = PermissionRule{Resource: ResourceInjection, Action: ActionDelete, Scope: ScopeAll}
+	PermInjectionCloneAll    = PermissionRule{Resource: ResourceInjection, Action: ActionClone, Scope: ScopeAll}
+	PermInjectionDownloadAll = PermissionRule{Resource: ResourceInjection, Action: ActionDownload, Scope: ScopeAll}
+	PermInjectionUploadAll   = PermissionRule{Resource: ResourceInjection, Action: ActionUpload, Scope: ScopeAll}
+
+	// Execution permissions (project-scoped)
 	PermExecutionReadProject    = PermissionRule{Resource: ResourceExecution, Action: ActionRead, Scope: ScopeProject}
 	PermExecutionCreateProject  = PermissionRule{Resource: ResourceExecution, Action: ActionCreate, Scope: ScopeProject}
 	PermExecutionUpdateProject  = PermissionRule{Resource: ResourceExecution, Action: ActionUpdate, Scope: ScopeProject}
 	PermExecutionDeleteProject  = PermissionRule{Resource: ResourceExecution, Action: ActionDelete, Scope: ScopeProject}
 	PermExecutionExecuteProject = PermissionRule{Resource: ResourceExecution, Action: ActionExecute, Scope: ScopeProject}
 	PermExecutionStopProject    = PermissionRule{Resource: ResourceExecution, Action: ActionStop, Scope: ScopeProject}
+
+	// Execution permissions (global)
+	PermExecutionReadAll   = PermissionRule{Resource: ResourceExecution, Action: ActionRead, Scope: ScopeAll}
+	PermExecutionUpdateAll = PermissionRule{Resource: ResourceExecution, Action: ActionUpdate, Scope: ScopeAll}
+	PermExecutionDeleteAll = PermissionRule{Resource: ResourceExecution, Action: ActionDelete, Scope: ScopeAll}
 
 	// Task permissions
 	PermTaskReadAll    = PermissionRule{Resource: ResourceTask, Action: ActionRead, Scope: ScopeAll}

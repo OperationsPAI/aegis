@@ -15,6 +15,9 @@ func Permissions() framework.PermissionRegistrar {
 			consts.PermExecutionDeleteProject,
 			consts.PermExecutionExecuteProject,
 			consts.PermExecutionStopProject,
+			consts.PermExecutionReadAll,
+			consts.PermExecutionUpdateAll,
+			consts.PermExecutionDeleteAll,
 		},
 	}
 }
@@ -30,17 +33,23 @@ func RoleGrants() framework.RoleGrantsRegistrar {
 				consts.PermExecutionDeleteProject,
 				consts.PermExecutionExecuteProject,
 				consts.PermExecutionStopProject,
+				consts.PermExecutionReadAll,
+				consts.PermExecutionUpdateAll,
+				consts.PermExecutionDeleteAll,
 			},
 			consts.RoleProjectAdmin: {
 				consts.PermExecutionReadProject,
 				consts.PermExecutionExecuteProject,
+				consts.PermExecutionReadAll,
 			},
 			consts.RoleProjectAlgoDeveloper: {
 				consts.PermExecutionReadProject,
 				consts.PermExecutionExecuteProject,
+				consts.PermExecutionReadAll,
 			},
 			consts.RoleProjectViewer: {
 				consts.PermExecutionReadProject,
+				consts.PermExecutionReadAll,
 			},
 		},
 	}
