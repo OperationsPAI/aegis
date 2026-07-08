@@ -32,6 +32,11 @@ global:
   # hostname is what does the routing. `tls internal` will also issue a
   # local-CA cert covering every listed hostname. Each entry: `host:port`.
   additionalSiteAddresses: []
+  # Authentik OIDC provider toggle. When true, edge-proxy routes OIDC
+  # public endpoints away (frontend talks to Authentik directly) and
+  # proxies RBAC/auth APIs to aegis-api instead of aegis-sso.
+  authentik:
+    enabled: false
   # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
   images:
     rcabench:

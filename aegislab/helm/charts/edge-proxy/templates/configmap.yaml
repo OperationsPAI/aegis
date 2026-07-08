@@ -72,6 +72,7 @@ data:
             {{- end }}
         }
 
+        {{- if not .Values.global.authentik.enabled }}
         # ─── SSO public endpoints (no auth) ───
         @sso_public {
             path /authorize /token /login /.well-known/openid-configuration /.well-known/jwks.json /auth/providers /auth/federated/* /auth/callback/*
@@ -80,21 +81,32 @@ data:
             request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $sso }}
         }
+        {{- end }}
 
         handle_path /v1/* {
             request_header X-Aegis-Auth-Mode "none"
+            {{- if .Values.global.authentik.enabled }}
+            reverse_proxy {{ $api }}
+            {{- else }}
             reverse_proxy {{ $sso }}
+            {{- end }}
         }
 
+        {{- if not .Values.global.authentik.enabled }}
         handle /userinfo {
             request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $sso }}
         }
+        {{- end }}
 
-        # ─── Auth API (no auth at edge — SSO handles it) ───
+        # ─── Auth API ───
         handle /api/v2/auth/* {
             request_header X-Aegis-Auth-Mode "none"
+            {{- if .Values.global.authentik.enabled }}
+            reverse_proxy {{ $api }}
+            {{- else }}
             reverse_proxy {{ $sso }}
+            {{- end }}
         }
 
         # ─── SSO user/key/role management (jwt) ───
@@ -103,7 +115,11 @@ data:
         }
         handle @sso_jwt {
             request_header X-Aegis-Auth-Mode "jwt"
+            {{- if .Values.global.authentik.enabled }}
+            reverse_proxy {{ $api }}
+            {{- else }}
             reverse_proxy {{ $sso }}
+            {{- end }}
         }
 
         # ─── Notify (jwt, portal audience) ───
