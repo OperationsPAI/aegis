@@ -33,7 +33,15 @@ data:
           "passwordType": "plain",
           "countryCodes": ["US", "CN"],
           "defaultAvatar": "",
-          "tags": []
+          "tags": [],
+          "languages": [],
+          "mfaItems": [],
+          "navItems": [],
+          "userNavItems": [],
+          "userTypes": [],
+          "widgetItems": [],
+          "passwordOptions": [],
+          "ldapAttributes": []
         }
       ],
       "applications": [
