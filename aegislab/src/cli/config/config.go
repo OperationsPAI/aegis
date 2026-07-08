@@ -36,6 +36,9 @@ type Context struct {
 	Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
 	KubeContext    string    `yaml:"kube-context,omitempty"`
 	KubeConfig     string    `yaml:"kubeconfig,omitempty"`
+	RefreshToken   string    `yaml:"refresh-token,omitempty"`
+	OIDCIssuer     string    `yaml:"oidc-issuer,omitempty"`
+	ClientID       string    `yaml:"client-id,omitempty"`
 }
 
 func (c *Context) UnmarshalYAML(value *yaml.Node) error {
@@ -52,6 +55,9 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 		Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
 		KubeContext    string    `yaml:"kube-context,omitempty"`
 		KubeConfig     string    `yaml:"kubeconfig,omitempty"`
+		RefreshToken   string    `yaml:"refresh-token,omitempty"`
+		OIDCIssuer     string    `yaml:"oidc-issuer,omitempty"`
+		ClientID       string    `yaml:"client-id,omitempty"`
 	}
 
 	var raw rawContext
@@ -71,6 +77,9 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 	c.Insecure = raw.Insecure
 	c.KubeContext = raw.KubeContext
 	c.KubeConfig = raw.KubeConfig
+	c.RefreshToken = raw.RefreshToken
+	c.OIDCIssuer = raw.OIDCIssuer
+	c.ClientID = raw.ClientID
 	return nil
 }
 

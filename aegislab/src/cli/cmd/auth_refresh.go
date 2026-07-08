@@ -41,6 +41,12 @@ func maybeRefreshToken() {
 		return
 	}
 
+	// OIDC refresh: use the refresh_token with the issuer's token endpoint.
+	if ctx.OIDCIssuer != "" && ctx.RefreshToken != "" {
+		refreshOIDCTokenFromContext(ctx, ctxName)
+		return
+	}
+
 	server := flagServer
 	if server == "" {
 		server = ctx.Server
@@ -66,6 +72,44 @@ func maybeRefreshToken() {
 
 	if err := config.SaveConfig(cfg); err != nil {
 		logrus.WithError(err).Warn("refreshed token but failed to persist config; next invocation will re-refresh")
+	}
+}
+
+func refreshOIDCTokenFromContext(ctx *config.Context, ctxName string) {
+	tlsOpts := resolveTLSOptions()
+
+	discovery, err := client.DiscoverOIDC(ctx.OIDCIssuer, tlsOpts)
+	if err != nil {
+		lastRefreshError = err
+		return
+	}
+
+	clientID := ctx.ClientID
+	if clientID == "" {
+		clientID = oidcDefaultClientID
+	}
+
+	tokenResp, err := client.RefreshOIDCToken(discovery.TokenEndpoint, ctx.RefreshToken, clientID, tlsOpts)
+	if err != nil {
+		lastRefreshError = err
+		return
+	}
+
+	ctx.Token = tokenResp.AccessToken
+	if tokenResp.ExpiresIn > 0 {
+		ctx.TokenExpiry = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	} else if exp := client.ParseJWTExp(tokenResp.AccessToken); !exp.IsZero() {
+		ctx.TokenExpiry = exp
+	}
+	if tokenResp.RefreshToken != "" {
+		ctx.RefreshToken = tokenResp.RefreshToken
+	}
+
+	cfg.Contexts[ctxName] = *ctx
+	flagToken = tokenResp.AccessToken
+
+	if err := config.SaveConfig(cfg); err != nil {
+		logrus.WithError(err).Warn("refreshed OIDC token but failed to persist config; next invocation will re-refresh")
 	}
 }
 
