@@ -7,6 +7,7 @@ import (
 	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"
 	configcenter "aegis/crud/admin/configcenter"
 	rbac "aegis/crud/iam/rbac"
+	sso "aegis/crud/iam/sso"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
 	"aegis/platform/middleware"
@@ -45,6 +46,9 @@ func Options(confPath, port string) fx.Option {
 		// themselves are served by aegis-sso; this import is for the
 		// fx-group registrars + the AggregatePermissions invoke only.
 		rbac.Module,
+		// Admin/RBAC REST surface (/v1/*) absorbed from aegis-sso so the
+		// SSO process can be decommissioned (Authentik migration Phase 5).
+		sso.AdminModule,
 		grpcruntimeintake.Module,
 		// Query channel into runtime-worker. aegis-api is otherwise intake-only
 		// (worker writes back), but the rate-limiter admin status reads the

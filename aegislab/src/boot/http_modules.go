@@ -42,14 +42,14 @@ import (
 //
 // What's NOT in this list — and why:
 //
-//   - iam/user, iam/auth, iam/rbac, iam/sso, clients/sso
-//     IAM is owned by the standalone aegis-sso process (boot/sso). The
-//     aegis-api reaches SSO through the middleware.TokenVerifier /
-//     middleware.PermissionChecker interfaces, which clients/sso provides
-//     when wired into binaries that need to *call* SSO (see ssoclient.Module
-//     in producer.go). The IAM modules themselves only mount their HTTP
-//     routes + own their PermissionRegistrar / RoleGrantsRegistrar inside
-//     the SSO binary's fx graph.
+//   - iam/auth, iam/sso (OIDC), clients/sso
+//     Auth and the OIDC provider are owned by aegis-sso (being replaced
+//     by Authentik). The aegis-api reaches SSO through
+//     middleware.TokenVerifier / middleware.PermissionChecker interfaces
+//     (ssoclient.Module in producer.go). iam/rbac is loaded in
+//     boot/api/options.go for AggregatePermissions. iam/sso's admin
+//     surface (/v1/* REST — permission checks, grants, service accounts)
+//     is absorbed into aegis-api via sso.AdminModule (boot/api/options.go).
 //
 // To add a new HTTP module to the aegis-api: import it above and append
 // `xyz.Module` to the slice. There is intentionally no generator.
