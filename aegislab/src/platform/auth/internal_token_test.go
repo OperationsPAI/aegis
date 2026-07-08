@@ -74,7 +74,7 @@ func TestInternalToken_ShortTTL(t *testing.T) {
 }
 
 func TestInternalToken_WrongIssuerRejected(t *testing.T) {
-	// Mint a regular user token (issuer = "rcabench"), try to parse it as
+	// Mint a regular user token (issuer = "aegis"), try to parse it as
 	// internal — must be rejected.
 	userTok, _, err := crypto.GenerateUnifiedToken(crypto.UnifiedTokenParams{Typ: "human", UserID: 1, Username: "u", Email: "u@x", IsActive: true, Lifetime: time.Hour}, testKey, "kid-1")
 	require.NoError(t, err)

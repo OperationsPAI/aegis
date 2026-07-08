@@ -1,22 +1,12 @@
 package consts
 
-// Project identity. The legacy "rcabench" name persists in JWT issuers,
-// OTel tracer namespaces, and Loki app labels because changing those values
-// would invalidate live tokens and break existing log queries. Use these
-// constants instead of inline literals so the eventual rename is a one-line change.
+// Project identity. The legacy "rcabench" name persists in OTel tracer
+// namespaces and Loki app labels because changing those values would break
+// existing log queries. Use these constants instead of inline literals so
+// the eventual rename is a one-line change.
 const (
 	ProjectName       = "aegislab"
 	LegacyProjectName = "rcabench"
-)
-
-// Legacy JWT issuers. No new tokens are minted with these values; all issuance
-// now uses crypto.JWTIssuerUnified ("aegis"). These constants survive only so
-// ParseUnifiedToken can accept tokens minted before the migration.
-const (
-	JWTIssuerUser           = "rcabench"
-	JWTIssuerRefresh        = "rcabench-refresh"
-	JWTIssuerService        = "rcabench-service"
-	JWTIssuerServiceAccount = "rcabench-sa"
 )
 
 // JTI (JWT ID claim) prefixes used as the first segment of the `jti` claim.

@@ -237,8 +237,10 @@ func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {
 }
 
 // ParseUnifiedToken validates and returns unified claims. It accepts tokens
-// with the unified issuer ("aegis") as well as all legacy issuers so that
-// tokens minted before the migration still work during rollout.
+// issued by aegis-api (issuer "aegis"). Federated IdP tokens (Authentik)
+// are exchanged for aegis-issued tokens at login; they never reach this
+// function directly. Internal gateway tokens use a separate path
+// (auth.ParseInternalToken).
 func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedClaims, error) {
 	if tokenString == "" {
 		return nil, fmt.Errorf("%w: empty token", ErrInvalidToken)
@@ -260,15 +262,8 @@ func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedC
 		return nil, ErrInvalidToken
 	}
 
-	switch claims.Issuer {
-	case JWTIssuerUnified:
-		// New unified issuer -- accept as-is.
-	case consts.JWTIssuerUser, consts.JWTIssuerService, consts.JWTIssuerServiceAccount:
-		// Legacy issuers accepted during migration rollout.
-	default:
-		if !isAcceptedIssuer(claims.Issuer) {
-			return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
-		}
+	if claims.Issuer != JWTIssuerUnified && !isAcceptedIssuer(claims.Issuer) {
+		return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
 	}
 
 	// Policy: human tokens for inactive users are rejected.

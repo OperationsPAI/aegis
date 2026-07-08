@@ -86,8 +86,7 @@ func (a *Authenticator) verifyBearer(ctx context.Context, token string) (Princip
 }
 
 func (a *Authenticator) resolveBearer(ctx context.Context, token string) (Principal, error) {
-	// Single path: ParseUnifiedToken accepts both the new "aegis" issuer
-	// and legacy issuers (rcabench, rcabench-service, rcabench-sa).
+	// ParseUnifiedToken accepts the "aegis" issuer.
 	if a.resolve != nil {
 		uc, err := crypto.ParseUnifiedToken(token, a.resolve)
 		if err == nil {
