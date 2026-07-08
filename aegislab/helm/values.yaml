@@ -753,3 +753,12 @@ blob:
   # other packs (kind, prod, cn_mirror) rendering unchanged.
   extraEnvFrom: []
   resources: {}
+
+# ---------------------------------------------------------------------------
+# authentik subchart values (forwarded into `charts/authentik/`).
+# Phase 0: deploy Authentik alongside existing SSO with no traffic changes.
+# ---------------------------------------------------------------------------
+authentik:
+  enabled: false
+  externalURL: ""
+  providerSlug: "aegis-console"
