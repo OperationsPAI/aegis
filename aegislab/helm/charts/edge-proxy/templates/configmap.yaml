@@ -96,7 +96,7 @@ data:
             reverse_proxy {{ $casdoor }}
         }
         @casdoor_api {
-            path /api/login/* /api/userinfo /api/logout /api/get-app-login /api/get-account /api/get-resources
+            path /api/login/* /api/login /api/userinfo /api/logout /api/get-application /api/get-app-login /api/get-account /api/get-resources /api/get-organization /api/get-user /api/get-css /api/get-default-application /api/get-captcha-status
         }
         handle @casdoor_api {
             request_header X-Aegis-Auth-Mode "none"
