@@ -326,6 +326,8 @@ configmap:
     issuer: "http://rcabench-sso:8083"
     baseURL: "http://rcabench-sso:8083"
     jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    # Comma-separated list of additional JWKS endpoints (e.g. Authentik).
+    additionalJwksURLs: ""
     clientID: "aegis-backend"
     clientSecret: ""
     # Defaults to http://<release-name>-aegis-api:<port>/auth/oidc/callback.

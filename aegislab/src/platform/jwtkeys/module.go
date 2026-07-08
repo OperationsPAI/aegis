@@ -28,7 +28,7 @@ func (s *Signer) PublicKey() *rsa.PublicKey {
 type Verifier struct {
 	keys atomic.Pointer[map[string]*rsa.PublicKey]
 	mu   sync.Mutex
-	url  string
+	urls []string
 }
 
 func NewVerifierWithKeys(keys map[string]*rsa.PublicKey) *Verifier {
@@ -42,7 +42,7 @@ func (v *Verifier) Resolve(kid string) (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("verifier not configured")
 	}
 	keys := v.keys.Load()
-	if (keys == nil || len(*keys) == 0) && v.url != "" {
+	if (keys == nil || len(*keys) == 0) && len(v.urls) > 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := v.Refresh(ctx); err == nil {
@@ -72,16 +72,33 @@ func (v *Verifier) Resolve(kid string) (*rsa.PublicKey, error) {
 }
 
 func (v *Verifier) Refresh(ctx context.Context) error {
-	if v.url == "" {
+	if len(v.urls) == 0 {
 		return nil
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	keys, err := FetchJWKS(ctx, v.url)
-	if err != nil {
-		return err
+	merged := make(map[string]*rsa.PublicKey)
+	var lastErr error
+	for _, u := range v.urls {
+		keys, err := FetchJWKS(ctx, u)
+		if err != nil {
+			logrus.WithError(err).WithField("url", u).Warn("jwks fetch from source failed")
+			lastErr = err
+			continue
+		}
+		for kid, pub := range keys {
+			if _, exists := merged[kid]; !exists {
+				merged[kid] = pub
+			}
+		}
 	}
-	v.keys.Store(&keys)
+	if len(merged) == 0 {
+		if lastErr != nil {
+			return lastErr
+		}
+		return fmt.Errorf("all jwks sources returned zero usable keys")
+	}
+	v.keys.Store(&merged)
 	return nil
 }
 
@@ -106,11 +123,19 @@ func newVerifierFromSigner(s *Signer) *Verifier {
 }
 
 func newRemoteVerifier(lc fx.Lifecycle) (*Verifier, error) {
-	url := config.GetString("sso.jwks_url")
-	if url == "" {
+	primary := config.GetString("sso.jwks_url")
+	if primary == "" {
 		return nil, fmt.Errorf("sso.jwks_url is not configured")
 	}
-	v := &Verifier{url: url}
+	urls := []string{primary}
+	if extra := config.GetString("sso.additional_jwks_urls"); extra != "" {
+		for _, u := range strings.Split(extra, ",") {
+			if u = strings.TrimSpace(u); u != "" {
+				urls = append(urls, u)
+			}
+		}
+	}
+	v := &Verifier{urls: urls}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
