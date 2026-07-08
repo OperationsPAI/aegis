@@ -2,9 +2,16 @@ package user
 
 import "go.uber.org/fx"
 
-var Module = fx.Module("user",
+// CoreModule provides only the data-layer components (Repository + Service)
+// without the HTTP handler, routes, or permissions. Use this in binaries that
+// need user lookups but do not serve the user admin HTTP surface.
+var CoreModule = fx.Module("user.core",
 	fx.Provide(NewRepository),
 	fx.Provide(NewService),
+)
+
+var Module = fx.Module("user",
+	CoreModule,
 	fx.Provide(fx.Annotate(AsReader, fx.As(new(Reader)))),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
