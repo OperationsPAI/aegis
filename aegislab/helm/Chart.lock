@@ -38,5 +38,8 @@ dependencies:
 - name: ray
   repository: ""
   version: 0.1.0
-digest: sha256:745492210395aada59649b16cb3a20d232dc01df75cda3543e257d89b0a7c9ff
-generated: "2026-07-02T18:35:24.40521696+01:00"
+- name: casdoor
+  repository: ""
+  version: 0.1.0
+digest: sha256:cb5f7e4b47515d57dc4b21d2095e6037c7acbcf847b2ef3324a69cfdbcbfa3bd
+generated: "2026-07-08T20:26:00.611041828+01:00"

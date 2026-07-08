@@ -65,7 +65,7 @@ data:
         }
 
         aegis_auth {
-            jwks_url http://{{ .Release.Name }}-sso:{{ .Values.backends.sso.port | default 8083 }}/.well-known/jwks.json
+            jwks_url http://{{ .Release.Name }}-aegis-api:{{ int .Values.backends.aegisApi.httpPort }}/.well-known/jwks.json
             {{- if .Values.global.casdoor.enabled }}
             jwks_url http://{{ .Release.Name }}-casdoor:8000/.well-known/jwks
             {{- end }}

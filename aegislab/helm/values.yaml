@@ -54,10 +54,10 @@ global:
   # template strings can pick them up. Bootstrap client secret is read
   # from a separate Secret (default: `sso-bootstrap`).
   ssoclient:
-    # Defaults assume `helm install rcabench ...` — chart Service is
-    # `<release>-sso`. Override only for split releases or external SSO.
-    baseURL: "http://rcabench-sso:8083"
-    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    # Defaults assume `helm install rcabench ...` — aegis-api now serves
+    # the JWKS endpoint directly. Override only for split releases.
+    baseURL: "http://rcabench-aegis-api:8082"
+    jwksURL: "http://rcabench-aegis-api:8082/.well-known/jwks.json"
     clientID: "aegis-backend"
     clientSecretRef:
       name: "sso-bootstrap"
@@ -328,10 +328,10 @@ configmap:
     # was kept so the host-side console could reach SSO during dev with
     # `make local-debug` + kind; that flow now uses the chart edge-proxy
     # instead, so the cluster-internal hostname is the right default.
-    issuer: "http://rcabench-sso:8083"
-    baseURL: "http://rcabench-sso:8083"
-    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
-    # Comma-separated list of additional JWKS endpoints (e.g. Authentik).
+    issuer: "http://rcabench-aegis-api:8082"
+    baseURL: "http://rcabench-aegis-api:8082"
+    jwksURL: "http://rcabench-aegis-api:8082/.well-known/jwks.json"
+    # Comma-separated list of additional JWKS endpoints (e.g. Casdoor).
     additionalJwksURLs: ""
     clientID: "aegis-backend"
     clientSecret: ""
