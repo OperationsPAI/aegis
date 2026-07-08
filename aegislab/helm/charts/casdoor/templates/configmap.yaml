@@ -87,7 +87,7 @@ data:
           "owner": "aegis",
           "name": "admin",
           "type": "normal-user",
-          "password": "123",
+          "password": "{{ required "casdoor.admin.password must be set" .Values.admin.password }}",
           "displayName": "Admin",
           "email": "admin@aegis.local",
           "isAdmin": true,

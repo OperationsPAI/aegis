@@ -29,7 +29,11 @@ mysql:
 # Defaults to in-cluster URL if empty.
 origin: ""
 
-# OIDC applications seeded on first deploy via init Job.
+# Admin user seeded on first boot. Change the password for production!
+admin:
+  password: ""
+
+# OIDC applications seeded on first deploy.
 oidc:
   console:
     clientId: "aegis-console"
