@@ -78,6 +78,8 @@ backends:
     enabled: false
 
 # `global` is inherited from the umbrella (imageRegistry, publicBaseURL,
-# additionalSiteAddresses, images.caddy). Declared empty so standalone
-# `helm template` of this subchart doesn't error on missing `.Values.global`.
-global: {}
+# additionalSiteAddresses, images.caddy, authentik). Declared with defaults
+# so standalone `helm template` of this subchart doesn't error.
+global:
+  authentik:
+    enabled: false
