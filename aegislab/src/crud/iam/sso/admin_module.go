@@ -1,6 +1,7 @@
 package sso
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -74,7 +75,8 @@ func registerTokenEndpoint(engine *gin.Engine, signer *jwtkeys.Signer) {
 			id = c.PostForm("client_id")
 			secret = c.PostForm("client_secret")
 		}
-		if id != clientID || secret != clientSecret {
+		if subtle.ConstantTimeCompare([]byte(id), []byte(clientID)) != 1 ||
+			subtle.ConstantTimeCompare([]byte(secret), []byte(clientSecret)) != 1 {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":             "invalid_client",
 				"error_description": "client authentication failed",

@@ -74,7 +74,6 @@ type UnifiedClaims struct {
 	PreferredUsername string            `json:"preferred_username,omitempty"`
 	Name             string            `json:"name,omitempty"`
 	Groups           []string          `json:"groups,omitempty"`
-	EmailVerified    bool              `json:"email_verified,omitempty"`
 	AegisUserID      int               `json:"aegis_user_id,omitempty"`
 	CasdoorIsAdmin   bool              `json:"isAdmin,omitempty"`
 	CasdoorForbidden bool              `json:"isForbidden,omitempty"`
@@ -229,12 +228,7 @@ func (c *UnifiedClaims) normalizeFromStandardOIDC() {
 		}
 	}
 
-	// active: Casdoor uses isForbidden (inverted)
-	if c.CasdoorForbidden {
-		c.IsActive = false
-	} else {
-		c.IsActive = true
-	}
+	c.IsActive = !c.CasdoorForbidden
 
 	// admin: Casdoor's isAdmin field, or group/role membership
 	if c.CasdoorIsAdmin {

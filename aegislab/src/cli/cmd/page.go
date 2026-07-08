@@ -563,17 +563,12 @@ var pageOpenCmd = &cobra.Command{
 			slug = args[0]
 		}
 		shareURL := joinURL(flagServer, "/p/"+url.PathEscape(slug))
-		if err := openBrowser(shareURL); err != nil {
+		if err := client.OpenBrowser(shareURL); err != nil {
 			return err
 		}
 		output.PrintInfo("opening " + shareURL)
 		return nil
 	},
-}
-
-func openBrowser(rawURL string) error {
-	return client.OpenBrowser(rawURL)
-	return nil
 }
 
 // ---------------------------------------------------------------------------

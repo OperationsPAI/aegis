@@ -236,11 +236,12 @@ func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {
 	}
 }
 
-// ParseUnifiedToken validates and returns unified claims. It accepts tokens
-// issued by aegis-api (issuer "aegis"). Federated IdP tokens (Authentik)
-// are exchanged for aegis-issued tokens at login; they never reach this
-// function directly. Internal gateway tokens use a separate path
-// (auth.ParseInternalToken).
+// ParseUnifiedToken validates and returns unified claims. It accepts the
+// unified issuer ("aegis") and any issuer in the accepted-issuers list
+// (configured via sso.accepted_issuers for external IdPs like Casdoor).
+// External IdP tokens are typically validated at the edge (Caddy plugin)
+// and converted to trusted headers; this function is the backend fallback.
+// Internal gateway tokens use a separate path (auth.ParseInternalToken).
 func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedClaims, error) {
 	if tokenString == "" {
 		return nil, fmt.Errorf("%w: empty token", ErrInvalidToken)
