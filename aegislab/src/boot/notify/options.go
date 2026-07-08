@@ -37,7 +37,7 @@ func Options(confPath, port string) fx.Option {
 		app.ObserveOptions(),
 		app.DataOptions(),
 
-		user.Module,
+		user.CoreModule,
 		// Verify-only binary: tokens are minted by sso, not here.
 		// WithRemoteVerifier wires the JWKS-backed *Verifier; ssoclient
 		// adds TokenVerifier + PermissionChecker on top of it.
