@@ -8,14 +8,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
 	"aegis/cli/apiclient"
 	apiclientext "aegis/cli/apiclient_ext"
+	"aegis/cli/client"
 	"aegis/cli/internal/cli/pagedir"
 	"aegis/cli/output"
 
@@ -572,26 +571,8 @@ var pageOpenCmd = &cobra.Command{
 	},
 }
 
-// openBrowser dispatches to the platform's "open the default browser" tool.
-// Tested only at the call shape (exec.Command name + args); the actual
-// browser launch is a UI-level concern.
 func openBrowser(rawURL string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "linux":
-		cmd = exec.Command("xdg-open", rawURL)
-	case "darwin":
-		cmd = exec.Command("open", rawURL)
-	case "windows":
-		cmd = exec.Command("cmd.exe", "/c", "start", "", rawURL)
-	default:
-		return fmt.Errorf("page open: no default browser launcher for GOOS=%s", runtime.GOOS)
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("page open: launch browser: %w", err)
-	}
-	// Don't Wait — the browser process typically outlives the CLI invocation.
-	_ = cmd.Process.Release()
+	return client.OpenBrowser(rawURL)
 	return nil
 }
 

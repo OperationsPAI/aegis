@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"aegis/platform/consts"
@@ -32,21 +32,19 @@ const (
 
 var JWTSecret string
 
-var (
-	acceptedIssuersMu sync.RWMutex
-	acceptedIssuers   []string
-)
+var acceptedIssuersPtr atomic.Pointer[[]string]
 
 func SetAcceptedIssuers(issuers []string) {
-	acceptedIssuersMu.Lock()
-	acceptedIssuers = append([]string(nil), issuers...)
-	acceptedIssuersMu.Unlock()
+	copied := append([]string(nil), issuers...)
+	acceptedIssuersPtr.Store(&copied)
 }
 
 func isAcceptedIssuer(issuer string) bool {
-	acceptedIssuersMu.RLock()
-	defer acceptedIssuersMu.RUnlock()
-	for _, accepted := range acceptedIssuers {
+	p := acceptedIssuersPtr.Load()
+	if p == nil {
+		return false
+	}
+	for _, accepted := range *p {
 		if accepted == issuer {
 			return true
 		}

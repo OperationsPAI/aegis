@@ -32,27 +32,12 @@ func JITProvision(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		p, ok := auth.GetPrincipal(c)
-		if !ok {
+		if !ok || p.Typ != auth.PrincipalHuman || isLocalIdp(p.Idp) || p.Email == "" {
 			c.Next()
 			return
 		}
 
-		if p.Typ != auth.PrincipalHuman {
-			c.Next()
-			return
-		}
-
-		if isLocalIdp(p.Idp) {
-			c.Next()
-			return
-		}
-
-		if p.Email == "" {
-			c.Next()
-			return
-		}
-
-		userID, err := ensureUser(db, p)
+		userID, created, err := ensureUser(db, p)
 		if err != nil {
 			logrus.WithError(err).WithField("email", p.Email).
 				Warn("jit_provision: failed to ensure user record")
@@ -66,7 +51,9 @@ func JITProvision(db *gorm.DB) gin.HandlerFunc {
 			c.Set(consts.CtxKeyUserID, userID)
 		}
 
-		syncRoles(db, userID, p.Roles)
+		if created {
+			syncRoles(db, userID, p.Roles)
+		}
 
 		c.Next()
 	}
@@ -80,15 +67,15 @@ func isLocalIdp(idp string) bool {
 	return false
 }
 
-func ensureUser(db *gorm.DB, p auth.Principal) (int, error) {
+func ensureUser(db *gorm.DB, p auth.Principal) (userID int, created bool, err error) {
 	var user model.User
-	err := db.Where("email = ? AND status != ?", p.Email, consts.CommonDeleted).
+	err = db.Where("email = ? AND status != ?", p.Email, consts.CommonDeleted).
 		First(&user).Error
 	if err == nil {
-		return user.ID, nil
+		return user.ID, false, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return 0, err
+		return 0, false, err
 	}
 
 	username := p.Username
@@ -105,19 +92,18 @@ func ensureUser(db *gorm.DB, p auth.Principal) (int, error) {
 		Status:   consts.CommonEnabled,
 	}
 	if err := db.Omit("active_username").Create(&user).Error; err != nil {
-		// Race: another request created the row between our SELECT and INSERT.
 		var existing model.User
 		if findErr := db.Where("email = ? AND status != ?", p.Email, consts.CommonDeleted).
 			First(&existing).Error; findErr == nil {
-			return existing.ID, nil
+			return existing.ID, false, nil
 		}
-		return 0, err
+		return 0, false, err
 	}
 
 	logrus.WithField("email", p.Email).WithField("user_id", user.ID).
 		Info("jit_provision: created user record for external IdP principal")
 
-	return user.ID, nil
+	return user.ID, true, nil
 }
 
 func syncRoles(db *gorm.DB, userID int, tokenRoles []string) {

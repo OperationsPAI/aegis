@@ -203,12 +203,12 @@ func initAcceptedIssuers() {
 var SignerModule = fx.Module("jwtkeys.signer",
 	fx.Provide(newSigner),
 	fx.Provide(newVerifierFromSigner),
-	fx.Invoke(func() { initAcceptedIssuers() }),
+	fx.Invoke(initAcceptedIssuers),
 )
 
 // VerifierModule provides a Verifier backed by a remote JWKS endpoint. Used by
 // consumer processes (aegislab backend) that only verify tokens.
 var VerifierModule = fx.Module("jwtkeys.verifier",
 	fx.Provide(newRemoteVerifier),
-	fx.Invoke(func() { initAcceptedIssuers() }),
+	fx.Invoke(initAcceptedIssuers),
 )

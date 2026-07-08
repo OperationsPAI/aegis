@@ -72,10 +72,6 @@ credential-based login.`,
 		ctxName := resolveAuthLoginContextName()
 		tlsOpts := resolveTLSOptions()
 
-		if authLoginBrowser {
-			return doBrowserLogin(server, ctxName, tlsOpts)
-		}
-
 		var savedCtx config.Context
 		if cfg != nil {
 			savedCtx = cfg.Contexts[ctxName]
@@ -86,7 +82,7 @@ credential-based login.`,
 			return err
 		}
 
-		if mode == "browser" {
+		if authLoginBrowser || mode == "browser" {
 			return doBrowserLogin(server, ctxName, tlsOpts)
 		}
 
