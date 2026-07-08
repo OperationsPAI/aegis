@@ -32,6 +32,8 @@ import (
 	trace "aegis/crud/observability/trace"
 	blob "aegis/crud/storage/blob"
 	pages "aegis/crud/storage/pages"
+	user "aegis/crud/iam/user"
+	"aegis/platform/middleware"
 	"aegis/platform/router"
 
 	"go.uber.org/fx"
@@ -190,11 +192,16 @@ func ExecutionInjectionOwnerModules() fx.Option {
 	)
 }
 
+func userProvisionerAdapter(svc *user.Service) middleware.UserProvisioner {
+	return svc
+}
+
 func ProducerHTTPModules() fx.Option {
 	return fx.Options(
 		fx.Options(apiHTTPModules()...),
 		fx.Provide(chaosSystemWriterAdapter),
 		fx.Provide(newTaskCanceller),
 		fx.Provide(executionCascaderAdapter),
+		fx.Provide(userProvisionerAdapter),
 	)
 }

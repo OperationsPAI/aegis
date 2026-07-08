@@ -17,10 +17,11 @@ import (
 type Params struct {
 	fx.In
 
-	Handlers   *Handlers
-	Middleware middleware.Service
-	DB         *gorm.DB
-	Registrars []framework.RouteRegistrar `group:"routes"`
+	Handlers      *Handlers
+	Middleware    middleware.Service
+	DB            *gorm.DB
+	Provisioner   middleware.UserProvisioner `optional:"true"`
+	Registrars    []framework.RouteRegistrar `group:"routes"`
 }
 
 // New assembles the gin.Engine. It iterates every module-provided
@@ -62,7 +63,7 @@ func New(params Params) *gin.Engine {
 		}
 		group := v2
 		if !r.SkipDefaultChain {
-			if chain := audienceChain(r.Audience, params.DB); len(chain) > 0 {
+			if chain := audienceChain(r.Audience, params.Provisioner); len(chain) > 0 {
 				group = v2.Group("", chain...)
 			}
 		}

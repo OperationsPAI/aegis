@@ -193,24 +193,26 @@ func (a *AegisAuth) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 	return next.ServeHTTP(w, r)
 }
 
-// --- OIDC normalization ---
-
-func (c *UnifiedClaims) normalizeFromStandardOIDC() {
+// normalizeExternalToken converts a token from any external OIDC provider
+// into the internal UnifiedClaims shape. It is a no-op for tokens that
+// already carry the aegis-native `typ` claim. The mapping proceeds in two
+// layers: standard OIDC claims first (portable across any IdP), then
+// provider-specific extensions (Casdoor properties, admin flag, etc.).
+func (c *UnifiedClaims) normalizeExternalToken() {
 	if c.Typ != "" {
 		return
 	}
 	c.Typ = "human"
 	c.AuthType = "user"
 
-	// user_id: try properties.aegis_user_id (Casdoor nested), then top-level aegis_user_id, then sub
-	if c.Properties != nil {
-		if idStr, ok := c.Properties["aegis_user_id"]; ok {
-			if id, err := strconv.Atoi(idStr); err == nil && id != 0 {
-				c.UserID = id
-			}
-		}
-	}
-	if c.UserID == 0 && c.AegisUserID != 0 {
+	c.normalizeCasdoorExtensions()
+	c.normalizeStandardOIDC()
+	c.deriveAdminFromRoles()
+}
+
+// normalizeStandardOIDC maps claims defined by the OpenID Connect Core spec.
+func (c *UnifiedClaims) normalizeStandardOIDC() {
+	if c.AegisUserID != 0 && c.UserID == 0 {
 		c.UserID = c.AegisUserID
 	}
 	if c.UserID == 0 {
@@ -219,30 +221,41 @@ func (c *UnifiedClaims) normalizeFromStandardOIDC() {
 		}
 	}
 
-	// username: preferred_username (standard OIDC), then name (Casdoor)
-	if c.Username == "" {
-		if c.PreferredUsername != "" {
-			c.Username = c.PreferredUsername
-		} else if c.Name != "" {
-			c.Username = c.Name
+	if c.Username == "" && c.PreferredUsername != "" {
+		c.Username = c.PreferredUsername
+	}
+
+	if len(c.Groups) > 0 && len(c.Roles) == 0 {
+		c.Roles = c.Groups
+	}
+}
+
+// normalizeCasdoorExtensions maps claims specific to Casdoor's JWT format.
+func (c *UnifiedClaims) normalizeCasdoorExtensions() {
+	if c.Properties != nil {
+		if idStr, ok := c.Properties["aegis_user_id"]; ok && c.UserID == 0 {
+			if id, err := strconv.Atoi(idStr); err == nil && id != 0 {
+				c.UserID = id
+			}
 		}
+	}
+
+	if c.Username == "" && c.Name != "" {
+		c.Username = c.Name
 	}
 
 	c.IsActive = !c.CasdoorForbidden
 
-	// admin: Casdoor's isAdmin field, or group/role membership
 	if c.CasdoorIsAdmin {
 		c.IsAdmin = true
 	}
+}
 
-	// roles: groups (standard OIDC / Authentik) or Roles already set by Casdoor
-	if len(c.Groups) > 0 && len(c.Roles) == 0 {
-		c.Roles = c.Groups
-	}
+func (c *UnifiedClaims) deriveAdminFromRoles() {
 	for _, r := range c.Roles {
 		if r == "super_admin" || r == "admin" {
 			c.IsAdmin = true
-			break
+			return
 		}
 	}
 }
@@ -270,7 +283,7 @@ func (a *AegisAuth) parseAndVerify(tokenString string) (*UnifiedClaims, error) {
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
-	claims.normalizeFromStandardOIDC()
+	claims.normalizeExternalToken()
 	if claims.Typ == "human" && !claims.IsActive {
 		return nil, errors.New("user account is inactive")
 	}

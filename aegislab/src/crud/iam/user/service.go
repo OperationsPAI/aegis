@@ -31,6 +31,7 @@ type SessionRevoker interface {
 
 type Service struct {
 	repo    *Repository
+	rbac    *rbac.Repository
 	revoker SessionRevoker
 }
 
@@ -41,11 +42,12 @@ type ServiceParams struct {
 	fx.In
 
 	Repo    *Repository
-	Revoker SessionRevoker `optional:"true"`
+	RBAC    *rbac.Repository `optional:"true"`
+	Revoker SessionRevoker   `optional:"true"`
 }
 
 func NewService(p ServiceParams) *Service {
-	return &Service{repo: p.Repo, revoker: p.Revoker}
+	return &Service{repo: p.Repo, rbac: p.RBAC, revoker: p.Revoker}
 }
 
 func (s *Service) GetByID(_ context.Context, userID int) (*model.User, error) {
@@ -475,6 +477,41 @@ func (s *Service) RemoveProject(ctx context.Context, userID, projectID int) erro
 		}
 		return nil
 	})
+}
+
+// EnsureExternalUser looks up or creates a user by email, then syncs roles.
+// Implements middleware.UserProvisioner for JIT provisioning.
+func (s *Service) EnsureExternalUser(email, username string, roles []string) (int, error) {
+	u, err := s.repo.getUserByEmail(email)
+	if err == nil {
+		return u.ID, nil
+	}
+
+	resp, err := s.CreateUser(context.Background(), &CreateUserReq{
+		Username: username,
+		Email:    email,
+		FullName: username,
+		Password: fmt.Sprintf("ext-%s-%d", email, time.Now().UnixNano()),
+	})
+	if err != nil {
+		u, retryErr := s.repo.getUserByEmail(email)
+		if retryErr == nil {
+			return u.ID, nil
+		}
+		return 0, err
+	}
+
+	if s.rbac != nil {
+		for _, roleName := range roles {
+			role, err := s.rbac.FindRoleByName(roleName)
+			if err != nil {
+				continue
+			}
+			_ = s.AssignRole(context.Background(), resp.ID, role.ID)
+		}
+	}
+
+	return resp.ID, nil
 }
 
 func buildUserResourceRoles(userContainers []model.UserScopedRole, userDatasets []model.UserScopedRole, userProjects []model.UserScopedRole) ([]UserContainerInfo, []UserDatasetInfo, []UserProjectInfo) {
