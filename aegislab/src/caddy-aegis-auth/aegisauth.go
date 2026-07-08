@@ -70,11 +70,15 @@ type UnifiedClaims struct {
 	APIKeyID     int      `json:"api_key_id,omitempty"`
 	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
 
-	// Standard OIDC claims (populated by Authentik, consumed by normalizeFromStandardOIDC)
-	PreferredUsername string   `json:"preferred_username,omitempty"`
-	Groups           []string `json:"groups,omitempty"`
-	EmailVerified    bool     `json:"email_verified,omitempty"`
-	AegisUserID      int      `json:"aegis_user_id,omitempty"`
+	// Standard OIDC / Casdoor claims (consumed by normalizeFromStandardOIDC)
+	PreferredUsername string            `json:"preferred_username,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Groups           []string          `json:"groups,omitempty"`
+	EmailVerified    bool              `json:"email_verified,omitempty"`
+	AegisUserID      int               `json:"aegis_user_id,omitempty"`
+	CasdoorIsAdmin   bool              `json:"isAdmin,omitempty"`
+	CasdoorForbidden bool              `json:"isForbidden,omitempty"`
+	Properties       map[string]string `json:"properties,omitempty"`
 
 	jwt.RegisteredClaims
 }
@@ -199,23 +203,50 @@ func (c *UnifiedClaims) normalizeFromStandardOIDC() {
 	c.Typ = "human"
 	c.AuthType = "user"
 
-	if c.AegisUserID != 0 {
+	// user_id: try properties.aegis_user_id (Casdoor nested), then top-level aegis_user_id, then sub
+	if c.Properties != nil {
+		if idStr, ok := c.Properties["aegis_user_id"]; ok {
+			if id, err := strconv.Atoi(idStr); err == nil && id != 0 {
+				c.UserID = id
+			}
+		}
+	}
+	if c.UserID == 0 && c.AegisUserID != 0 {
 		c.UserID = c.AegisUserID
-	} else if id, err := strconv.Atoi(c.Subject); err == nil {
-		c.UserID = id
+	}
+	if c.UserID == 0 {
+		if id, err := strconv.Atoi(c.Subject); err == nil {
+			c.UserID = id
+		}
 	}
 
-	if c.PreferredUsername != "" && c.Username == "" {
-		c.Username = c.PreferredUsername
+	// username: preferred_username (standard OIDC), then name (Casdoor)
+	if c.Username == "" {
+		if c.PreferredUsername != "" {
+			c.Username = c.PreferredUsername
+		} else if c.Name != "" {
+			c.Username = c.Name
+		}
 	}
 
-	c.IsActive = true
+	// active: Casdoor uses isForbidden (inverted)
+	if c.CasdoorForbidden {
+		c.IsActive = false
+	} else {
+		c.IsActive = true
+	}
 
+	// admin: Casdoor's isAdmin field, or group/role membership
+	if c.CasdoorIsAdmin {
+		c.IsAdmin = true
+	}
+
+	// roles: groups (standard OIDC / Authentik) or Roles already set by Casdoor
 	if len(c.Groups) > 0 && len(c.Roles) == 0 {
 		c.Roles = c.Groups
 	}
-	for _, g := range c.Groups {
-		if g == "super_admin" || g == "admin" {
+	for _, r := range c.Roles {
+		if r == "super_admin" || r == "admin" {
 			c.IsAdmin = true
 			break
 		}
