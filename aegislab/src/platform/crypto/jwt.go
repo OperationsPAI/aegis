@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"aegis/platform/consts"
@@ -30,6 +31,28 @@ const (
 )
 
 var JWTSecret string
+
+var (
+	acceptedIssuersMu sync.RWMutex
+	acceptedIssuers   []string
+)
+
+func SetAcceptedIssuers(issuers []string) {
+	acceptedIssuersMu.Lock()
+	acceptedIssuers = append([]string(nil), issuers...)
+	acceptedIssuersMu.Unlock()
+}
+
+func isAcceptedIssuer(issuer string) bool {
+	acceptedIssuersMu.RLock()
+	defer acceptedIssuersMu.RUnlock()
+	for _, accepted := range acceptedIssuers {
+		if accepted == issuer {
+			return true
+		}
+	}
+	return false
+}
 
 func InitJWTSecret() error {
 	secret := os.Getenv(JWTSecretEnvVar)
@@ -245,7 +268,9 @@ func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedC
 	case consts.JWTIssuerUser, consts.JWTIssuerService, consts.JWTIssuerServiceAccount:
 		// Legacy issuers accepted during migration rollout.
 	default:
-		return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
+		if !isAcceptedIssuer(claims.Issuer) {
+			return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
+		}
 	}
 
 	// Policy: human tokens for inactive users are rejected.

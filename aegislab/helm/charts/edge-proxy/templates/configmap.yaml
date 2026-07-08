@@ -66,6 +66,9 @@ data:
 
         aegis_auth {
             jwks_url http://{{ .Release.Name }}-sso:{{ .Values.backends.sso.port | default 8083 }}/.well-known/jwks.json
+            {{- if .Values.global.authentik.enabled }}
+            jwks_url {{ .Values.global.authentik.jwksURL }}
+            {{- end }}
             hmac_key {env.GATEWAY_HMAC_KEY}
             {{- if .Values.aegisAuth.jwksRefreshInterval }}
             jwks_refresh_interval {{ .Values.aegisAuth.jwksRefreshInterval }}
