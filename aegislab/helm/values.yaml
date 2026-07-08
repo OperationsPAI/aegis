@@ -112,11 +112,6 @@ frontend:
 # Dev anchors: placeholder Deployments + Services that telepresence can
 # intercept to forward /dev/* (frontend) and /dev/api/* (backend) traffic
 # from the edge-proxy down to a developer's laptop. Disabled by default;
-# turn on per cluster that should host dev intercepts. See
-# docs/dev-intercept.md for the developer-side workflow.
-devAnchors:
-  enabled: false
-
 edgeProxy:
   # Caddy fronting aegis-api + intake-grpc. Enabled by default so every pack
   # (kind / local / byte-cluster / prod) presents the same external surface:
@@ -162,21 +157,14 @@ edgeProxy:
   # Upstream ports/toggles the edge-proxy Caddyfile routes to. Duplicated
   # here because the edge-proxy subchart can't read sibling-subchart or
   # parent values — keep these in sync with `microservices.aegisApi.*`,
-  # `gateway.*`, `frontend.*`, `sso.service.port`, and `devAnchors.enabled`.
+  # `frontend.*`, etc.
   backends:
     aegisApi:
       httpPort: 8082
       intakeGrpcPort: 9096
-    gateway:
-      enabled: true
-      httpPort: 8086
     frontend:
       enabled: false
       port: 80
-    sso:
-      port: 8083
-    devAnchors:
-      enabled: false
 
 buildkit:
   enabled: true
@@ -235,7 +223,7 @@ auth:
 # by setting `sso.<path>` here (Helm forwards top-level `sso:` into the
 # subchart's scope).
 sso:
-  enabled: true
+  enabled: false
 
 configmap:
   name: "rcabench"

@@ -200,21 +200,6 @@ data:
             }
         }
 
-        {{- if .Values.backends.devAnchors.enabled }}
-        # ─── Dev intercept ───
-        handle /dev/api/* {
-            request_header X-Aegis-Auth-Mode "none"
-            reverse_proxy {{ .Release.Name }}-dev-api:80
-        }
-        @dev {
-            path /dev /dev/*
-        }
-        handle @dev {
-            request_header X-Aegis-Auth-Mode "none"
-            reverse_proxy {{ .Release.Name }}-dev-frontend:80
-        }
-        {{- end }}
-
         # ─── Health checks (no auth) ───
         handle /healthz {
             request_header X-Aegis-Auth-Mode "none"

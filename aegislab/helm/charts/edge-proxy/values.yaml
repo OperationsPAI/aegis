@@ -6,11 +6,10 @@
 # (the dependency is aliased to `edgeProxy`).
 #
 # NOTE on backends: subcharts cannot read sibling-subchart or parent values,
-# so the upstream ports/toggles the Caddyfile needs (aegis-api, gateway,
-# frontend, sso, dev anchors) are duplicated here under `backends:`. The
-# umbrella forwards the real values via its top-level `edgeProxy.backends:`
-# block — keep the two in sync. Backend Service NAMES are derived from
-# `.Release.Name` (same release as the upstreams under the umbrella).
+# so the upstream ports/toggles the Caddyfile needs (aegis-api, frontend,
+# etc.) are duplicated here under `backends:`. The umbrella forwards the
+# real values via its top-level `edgeProxy.backends:` block — keep the two
+# in sync. Backend Service NAMES are derived from `.Release.Name`.
 
 # Toggle the whole edge-proxy (Deployment + Service + ConfigMap).
 enabled: true
@@ -45,9 +44,7 @@ arl:
   port: 80
   upstream: ""
 
-# Upstream ports/toggles the Caddyfile routes to. Duplicated from the
-# umbrella's microservices / gateway / frontend / sso / devAnchors values
-# because subcharts can't read sibling values (see header note).
+# Upstream ports/toggles the Caddyfile routes to.
 aegisAuth:
   jwksRefreshInterval: "5m"
 
@@ -55,14 +52,9 @@ backends:
   aegisApi:
     httpPort: 8082
     intakeGrpcPort: 9096
-  gateway:
-    enabled: false
-    httpPort: 8086
   frontend:
     enabled: false
     port: 80
-  sso:
-    port: 8083
   blob:
     port: 8085
   notify:
@@ -74,8 +66,6 @@ backends:
   ray:
     enabled: false
     dashboardPort: 8265
-  devAnchors:
-    enabled: false
 
 # `global` is inherited from the umbrella (imageRegistry, publicBaseURL,
 # additionalSiteAddresses, images.caddy, casdoor). Declared with defaults
