@@ -10,6 +10,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 // Params is the fx-group collection input for router.New.
@@ -18,6 +19,7 @@ type Params struct {
 
 	Handlers   *Handlers
 	Middleware middleware.Service
+	DB         *gorm.DB
 	Registrars []framework.RouteRegistrar `group:"routes"`
 }
 
@@ -60,7 +62,7 @@ func New(params Params) *gin.Engine {
 		}
 		group := v2
 		if !r.SkipDefaultChain {
-			if chain := audienceChain(r.Audience); len(chain) > 0 {
+			if chain := audienceChain(r.Audience, params.DB); len(chain) > 0 {
 				group = v2.Group("", chain...)
 			}
 		}
