@@ -28,3 +28,14 @@ mysql:
 # The externally-reachable origin Casdoor uses for OIDC issuer/redirect.
 # Defaults to in-cluster URL if empty.
 origin: ""
+
+# OIDC applications seeded on first deploy via init Job.
+oidc:
+  console:
+    clientId: "aegis-console"
+    redirectUris:
+      - "http://localhost:3000/callback"
+  cli:
+    clientId: "aegis-cli"
+    redirectUris:
+      - "http://localhost:*/callback"

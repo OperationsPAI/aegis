@@ -19,4 +19,82 @@ data:
 
     origin = {{ .Values.origin | default (printf "http://%s-casdoor:%d" .Release.Name (int .Values.port)) }}
     staticBaseUrl = ""
+    initDataFile = "/conf/init_data.json"
+
+  init_data.json: |
+    {
+      "organizations": [
+        {
+          "owner": "admin",
+          "name": "aegis",
+          "displayName": "Aegis",
+          "websiteUrl": "",
+          "favicon": "",
+          "passwordType": "plain",
+          "countryCodes": ["US", "CN"],
+          "defaultAvatar": "",
+          "tags": []
+        }
+      ],
+      "applications": [
+        {
+          "owner": "admin",
+          "name": "aegis-console",
+          "displayName": "Aegis Console",
+          "organization": "aegis",
+          "cert": "cert-built-in",
+          "enablePassword": true,
+          "enableSignUp": false,
+          "clientId": "{{ .Values.oidc.console.clientId }}",
+          "clientSecret": "aegis-console-public",
+          "redirectUris": {{ .Values.oidc.console.redirectUris | toJson }},
+          "grantTypes": ["authorization_code"],
+          "tokenFormat": "JWT",
+          "expireInHours": 24,
+          "refreshExpireInHours": 168,
+          "signinMethods": [{"name": "Password", "displayName": "Password", "rule": "All"}],
+          "signupItems": [
+            {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
+            {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
+            {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
+          ]
+        },
+        {
+          "owner": "admin",
+          "name": "aegis-cli",
+          "displayName": "Aegis CLI",
+          "organization": "aegis",
+          "cert": "cert-built-in",
+          "enablePassword": true,
+          "enableSignUp": false,
+          "clientId": "{{ .Values.oidc.cli.clientId }}",
+          "clientSecret": "aegis-cli-public",
+          "redirectUris": {{ .Values.oidc.cli.redirectUris | toJson }},
+          "grantTypes": ["authorization_code"],
+          "tokenFormat": "JWT",
+          "expireInHours": 24,
+          "refreshExpireInHours": 168,
+          "signinMethods": [{"name": "Password", "displayName": "Password", "rule": "All"}],
+          "signupItems": [
+            {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
+            {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
+            {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
+          ]
+        }
+      ],
+      "users": [
+        {
+          "owner": "aegis",
+          "name": "admin",
+          "type": "normal-user",
+          "password": "123",
+          "displayName": "Admin",
+          "email": "admin@aegis.local",
+          "isAdmin": true,
+          "properties": {
+            "aegis_user_id": "1"
+          }
+        }
+      ]
+    }
 {{- end }}

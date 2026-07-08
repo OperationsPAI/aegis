@@ -761,3 +761,12 @@ casdoor:
     password: ""
     database: casdoor
   origin: ""
+  oidc:
+    console:
+      clientId: "aegis-console"
+      redirectUris:
+        - "http://localhost:3000/callback"
+    cli:
+      clientId: "aegis-cli"
+      redirectUris:
+        - "http://localhost:*/callback"
