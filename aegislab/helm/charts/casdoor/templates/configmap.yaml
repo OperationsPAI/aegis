@@ -1,0 +1,22 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-casdoor
+data:
+  app.conf: |
+    appname = casdoor
+    httpport = {{ .Values.port }}
+    runmode = prod
+
+    driverName = mysql
+    dataSourceName = {{ .Values.mysql.user }}:{{ .Values.mysql.password }}@tcp({{ .Values.mysql.host }}:{{ .Values.mysql.port }})/
+    dbName = {{ .Values.mysql.database }}
+
+    tableNamePrefix =
+    showSql = false
+    sessionOn = true
+
+    origin = {{ .Values.origin | default (printf "http://%s-casdoor:%d" .Release.Name (int .Values.port)) }}
+    staticBaseUrl = ""
+{{- end }}

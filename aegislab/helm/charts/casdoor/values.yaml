@@ -1,0 +1,30 @@
+enabled: false
+
+image:
+  repository: casbin/casdoor
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+port: 8000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# Casdoor connects to the existing MySQL instance (separate database).
+mysql:
+  host: ""
+  port: 3306
+  user: root
+  password: ""
+  database: casdoor
+
+# The externally-reachable origin Casdoor uses for OIDC issuer/redirect.
+# Defaults to in-cluster URL if empty.
+origin: ""

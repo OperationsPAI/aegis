@@ -32,10 +32,10 @@ global:
   # hostname is what does the routing. `tls internal` will also issue a
   # local-CA cert covering every listed hostname. Each entry: `host:port`.
   additionalSiteAddresses: []
-  # Authentik OIDC provider toggle. When true, edge-proxy routes OIDC
-  # public endpoints away (frontend talks to Authentik directly) and
+  # Casdoor OIDC provider toggle. When true, edge-proxy routes OIDC
+  # public endpoints away (frontend talks to Casdoor directly) and
   # proxies RBAC/auth APIs to aegis-api instead of aegis-sso.
-  authentik:
+  casdoor:
     enabled: false
   # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
   images:
@@ -762,10 +762,14 @@ blob:
   resources: {}
 
 # ---------------------------------------------------------------------------
-# authentik subchart values (forwarded into `charts/authentik/`).
-# Phase 0: deploy Authentik alongside existing SSO with no traffic changes.
+# casdoor subchart values (forwarded into `charts/casdoor/`).
 # ---------------------------------------------------------------------------
-authentik:
+casdoor:
   enabled: false
-  externalURL: ""
-  providerSlug: "aegis-console"
+  mysql:
+    host: ""
+    port: 3306
+    user: root
+    password: ""
+    database: casdoor
+  origin: ""

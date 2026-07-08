@@ -78,8 +78,8 @@ backends:
     enabled: false
 
 # `global` is inherited from the umbrella (imageRegistry, publicBaseURL,
-# additionalSiteAddresses, images.caddy, authentik). Declared with defaults
+# additionalSiteAddresses, images.caddy, casdoor). Declared with defaults
 # so standalone `helm template` of this subchart doesn't error.
 global:
-  authentik:
+  casdoor:
     enabled: false

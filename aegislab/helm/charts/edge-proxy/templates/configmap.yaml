@@ -66,8 +66,8 @@ data:
 
         aegis_auth {
             jwks_url http://{{ .Release.Name }}-sso:{{ .Values.backends.sso.port | default 8083 }}/.well-known/jwks.json
-            {{- if .Values.global.authentik.enabled }}
-            jwks_url {{ .Values.global.authentik.jwksURL }}
+            {{- if .Values.global.casdoor.enabled }}
+            jwks_url http://{{ .Release.Name }}-casdoor:8000/.well-known/jwks
             {{- end }}
             hmac_key {env.GATEWAY_HMAC_KEY}
             {{- if .Values.aegisAuth.jwksRefreshInterval }}
@@ -75,7 +75,7 @@ data:
             {{- end }}
         }
 
-        {{- if not .Values.global.authentik.enabled }}
+        {{- if not .Values.global.casdoor.enabled }}
         # ─── SSO public endpoints (no auth) ───
         @sso_public {
             path /authorize /token /login /.well-known/openid-configuration /.well-known/jwks.json /auth/providers /auth/federated/* /auth/callback/*
@@ -88,14 +88,14 @@ data:
 
         handle_path /v1/* {
             request_header X-Aegis-Auth-Mode "none"
-            {{- if .Values.global.authentik.enabled }}
+            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
             {{- else }}
             reverse_proxy {{ $sso }}
             {{- end }}
         }
 
-        {{- if not .Values.global.authentik.enabled }}
+        {{- if not .Values.global.casdoor.enabled }}
         handle /userinfo {
             request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $sso }}
@@ -105,7 +105,7 @@ data:
         # ─── Auth API ───
         handle /api/v2/auth/* {
             request_header X-Aegis-Auth-Mode "none"
-            {{- if .Values.global.authentik.enabled }}
+            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
             {{- else }}
             reverse_proxy {{ $sso }}
@@ -118,7 +118,7 @@ data:
         }
         handle @sso_jwt {
             request_header X-Aegis-Auth-Mode "jwt"
-            {{- if .Values.global.authentik.enabled }}
+            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
             {{- else }}
             reverse_proxy {{ $sso }}

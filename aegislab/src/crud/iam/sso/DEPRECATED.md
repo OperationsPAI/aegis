@@ -1,11 +1,11 @@
-# Files to delete after Authentik migration is validated
+# Files to delete after Casdoor migration is validated
 
 The admin/RBAC surface (/v1/*) has been absorbed into aegis-api via
 AdminModule. The files below belong to the OIDC provider and SSO boot,
-which Authentik replaces. Delete them once Authentik is fully validated
+which Casdoor replaces. Delete them once Casdoor is fully validated
 in production.
 
-## OIDC Provider (replaced by Authentik)
+## OIDC Provider (replaced by Casdoor)
 - oidc.go
 - oidc_handler.go
 - oidc_grants.go
@@ -13,7 +13,7 @@ in production.
 - oidc_state.go
 - oidc_jwks.go
 
-## Federation (handled by Authentik natively)
+## Federation (handled by Casdoor natively)
 - federation_handler.go
 - federation_state.go
 - federation_repository.go
@@ -26,7 +26,7 @@ in production.
 - service.go (OIDCClient CRUD)
 - repository.go (OIDCClient repo)
 
-## GitHub OAuth Proxy (absorbed by Authentik federation)
+## GitHub OAuth Proxy (absorbed by Casdoor federation)
 - github_proxy_handler.go
 
 ## SSO Boot

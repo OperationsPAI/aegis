@@ -1,0 +1,4 @@
+apiVersion: v2
+name: casdoor
+description: Casdoor identity provider for aegis
+version: 0.1.0

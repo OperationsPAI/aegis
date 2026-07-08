@@ -1,9 +1,0 @@
-apiVersion: v2
-name: authentik
-description: Authentik identity provider for aegis
-version: 0.1.0
-dependencies:
-  - name: authentik
-    version: "2024.12.3"
-    repository: https://charts.goauthentik.io
-    condition: authentik.enabled

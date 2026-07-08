@@ -82,7 +82,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: ray.enabled
-  - name: authentik
+  - name: casdoor
     version: "0.1.0"
     repository: ""
-    condition: authentik.enabled
+    condition: casdoor.enabled
