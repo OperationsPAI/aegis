@@ -104,6 +104,7 @@ data:
     {{- end }}
     console_redirect_uris = "{{ $consoleURIs }}"
     login_redirect = "{{ $loginRedir }}"
+    accepted_issuers = "{{ .Values.configmap.sso.acceptedIssuers | default "" }}"
 
     [jfs]
     backend = "{{ .Values.configmap.jfs.backend | default "filesystem" }}"

@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"aegis/platform/config"
+	"aegis/platform/crypto"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -152,16 +154,36 @@ func startRefreshLoop(lc fx.Lifecycle, v *Verifier) {
 	})
 }
 
+func initAcceptedIssuers() {
+	raw := strings.TrimSpace(config.GetString("sso.accepted_issuers"))
+	if raw == "" {
+		return
+	}
+	var issuers []string
+	for _, s := range strings.Split(raw, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			issuers = append(issuers, s)
+		}
+	}
+	if len(issuers) > 0 {
+		crypto.SetAcceptedIssuers(issuers)
+		logrus.WithField("issuers", issuers).Info("additional JWT issuers configured")
+	}
+}
+
 // SignerModule provides both a Signer (private key) and a Verifier that trusts
 // its own public key. Used by the SSO process that signs and also accepts the
 // tokens it just minted.
 var SignerModule = fx.Module("jwtkeys.signer",
 	fx.Provide(newSigner),
 	fx.Provide(newVerifierFromSigner),
+	fx.Invoke(func() { initAcceptedIssuers() }),
 )
 
 // VerifierModule provides a Verifier backed by a remote JWKS endpoint. Used by
 // consumer processes (aegislab backend) that only verify tokens.
 var VerifierModule = fx.Module("jwtkeys.verifier",
 	fx.Provide(newRemoteVerifier),
+	fx.Invoke(func() { initAcceptedIssuers() }),
 )

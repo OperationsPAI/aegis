@@ -76,7 +76,7 @@ type UnifiedClaims struct {
 // remote JWKS endpoint and injects signed trusted headers for downstream
 // services.
 type AegisAuth struct {
-	JWKSURL             string        `json:"jwks_url"`
+	JWKSURLs            []string      `json:"jwks_urls"`
 	HMACKey             string        `json:"hmac_key"`
 	JWKSRefreshInterval caddy.Duration `json:"jwks_refresh_interval,omitempty"`
 
@@ -118,8 +118,8 @@ func (a *AegisAuth) Cleanup() error {
 }
 
 func (a *AegisAuth) Validate() error {
-	if a.JWKSURL == "" {
-		return errors.New("aegis_auth: jwks_url is required")
+	if len(a.JWKSURLs) == 0 {
+		return errors.New("aegis_auth: at least one jwks_url is required")
 	}
 	if len(a.hmacKey) == 0 {
 		return errors.New("aegis_auth: hmac_key is required")
@@ -281,17 +281,46 @@ func (a *AegisAuth) refreshLoop(interval time.Duration) {
 
 func (a *AegisAuth) refreshKeys() error {
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(a.JWKSURL)
+	merged := make(map[string]*rsa.PublicKey)
+	var lastErr error
+	for _, url := range a.JWKSURLs {
+		keys, err := fetchJWKSFrom(client, url)
+		if err != nil {
+			a.logger.Warn("jwks fetch failed for source", zap.String("url", url), zap.Error(err))
+			lastErr = err
+			continue
+		}
+		for kid, pub := range keys {
+			if _, exists := merged[kid]; !exists {
+				merged[kid] = pub
+			}
+		}
+	}
+	if len(merged) == 0 {
+		if lastErr != nil {
+			return fmt.Errorf("all JWKS sources failed, last error: %w", lastErr)
+		}
+		return errors.New("jwks documents contained no usable RSA keys")
+	}
+	a.mu.Lock()
+	a.keys = merged
+	a.mu.Unlock()
+	a.logger.Info("jwks refreshed", zap.Int("keys", len(merged)), zap.Int("sources", len(a.JWKSURLs)))
+	return nil
+}
+
+func fetchJWKSFrom(client *http.Client, url string) (map[string]*rsa.PublicKey, error) {
+	resp, err := client.Get(url)
 	if err != nil {
-		return fmt.Errorf("fetch jwks: %w", err)
+		return nil, fmt.Errorf("fetch jwks from %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("jwks returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("jwks %s returned status %d", url, resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read jwks body: %w", err)
+		return nil, fmt.Errorf("read jwks body from %s: %w", url, err)
 	}
 	var doc struct {
 		Keys []struct {
@@ -302,7 +331,7 @@ func (a *AegisAuth) refreshKeys() error {
 		} `json:"keys"`
 	}
 	if err := json.Unmarshal(body, &doc); err != nil {
-		return fmt.Errorf("decode jwks: %w", err)
+		return nil, fmt.Errorf("decode jwks from %s: %w", url, err)
 	}
 	keys := make(map[string]*rsa.PublicKey, len(doc.Keys))
 	for _, k := range doc.Keys {
@@ -323,14 +352,7 @@ func (a *AegisAuth) refreshKeys() error {
 		}
 		keys[k.Kid] = &rsa.PublicKey{N: new(big.Int).SetBytes(nBytes), E: int(e.Int64())}
 	}
-	if len(keys) == 0 {
-		return errors.New("jwks document contained no usable RSA keys")
-	}
-	a.mu.Lock()
-	a.keys = keys
-	a.mu.Unlock()
-	a.logger.Info("jwks refreshed", zap.Int("keys", len(keys)))
-	return nil
+	return keys, nil
 }
 
 // --- Caddyfile parsing ---
@@ -343,7 +365,7 @@ func (a *AegisAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if !d.NextArg() {
 				return d.ArgErr()
 			}
-			a.JWKSURL = d.Val()
+			a.JWKSURLs = append(a.JWKSURLs, d.Val())
 		case "hmac_key":
 			if !d.NextArg() {
 				return d.ArgErr()
