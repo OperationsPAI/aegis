@@ -40,7 +40,6 @@ data:
     {{- end }}
 
     {{- /* Upstream shortcuts */}}
-    {{- $sso     := printf "%s-sso:%s"      .Release.Name (.Values.backends.sso.port      | default "8083" | toString) }}
     {{- $api     := printf "%s-aegis-api:%d" .Release.Name (int .Values.backends.aegisApi.httpPort) }}
     {{- $blob    := printf "%s-blob:%s"      .Release.Name (.Values.backends.blob.port     | default "8085" | toString) }}
     {{- $notify  := printf "%s-notify:%s"    .Release.Name (.Values.backends.notify.port   | default "8084" | toString) }}
@@ -75,54 +74,30 @@ data:
             {{- end }}
         }
 
-        {{- if not .Values.global.casdoor.enabled }}
-        # ─── SSO public endpoints (no auth) ───
-        @sso_public {
-            path /authorize /token /login /.well-known/openid-configuration /.well-known/jwks.json /auth/providers /auth/federated/* /auth/callback/*
-        }
-        handle @sso_public {
+        # ─── JWKS (no auth) ───
+        handle /.well-known/jwks.json {
             request_header X-Aegis-Auth-Mode "none"
-            reverse_proxy {{ $sso }}
+            reverse_proxy {{ $api }}
         }
-        {{- end }}
 
         handle_path /v1/* {
             request_header X-Aegis-Auth-Mode "none"
-            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
-            {{- else }}
-            reverse_proxy {{ $sso }}
-            {{- end }}
         }
-
-        {{- if not .Values.global.casdoor.enabled }}
-        handle /userinfo {
-            request_header X-Aegis-Auth-Mode "jwt"
-            reverse_proxy {{ $sso }}
-        }
-        {{- end }}
 
         # ─── Auth API ───
         handle /api/v2/auth/* {
             request_header X-Aegis-Auth-Mode "none"
-            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
-            {{- else }}
-            reverse_proxy {{ $sso }}
-            {{- end }}
         }
 
-        # ─── SSO user/key/role management (jwt) ───
-        @sso_jwt {
+        # ─── User/key/role management (jwt) ───
+        @iam_jwt {
             path /api/v2/users* /api/v2/api-keys* /api/v2/roles* /api/v2/permissions* /api/v2/resources* /api/v2/github/*
         }
-        handle @sso_jwt {
+        handle @iam_jwt {
             request_header X-Aegis-Auth-Mode "jwt"
-            {{- if .Values.global.casdoor.enabled }}
             reverse_proxy {{ $api }}
-            {{- else }}
-            reverse_proxy {{ $sso }}
-            {{- end }}
         }
 
         # ─── Notify (jwt, portal audience) ───

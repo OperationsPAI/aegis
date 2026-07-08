@@ -137,10 +137,10 @@ data:
     [api_gateway.intake.grpc]
     addr = ":{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}"
 
-    {{- if .Values.gateway.enabled }}
     [gateway]
     trusted_header_key = "{{ (.Values.global).gatewayTrustedHeaderKey | default .Values.gateway.trustedHeaderKey }}"
 
+    {{- if .Values.gateway.enabled }}
     [gateway.rate_limit]
     rps   = {{ .Values.gateway.rateLimit.rps | default 200 }}
     burst = {{ .Values.gateway.rateLimit.burst | default 400 }}
@@ -152,35 +152,17 @@ data:
     allow_credentials = true
     max_age_seconds   = 86400
 
+    {{- $apiUpstream := printf "%s-aegis-api:%v" .Release.Name .Values.microservices.aegisApi.httpPort }}
+
     [[gateway.routes]]
     prefix   = "/v1/"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "none"
 
     [[gateway.routes]]
     prefix   = "/.well-known/"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "none"
-
-    [[gateway.routes]]
-    prefix   = "/authorize"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
-    auth     = "none"
-
-    [[gateway.routes]]
-    prefix   = "/login"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
-    auth     = "none"
-
-    [[gateway.routes]]
-    prefix   = "/token"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
-    auth     = "none"
-
-    [[gateway.routes]]
-    prefix   = "/userinfo"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
-    auth     = "jwt"
 
     [[gateway.routes]]
     prefix    = "/api/v2/inbox/"
@@ -295,37 +277,37 @@ data:
 
     [[gateway.routes]]
     prefix   = "/api/v2/github/"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix   = "/api/v2/auth/"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "none"
 
     [[gateway.routes]]
     prefix   = "/api/v2/users"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix   = "/api/v2/api-keys"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix   = "/api/v2/roles"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix   = "/api/v2/permissions"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix   = "/api/v2/resources"
-    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    upstream = "{{ $apiUpstream }}"
     auth     = "jwt"
 
     [[gateway.routes]]

@@ -184,7 +184,7 @@ spec:
             claimName: {{ .Release.Name }}-juicefs-dataset
         - name: sso-private-key
           secret:
-            secretName: {{ default (include "sso.secretName" .) .Values.global.ssoclient.privateKeySecretName }}
+            secretName: {{ .Values.global.ssoclient.privateKeySecretName | default (printf "%s-sso-key" .Release.Name) }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
@@ -381,7 +381,7 @@ spec:
             claimName: {{ .Release.Name }}-juicefs-experiment-storage
         - name: sso-private-key
           secret:
-            secretName: {{ default (include "sso.secretName" .) .Values.global.ssoclient.privateKeySecretName }}
+            secretName: {{ .Values.global.ssoclient.privateKeySecretName | default (printf "%s-sso-key" .Release.Name) }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
