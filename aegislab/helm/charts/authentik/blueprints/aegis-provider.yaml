@@ -1,54 +1,17 @@
 version: 1
 metadata:
-  name: aegis-provider
-  labels:
-    blueprints.goauthentik.io/instantiate: "true"
+  name: aegis OIDC provider
 entries:
   - model: authentik_providers_oauth2.scopemapping
-    state: present
-    identifiers:
-      managed: goauthentik.io/providers/aegis/scope-aegis-claims
-    id: aegis-claims-mapping
+    id: aegis-claims
     attrs:
       name: "aegis-claims"
       scope_name: "aegis"
-      description: "Aegis unified claims"
       expression: |
         user = request.user
         attrs = user.attributes
         groups = [g.name for g in user.ak_groups.all()]
         return {
-            "typ": "human",
-            "user_id": attrs.get("aegis_user_id", 0),
-            "username": user.username,
-            "email": user.email,
-            "is_active": user.is_active,
-            "is_admin": "super_admin" in groups or "admin" in groups,
-            "roles": groups,
-            "auth_type": "user",
+            "aegis_user_id": attrs.get("aegis_user_id", 0),
+            "groups": groups,
         }
-
-  - model: authentik_providers_oauth2.oauth2provider
-    state: present
-    identifiers:
-      name: aegis-provider
-    id: aegis-provider
-    attrs:
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      client_type: public
-      signing_key: !Find [authentik_crypto.certificatekeypair, [name, "authentik Self-signed Certificate"]]
-      redirect_uris: ""
-      property_mappings:
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
-        - !KeyOf [aegis-claims-mapping]
-
-  - model: authentik_core.application
-    state: present
-    identifiers:
-      slug: aegis-console
-    attrs:
-      name: "aegis-console"
-      provider: !KeyOf [aegis-provider]
-      meta_launch_url: ""
