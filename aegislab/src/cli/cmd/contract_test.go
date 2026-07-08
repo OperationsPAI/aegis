@@ -267,16 +267,17 @@ func TestAuthLoginMissingSecretUsesUsageExitCode(t *testing.T) {
 	}
 }
 
-func TestAuthLoginMissingIdentityUsesUsageExitCode(t *testing.T) {
+func TestAuthLoginMissingIdentityFallsBackToBrowser(t *testing.T) {
+	// With no credentials, auth login now falls back to browser-based
+	// OIDC login instead of returning a usage error. The OIDC discovery
+	// will fail against a non-existent host, but the exit code should
+	// NOT be ExitCodeUsage — it is a runtime failure, not a flag error.
 	res := runCLI(t, "auth", "login", "--server", "http://example.test")
-	if res.code != ExitCodeUsage {
-		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeUsage, res.stderr)
+	if res.code == ExitCodeUsage {
+		t.Fatalf("exit code should not be usage error when falling back to browser login; stderr=%q", res.stderr)
 	}
-	if !strings.Contains(res.stderr, "either --username or --key-id is required") {
-		t.Fatalf("stderr = %q, want identity diagnostic", res.stderr)
-	}
-	if strings.TrimSpace(res.stdout) != "" {
-		t.Fatalf("stdout should be empty on validation failure, got %q", res.stdout)
+	if !strings.Contains(res.stderr, "OIDC discovery") {
+		t.Fatalf("stderr = %q, want OIDC discovery attempt", res.stderr)
 	}
 }
 

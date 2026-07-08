@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -29,6 +30,9 @@ var authLoginPasswordFile string
 var authLoginPasswordStdin bool
 var authLoginSavePassword bool
 var authLoginContext string
+var authLoginBrowser bool
+var authLoginIssuer string
+var authLoginClientID string
 
 var (
 	apiKeyLoginFunc   = client.LoginWithAPIKeyTLS
@@ -46,8 +50,13 @@ type authLoginJSONResult struct {
 
 var authLoginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Exchange API credentials for a bearer token",
-	Args:  requireNoArgs,
+	Short: "Authenticate with the aegislab platform",
+	Long: `Authenticate via browser-based OIDC (default), username/password, or API key.
+
+When no credentials are provided, the command opens a browser for OIDC login.
+Use --browser to force browser login, or provide --username/--key-id for
+credential-based login.`,
+	Args: requireNoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		server := authLoginServer
 		if server == "" {
@@ -61,6 +70,12 @@ var authLoginCmd = &cobra.Command{
 		}
 
 		ctxName := resolveAuthLoginContextName()
+		tlsOpts := resolveTLSOptions()
+
+		if authLoginBrowser {
+			return doBrowserLogin(server, ctxName, tlsOpts)
+		}
+
 		var savedCtx config.Context
 		if cfg != nil {
 			savedCtx = cfg.Contexts[ctxName]
@@ -71,7 +86,10 @@ var authLoginCmd = &cobra.Command{
 			return err
 		}
 
-		tlsOpts := resolveTLSOptions()
+		if mode == "browser" {
+			return doBrowserLogin(server, ctxName, tlsOpts)
+		}
+
 		var result *client.LoginResult
 		switch mode {
 		case "password":
@@ -154,7 +172,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command, savedCtx config.Context) (mode, 
 	}
 
 	if keyID == "" {
-		return "", "", "", "", "", usageErrorf("either --username or --key-id is required (or store credentials in the saved context)")
+		return "browser", "", "", "", "", nil
 	}
 
 	keySecret = authLoginKeySecret
@@ -274,6 +292,147 @@ func saveLoginContext(ctxName, server, mode, username, password string, result *
 		if result.KeyID != "" {
 			ctx.KeyID = result.KeyID
 		}
+	}
+
+	cfg.Contexts[ctxName] = ctx
+	cfg.CurrentContext = ctxName
+
+	if err := config.SaveConfig(cfg); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
+}
+
+// --- browser OIDC login ---
+
+const (
+	oidcDefaultClientID = "aegis-cli"
+	oidcDefaultScope    = "openid profile email aegis"
+	oidcCallbackTimeout = 5 * time.Minute
+)
+
+func doBrowserLogin(server, ctxName string, tlsOpts client.TLSOptions) error {
+	issuer := authLoginIssuer
+	if issuer == "" {
+		issuer = strings.TrimRight(server, "/")
+	}
+
+	clientID := authLoginClientID
+	if clientID == "" {
+		clientID = oidcDefaultClientID
+	}
+
+	output.PrintInfo(fmt.Sprintf("Discovering OIDC endpoints from %s...", issuer))
+	discovery, err := client.DiscoverOIDC(issuer, tlsOpts)
+	if err != nil {
+		return fmt.Errorf("OIDC discovery failed: %w", err)
+	}
+
+	pkce, err := client.GeneratePKCE()
+	if err != nil {
+		return err
+	}
+
+	state, err := client.GenerateState()
+	if err != nil {
+		return err
+	}
+
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return fmt.Errorf("start callback server: %w", err)
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+
+	authURL := client.BuildAuthorizationURL(
+		discovery.AuthorizationEndpoint,
+		clientID,
+		redirectURI,
+		oidcDefaultScope,
+		state,
+		pkce.Challenge,
+	)
+
+	output.PrintInfo("Opening browser for authentication...")
+	if err := client.OpenBrowser(authURL); err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open browser automatically: %v\n", err)
+	}
+	fmt.Fprintf(os.Stderr, "If the browser did not open, visit:\n%s\n", authURL)
+
+	callbackResult, err := client.WaitForOIDCCallback(listener, state, oidcCallbackTimeout)
+	if err != nil {
+		return err
+	}
+
+	if callbackResult.Error != "" {
+		return fmt.Errorf("authentication failed: %s", callbackResult.Error)
+	}
+
+	output.PrintInfo("Exchanging authorization code for tokens...")
+	tokenResp, err := client.ExchangeOIDCCode(
+		discovery.TokenEndpoint,
+		callbackResult.Code,
+		redirectURI,
+		clientID,
+		pkce.Verifier,
+		tlsOpts,
+	)
+	if err != nil {
+		return err
+	}
+
+	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	if tokenResp.ExpiresIn == 0 {
+		if exp := client.ParseJWTExp(tokenResp.AccessToken); !exp.IsZero() {
+			expiresAt = exp
+		}
+	}
+
+	result := &client.LoginResult{
+		Token:     tokenResp.AccessToken,
+		ExpiresAt: expiresAt,
+		AuthType:  "oidc",
+	}
+
+	if err := saveOIDCLoginContext(ctxName, server, result, tokenResp.RefreshToken, issuer, clientID, tlsOpts); err != nil {
+		return err
+	}
+
+	if output.OutputFormat(flagOutput) == output.FormatJSON {
+		output.PrintJSON(authLoginJSONResult{
+			Context:   ctxName,
+			Server:    server,
+			AuthType:  "oidc",
+			ExpiresAt: expiresAt.Format(time.RFC3339),
+		})
+	} else {
+		output.PrintInfo(fmt.Sprintf("Login successful (context: %s)", ctxName))
+		output.PrintInfo(fmt.Sprintf("Token expires at %s", expiresAt.Format(time.RFC3339)))
+	}
+
+	return nil
+}
+
+func saveOIDCLoginContext(ctxName, server string, result *client.LoginResult, refreshToken, issuer, clientID string, tlsOpts client.TLSOptions) error {
+	if cfg.Contexts == nil {
+		cfg.Contexts = make(map[string]config.Context)
+	}
+	ctx := cfg.Contexts[ctxName]
+	ctx.Server = server
+	ctx.Token = result.Token
+	ctx.AuthType = result.AuthType
+	ctx.TokenExpiry = result.ExpiresAt
+	ctx.RefreshToken = refreshToken
+	ctx.OIDCIssuer = issuer
+	ctx.ClientID = clientID
+	if tlsOpts.CACert != "" {
+		ctx.CACert = tlsOpts.CACert
+	}
+	if tlsOpts.Insecure {
+		ctx.Insecure = true
 	}
 
 	cfg.Contexts[ctxName] = ctx
@@ -572,6 +731,9 @@ func init() {
 	authLoginCmd.Flags().StringVar(&authLoginPasswordFile, "password-file", "", "Read password from file (env: AEGIS_PASSWORD_FILE)")
 	authLoginCmd.Flags().BoolVar(&authLoginSavePassword, "save-password", false, "Persist the plaintext password to ~/.aegisctl for unattended re-login (default: token-only; prefer AEGIS_PASSWORD/--password-file)")
 	authLoginCmd.Flags().StringVar(&authLoginContext, "context", "", "Context name to save credentials under (default: \"default\")")
+	authLoginCmd.Flags().BoolVar(&authLoginBrowser, "browser", false, "Force browser-based OIDC login (default when no credentials are provided)")
+	authLoginCmd.Flags().StringVar(&authLoginIssuer, "issuer", "", "OIDC issuer URL for browser login (default: derived from --server)")
+	authLoginCmd.Flags().StringVar(&authLoginClientID, "client-id", "", "OIDC client ID for browser login (default: \"aegis-cli\")")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeyID, "key-id", "", "Key ID (env: AEGIS_KEY_ID)")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeySecret, "key-secret", "", "Key secret (env: AEGIS_KEY_SECRET)")
 	authSignDebugCmd.Flags().Int64Var(&authSignDebugTimestamp, "timestamp", 0, "Override unix timestamp in seconds")
