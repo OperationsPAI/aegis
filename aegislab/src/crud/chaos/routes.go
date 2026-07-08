@@ -71,11 +71,9 @@ func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.Route
 			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
 
-			// SA token first (backend mints rcabench-sa for chaos-client at
-			// boot, see core/orchestrator/chaos_sa_token.go); on missing/
-			// non-SA bearer the chain falls through to the static-bearer
-			// path so kubectl smoke-tests with CHAOS_INBOUND_BEARER keep
-			// working through the cutover.
+			// SA token first (backend mints a service-account token for
+			// chaos-client at boot); on missing/non-SA bearer the chain
+			// falls through to the static-bearer path.
 			g.Use(middleware.RequireServiceAccount(db, verifier.Resolve, "chaos-client"))
 			// requireChaosPrincipal runs LAST in the auth chain: the /v1beta
 			// chaos surface is service-to-service, so reject ordinary/default
