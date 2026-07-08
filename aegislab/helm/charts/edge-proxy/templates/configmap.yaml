@@ -80,6 +80,37 @@ data:
             reverse_proxy {{ $api }}
         }
 
+        {{- if .Values.global.casdoor.enabled }}
+        {{- $casdoor := printf "%s-casdoor:8000" .Release.Name }}
+        # ─── Casdoor IdP (no auth — browser OIDC redirect flow) ───
+        handle /.well-known/openid-configuration {
+            request_header X-Aegis-Auth-Mode "none"
+            reverse_proxy {{ $casdoor }}
+        }
+        handle /login/* {
+            request_header X-Aegis-Auth-Mode "none"
+            reverse_proxy {{ $casdoor }}
+        }
+        handle /signup/* {
+            request_header X-Aegis-Auth-Mode "none"
+            reverse_proxy {{ $casdoor }}
+        }
+        @casdoor_api {
+            path /api/login/* /api/userinfo /api/logout /api/get-app-login /api/get-account /api/get-resources
+        }
+        handle @casdoor_api {
+            request_header X-Aegis-Auth-Mode "none"
+            reverse_proxy {{ $casdoor }}
+        }
+        @casdoor_assets {
+            path /static/js/* /static/css/* /static/media/* /favicon.png /manifest.json
+        }
+        handle @casdoor_assets {
+            request_header X-Aegis-Auth-Mode "none"
+            reverse_proxy {{ $casdoor }}
+        }
+        {{- end }}
+
         handle_path /v1/* {
             request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
