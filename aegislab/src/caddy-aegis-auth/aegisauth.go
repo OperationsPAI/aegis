@@ -69,6 +69,13 @@ type UnifiedClaims struct {
 	Service      string   `json:"service,omitempty"`
 	APIKeyID     int      `json:"api_key_id,omitempty"`
 	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
+
+	// Standard OIDC claims (populated by Authentik, consumed by normalizeFromStandardOIDC)
+	PreferredUsername string   `json:"preferred_username,omitempty"`
+	Groups           []string `json:"groups,omitempty"`
+	EmailVerified    bool     `json:"email_verified,omitempty"`
+	AegisUserID      int      `json:"aegis_user_id,omitempty"`
+
 	jwt.RegisteredClaims
 }
 
@@ -183,6 +190,38 @@ func (a *AegisAuth) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 	return next.ServeHTTP(w, r)
 }
 
+// --- OIDC normalization ---
+
+func (c *UnifiedClaims) normalizeFromStandardOIDC() {
+	if c.Typ != "" {
+		return
+	}
+	c.Typ = "human"
+	c.AuthType = "user"
+
+	if c.AegisUserID != 0 {
+		c.UserID = c.AegisUserID
+	} else if id, err := strconv.Atoi(c.Subject); err == nil {
+		c.UserID = id
+	}
+
+	if c.PreferredUsername != "" && c.Username == "" {
+		c.Username = c.PreferredUsername
+	}
+
+	c.IsActive = true
+
+	if len(c.Groups) > 0 && len(c.Roles) == 0 {
+		c.Roles = c.Groups
+	}
+	for _, g := range c.Groups {
+		if g == "super_admin" || g == "admin" {
+			c.IsAdmin = true
+			break
+		}
+	}
+}
+
 // --- JWT verification ---
 
 func (a *AegisAuth) parseAndVerify(tokenString string) (*UnifiedClaims, error) {
@@ -206,6 +245,7 @@ func (a *AegisAuth) parseAndVerify(tokenString string) (*UnifiedClaims, error) {
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
+	claims.normalizeFromStandardOIDC()
 	if claims.Typ == "human" && !claims.IsActive {
 		return nil, errors.New("user account is inactive")
 	}
