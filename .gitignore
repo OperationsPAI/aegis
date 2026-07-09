@@ -30,3 +30,6 @@ experiments/*/.cache/
 aegislab/manifests/byte-cluster/tls-local/*.key
 aegislab/manifests/byte-cluster/tls-local/*.crt
 aegislab/manifests/byte-cluster/tls-local/*.srl
+
+# Helm secrets overlays — contain EIPs, passwords, trusted-header keys.
+aegislab/manifests/byte-cluster/*.secrets.yaml

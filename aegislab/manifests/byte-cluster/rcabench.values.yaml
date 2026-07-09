@@ -1,25 +1,22 @@
 global:
   imageRegistry: ""
-  # Volcengine LB EIP fronting edge-proxy:8082. Drives SSO redirect URIs +
+  # Volcengine LB EIP fronting edge-proxy:8082. Drives OIDC redirect URIs +
   # any other "where does the browser reach us" value via chart templates.
   # https because edge-proxy terminates TLS with an internal self-signed
   # cert (see `edgeProxy.tls.enabled` below). The SPA needs a Secure
   # Context for `crypto.subtle.digest` (PKCE code_challenge).
-  publicBaseURL: "https://118.196.98.178:8082"
-  # Second public ingress: a NAT proxy CLB that forwards external
-  # 23.189.248.55:38082 to the same edge-proxy backend. The CLB does port
-  # translation, so traffic reaches the pod on listener :8082 (not :38082).
-  # The site-address port here is the LISTENER port, while Caddy ignores
-  # the port in the Host header when matching site blocks — so we list
-  # the host on the existing :8082 listener, NOT on a fake :38082
-  # listener (lost a debug session 2026-05-17 trying the latter).
-  # Caddy will also issue the internal cert with `23.189.248.55` in the
-  # SAN list.
-  additionalSiteAddresses:
-    - "23.189.248.55:8082"
+  # SENSITIVE — actual EIP lives in rcabench.secrets.yaml.
+  publicBaseURL: ""
+  # Second public ingress: a NAT proxy CLB that forwards to the same
+  # edge-proxy backend. The site-address port is the LISTENER port; Caddy
+  # ignores the port in the Host header when matching site blocks.
+  # SENSITIVE — actual address lives in rcabench.secrets.yaml.
+  additionalSiteAddresses: []
+  casdoor:
+    enabled: true
   # Single source of truth for the shared backend image — consumed by
-  # parent-chart deployments and every extracted subchart (notify, future
-  # sso/blob).
+  # parent-chart deployments and every extracted subchart (notify, blob,
+  # casdoor).
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
@@ -219,10 +216,10 @@ edgeProxy:
     minReplicas: 2
     maxReplicas: 4
     targetCPUUtilizationPercentage: 70
-  # Reuse this edge EIP (118.196.98.178) on :80 as a DIRECT passthrough to the
-  # agent-env/arl gateway. No SSO at the edge — arl's own fail-closed API-key
-  # auth is the gate (clients send Authorization: Bearer <arl-key>). Keeps a
-  # single EIP for both rcabench (:8082) and arl (:80).
+  # Reuse the edge EIP on :80 as a DIRECT passthrough to the agent-env/arl
+  # gateway. arl's own fail-closed API-key auth is the gate
+  # (clients send Authorization: Bearer <arl-key>). Keeps a single EIP for
+  # both rcabench (:8082) and arl (:80).
   arl:
     enabled: true
     port: 80
@@ -230,8 +227,8 @@ edgeProxy:
   # The edge-proxy subchart can't read the top-level `frontend.enabled` /
   # `devAnchors.enabled` toggles, so mirror them here so the Caddyfile
   # path-splits to the frontend Service and renders the /dev intercept
-  # routes. aegis-api / gateway / sso ports already match the subchart
-  # defaults, so they're omitted.
+  # routes. aegis-api / gateway ports already match the subchart defaults,
+  # so they're omitted.
   aegisAuth:
     jwksRefreshInterval: "5m"
   backends:
@@ -247,13 +244,15 @@ edgeProxy:
     clickhouse:
       upstream: "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123"
   global:
-    gatewayTrustedHeaderKey: "byte-cluster-trusted-key-please-rotate"
+    # SENSITIVE — actual key lives in rcabench.secrets.yaml.
+    gatewayTrustedHeaderKey: ""
 
 # aegis-gateway: kept in config for backward compatibility but no longer
 # deployed — auth moved into the Caddy edge-proxy via aegis_auth plugin.
 gateway:
   enabled: false
-  trustedHeaderKey: "byte-cluster-trusted-key-please-rotate"
+  # SENSITIVE — actual key lives in rcabench.secrets.yaml.
+  trustedHeaderKey: ""
 
 # blob microservice (aegis-blob) needs the same S3 credential envFrom so
 # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`
@@ -280,7 +279,8 @@ blob:
   # signs URLs against this host (each bucket inherits unless it sets its
   # own `publicEndpoint`); edge-proxy reverse-proxies /aegis-*/* paths
   # back to rustfs with the original Host preserved so SigV4 validates.
-  publicEndpoint: "https://118.196.98.178:8082"
+  # SENSITIVE — actual endpoint lives in rcabench.secrets.yaml.
+  publicEndpoint: ""
   buckets:
     datapack:
       driver: "s3"
@@ -367,21 +367,31 @@ blob:
     # also fine — the handler then returns relative `/s/<code>` URLs.
     publicBaseURL: ""
 
-sso:
+# Casdoor OIDC provider (replaces legacy aegis-sso).
+# Passwords, origin, and redirect URIs with EIPs live in rcabench.secrets.yaml.
+casdoor:
+  enabled: true
   image:
-    # SSO microservice runs the same `opspai/rcabench` image (different
-    # entrypoint). Pin to the volces mirror + matching tag so the byte
-    # cluster doesn't try docker.io (unreachable from this VPC).
-    repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: d6e9d7df
+    repository: pair-cn-shanghai.cr.volces.com/opspai/casdoor
+    tag: latest
     pullPolicy: IfNotPresent
-  persistence:
-    storageClass: rcabench
-  bootstrap:
-    # First-boot admin password. Idempotent — ignored after the row
-    # exists. For prod replace with `existingSecret: <name>` and seed the
-    # value via sops / sealed-secrets so it doesn't sit in values.
-    adminPassword: "TempAdminPass2026!"
+  mysql:
+    host: rcabench-mysql
+    port: 3306
+    user: root
+    password: ""
+    database: casdoor
+  origin: ""
+  admin:
+    password: ""
+  oidc:
+    console:
+      clientId: "aegis-console"
+      redirectUris: []
+    cli:
+      clientId: "aegis-cli"
+      redirectUris:
+        - "http://localhost:*/callback"
 
 
 persistence:
@@ -430,8 +440,7 @@ chaos:
     requireBearer: true
   # Outbound webhook auth: chaos → backend now uses a service-account JWT
   # held in the operator-managed Secret rcabench-chaos-sa (key `token`).
-  # Provision via SSO POST /v1/service-accounts/chaos-service/issue; rotate
-  # by re-issuing and applying a new Secret. Replaces the deprecated
+  # Rotate by re-issuing and applying a new Secret. Replaces the deprecated
   # webhookBearer / chaosAuth fallback for the outbound direction.
   serviceAccount:
     secretName: rcabench-chaos-sa

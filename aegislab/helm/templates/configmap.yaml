@@ -83,7 +83,16 @@ data:
     issuer = "{{ .Values.configmap.sso.issuer }}"
     base_url = "{{ .Values.configmap.sso.baseURL }}"
     jwks_url = "{{ .Values.configmap.sso.jwksURL }}"
-    additional_jwks_urls = "{{ .Values.configmap.sso.additionalJwksURLs | default "" }}"
+    {{- $extraJwks := .Values.configmap.sso.additionalJwksURLs | default "" }}
+    {{- if .Values.global.casdoor.enabled }}
+      {{- $casdoorJwks := printf "http://%s-casdoor:8000/.well-known/jwks" .Release.Name }}
+      {{- if $extraJwks }}
+        {{- $extraJwks = printf "%s,%s" $extraJwks $casdoorJwks }}
+      {{- else }}
+        {{- $extraJwks = $casdoorJwks }}
+      {{- end }}
+    {{- end }}
+    additional_jwks_urls = "{{ $extraJwks }}"
     client_id = "{{ .Values.configmap.sso.clientID }}"
     client_secret = "{{ .Values.configmap.sso.clientSecret }}"
     backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-aegis-api:%v/auth/oidc/callback" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
