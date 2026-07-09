@@ -159,6 +159,10 @@ func TrustedHeaderAuth() gin.HandlerFunc {
 		expected := hex.EncodeToString(mac.Sum(nil))
 
 		if !hmac.Equal([]byte(sig), []byte(expected)) {
+			if hasBearer {
+				JWTAuth()(c)
+				return
+			}
 			dto.ErrorResponse(c, http.StatusUnauthorized, "forged trusted-header set")
 			c.Abort()
 			return

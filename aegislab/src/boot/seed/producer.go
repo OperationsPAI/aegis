@@ -175,6 +175,26 @@ func seedServiceAccounts(db *gorm.DB, accounts []InitialDataServiceAccount) erro
 	return nil
 }
 
+// syncCasdoorUserID updates the Casdoor user's properties.aegis_user_id
+// to match the aegis DB auto-increment ID. Idempotent — skipped when
+// Casdoor is not configured or the casdoor database doesn't exist.
+func syncCasdoorUserID(db *gorm.DB, username string, aegisID int) {
+	casdoorDB := config.GetString("casdoor.mysql.database")
+	if casdoorDB == "" {
+		casdoorDB = "casdoor"
+	}
+	idStr := fmt.Sprintf("%d", aegisID)
+	result := db.Exec(
+		fmt.Sprintf("UPDATE `%s`.`user` SET properties = JSON_SET(COALESCE(properties, '{}'), '$.aegis_user_id', ?) WHERE name = ? AND owner = 'aegis'", casdoorDB),
+		idStr, username,
+	)
+	if result.Error != nil {
+		logrus.WithError(result.Error).Debug("casdoor aegis_user_id sync skipped")
+	} else if result.RowsAffected > 0 {
+		logrus.WithField("username", username).WithField("aegis_user_id", aegisID).Info("synced aegis_user_id to Casdoor")
+	}
+}
+
 func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User, error) {
 	adminUser := data.AdminUser.ConvertToDBUser()
 
@@ -195,6 +215,8 @@ func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User,
 	default:
 		return nil, fmt.Errorf("admin user lookup failed: %w", getErr)
 	}
+
+	syncCasdoorUserID(store.db, adminUser.Username, adminUser.ID)
 
 	superAdminRole, err := store.getRoleByName("super_admin")
 	if err != nil {

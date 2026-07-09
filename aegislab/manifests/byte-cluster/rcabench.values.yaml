@@ -243,16 +243,13 @@ edgeProxy:
       dashboardPort: 8265
     clickhouse:
       upstream: "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123"
-  global:
-    # SENSITIVE — actual key lives in rcabench.secrets.yaml.
-    gatewayTrustedHeaderKey: ""
+  # NOTE: gatewayTrustedHeaderKey was previously under edgeProxy.global but
+  # Helm only propagates top-level `global:` into subcharts. The key now
+  # lives under `global.gatewayTrustedHeaderKey` in rcabench.secrets.yaml.
 
-# aegis-gateway: kept in config for backward compatibility but no longer
-# deployed — auth moved into the Caddy edge-proxy via aegis_auth plugin.
+# aegis-gateway: no longer deployed — auth moved into the Caddy edge-proxy.
 gateway:
   enabled: false
-  # SENSITIVE — actual key lives in rcabench.secrets.yaml.
-  trustedHeaderKey: ""
 
 # blob microservice (aegis-blob) needs the same S3 credential envFrom so
 # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`

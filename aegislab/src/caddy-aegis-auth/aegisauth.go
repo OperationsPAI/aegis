@@ -334,6 +334,13 @@ func (a *AegisAuth) injectHeaders(r *http.Request, c *UnifiedClaims) {
 	mac.Write([]byte(strings.Join(canonical, "|")))
 	sig := hex.EncodeToString(mac.Sum(nil))
 
+	a.logger.Info("aegis_auth inject",
+		zap.String("canonical", strings.Join(canonical, "|")),
+		zap.String("sig", sig),
+		zap.Int("uid", c.UserID),
+		zap.String("path", r.URL.Path),
+	)
+
 	for k, v := range vals {
 		r.Header.Set(k, v)
 	}

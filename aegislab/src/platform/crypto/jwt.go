@@ -100,6 +100,14 @@ type UnifiedClaims struct {
 	APIKeyID     int      `json:"api_key_id,omitempty"`     // api_key tokens
 	APIKeyScopes []string `json:"api_key_scopes,omitempty"` // api_key tokens
 
+	// Casdoor / external OIDC claims (used by normalizeExternalClaims)
+	Name               string            `json:"name,omitempty"`
+	PreferredUsername   string            `json:"preferred_username,omitempty"`
+	Groups             []string          `json:"groups,omitempty"`
+	CasdoorIsAdmin     bool              `json:"isAdmin,omitempty"`
+	CasdoorIsForbidden bool              `json:"isForbidden,omitempty"`
+	Properties         map[string]string `json:"properties,omitempty"`
+
 	jwt.RegisteredClaims
 }
 
@@ -267,12 +275,52 @@ func ParseUnifiedToken(tokenString string, resolve PublicKeyResolver) (*UnifiedC
 		return nil, fmt.Errorf("%w: unrecognized issuer %q", ErrInvalidToken, claims.Issuer)
 	}
 
-	// Policy: human tokens for inactive users are rejected.
+	if claims.Typ == "" {
+		normalizeExternalClaims(claims)
+	}
+
 	if claims.Typ == "human" && !claims.IsActive {
 		return nil, errors.New("user account is inactive")
 	}
 
 	return claims, nil
+}
+
+func normalizeExternalClaims(c *UnifiedClaims) {
+	c.Typ = "human"
+	c.AuthType = "user"
+
+	if c.Properties != nil {
+		if idStr, ok := c.Properties["aegis_user_id"]; ok && c.UserID == 0 {
+			if id, err := strconv.Atoi(idStr); err == nil && id != 0 {
+				c.UserID = id
+			}
+		}
+	}
+	if c.UserID == 0 {
+		if id, err := strconv.Atoi(c.Subject); err == nil {
+			c.UserID = id
+		}
+	}
+	if c.Username == "" && c.Name != "" {
+		c.Username = c.Name
+	}
+	if c.Username == "" && c.PreferredUsername != "" {
+		c.Username = c.PreferredUsername
+	}
+	if len(c.Groups) > 0 && len(c.Roles) == 0 {
+		c.Roles = c.Groups
+	}
+	c.IsActive = !c.CasdoorIsForbidden
+	if c.CasdoorIsAdmin {
+		c.IsAdmin = true
+	}
+	for _, r := range c.Roles {
+		if r == "super_admin" || r == "admin" {
+			c.IsAdmin = true
+			break
+		}
+	}
 }
 
 // ParseTokenWithoutValidation parses a token without verifying signature or

@@ -64,17 +64,19 @@ data:
         }
 
         # ───────────────────────────────────────────────────────────
-        # Auth gate — a `route` block forces Caddyfile-order execution
-        # so request_header runs BEFORE aegis_auth, which runs BEFORE
-        # the handle-block routing below. Without `route`, Caddy's
-        # directive ordering puts aegis_auth after handle blocks.
+        # Everything inside a single `route` block so Caddyfile
+        # order is preserved: request_header → aegis_auth → routing.
+        # Without `route`, Caddy's directive-sort puts handle blocks
+        # before aegis_auth and the auth gate never fires.
         # ───────────────────────────────────────────────────────────
         route {
+            # §1 — Set auth mode headers based on path matchers.
             @no_auth {
-                path /.well-known/* /login/* /signup/* /v1/* /api/v2/auth/*
-                path /api/v2/blob/raw/* /s/* /p/* /static/pages/*
-                path /api/v2/pages /api/v2/pages/*
-                path /healthz /readyz
+                not path /api/* /v1/* /v1beta/* /metrics /livez
+            }
+            @no_auth_api {
+                path /.well-known/* /v1/* /api/v2/auth/*
+                path /api/v2/blob/raw/* /api/v2/pages /api/v2/pages/*
                 path /aegis-*
                 {{- if .Values.global.casdoor.enabled }}
                 path /api/login/* /api/login /api/userinfo /api/logout
@@ -85,6 +87,7 @@ data:
                 {{- end }}
             }
             request_header @no_auth X-Aegis-Auth-Mode "none"
+            request_header @no_auth_api X-Aegis-Auth-Mode "none"
 
             @portal_audience {
                 path /api/v2/inbox/* /api/v2/share /api/v2/share/*
@@ -96,6 +99,7 @@ data:
             }
             request_header @service_or_jwt X-Aegis-Auth-Mode "jwt_or_service"
 
+            # §2 — JWT verification + trusted header injection.
             aegis_auth {
                 jwks_url http://{{ .Release.Name }}-aegis-api:{{ int .Values.backends.aegisApi.httpPort }}/.well-known/jwks.json
                 {{- if .Values.global.casdoor.enabled }}
@@ -106,160 +110,154 @@ data:
                 jwks_refresh_interval {{ .Values.aegisAuth.jwksRefreshInterval }}
                 {{- end }}
             }
-        }
 
-        # ───────────────────────────────────────────────────────────
-        # Routing — handle blocks only route to the correct upstream.
-        # Auth mode is already set above; no request_header needed here.
-        # ───────────────────────────────────────────────────────────
+            # §3 — Upstream routing.
+            handle /.well-known/jwks.json {
+                reverse_proxy {{ $api }}
+            }
 
-        # ─── JWKS (no auth) ───
-        handle /.well-known/jwks.json {
-            reverse_proxy {{ $api }}
-        }
+            {{- if .Values.global.casdoor.enabled }}
+            {{- $casdoor := printf "%s-casdoor:8000" .Release.Name }}
+            handle /.well-known/openid-configuration {
+                reverse_proxy {{ $casdoor }}
+            }
+            handle /login/* {
+                reverse_proxy {{ $casdoor }}
+            }
+            handle /signup/* {
+                reverse_proxy {{ $casdoor }}
+            }
+            @casdoor_api {
+                path /api/login/* /api/login /api/userinfo /api/logout /api/get-application /api/get-app-login /api/get-account /api/get-resources /api/get-organization /api/get-user /api/get-css /api/get-default-application /api/get-captcha-status
+            }
+            handle @casdoor_api {
+                reverse_proxy {{ $casdoor }}
+            }
+            @casdoor_assets {
+                path /static/js/* /static/css/* /static/media/* /favicon.png /manifest.json
+            }
+            handle @casdoor_assets {
+                reverse_proxy {{ $casdoor }}
+            }
+            {{- end }}
 
-        {{- if .Values.global.casdoor.enabled }}
-        {{- $casdoor := printf "%s-casdoor:8000" .Release.Name }}
-        # ─── Casdoor IdP ───
-        handle /.well-known/openid-configuration {
-            reverse_proxy {{ $casdoor }}
-        }
-        handle /login/* {
-            reverse_proxy {{ $casdoor }}
-        }
-        handle /signup/* {
-            reverse_proxy {{ $casdoor }}
-        }
-        @casdoor_api {
-            path /api/login/* /api/login /api/userinfo /api/logout /api/get-application /api/get-app-login /api/get-account /api/get-resources /api/get-organization /api/get-user /api/get-css /api/get-default-application /api/get-captcha-status
-        }
-        handle @casdoor_api {
-            reverse_proxy {{ $casdoor }}
-        }
-        @casdoor_assets {
-            path /static/js/* /static/css/* /static/media/* /favicon.png /manifest.json
-        }
-        handle @casdoor_assets {
-            reverse_proxy {{ $casdoor }}
-        }
-        {{- end }}
+            handle_path /v1/* {
+                reverse_proxy {{ $api }}
+            }
 
-        handle_path /v1/* {
-            reverse_proxy {{ $api }}
-        }
+            handle /api/v2/auth/* {
+                reverse_proxy {{ $api }}
+            }
 
-        handle /api/v2/auth/* {
-            reverse_proxy {{ $api }}
-        }
+            @iam_jwt {
+                path /api/v2/users* /api/v2/api-keys* /api/v2/roles* /api/v2/permissions* /api/v2/resources* /api/v2/github/*
+            }
+            handle @iam_jwt {
+                reverse_proxy {{ $api }}
+            }
 
-        @iam_jwt {
-            path /api/v2/users* /api/v2/api-keys* /api/v2/roles* /api/v2/permissions* /api/v2/resources* /api/v2/github/*
-        }
-        handle @iam_jwt {
-            reverse_proxy {{ $api }}
-        }
+            handle /api/v2/inbox/* {
+                reverse_proxy {{ $notify }}
+            }
 
-        handle /api/v2/inbox/* {
-            reverse_proxy {{ $notify }}
-        }
+            handle /api/v2/notifications/* {
+                reverse_proxy {{ $notify }}
+            }
 
-        handle /api/v2/notifications/* {
-            reverse_proxy {{ $notify }}
-        }
+            handle /api/v2/blob/raw/* {
+                reverse_proxy {{ $blob }}
+            }
 
-        handle /api/v2/blob/raw/* {
-            reverse_proxy {{ $blob }}
-        }
-
-        handle /api/v2/blob/buckets/* {
-            reverse_proxy {{ $blob }} {
-                transport http {
-                    response_header_timeout 180s
+            handle /api/v2/blob/buckets/* {
+                reverse_proxy {{ $blob }} {
+                    transport http {
+                        response_header_timeout 180s
+                    }
                 }
             }
-        }
 
-        handle /api/v2/blob/* {
-            reverse_proxy {{ $blob }}
-        }
+            handle /api/v2/blob/* {
+                reverse_proxy {{ $blob }}
+            }
 
-        @share {
-            path /api/v2/share /api/v2/share/*
-        }
-        handle @share {
-            reverse_proxy {{ $blob }}
-        }
+            @share {
+                path /api/v2/share /api/v2/share/*
+            }
+            handle @share {
+                reverse_proxy {{ $blob }}
+            }
 
-        handle /s/* {
-            reverse_proxy {{ $blob }}
-        }
+            handle /s/* {
+                reverse_proxy {{ $blob }}
+            }
 
-        handle /p/* {
-            reverse_proxy {{ $api }}
-        }
+            handle /p/* {
+                reverse_proxy {{ $api }}
+            }
 
-        handle /static/pages/* {
-            reverse_proxy {{ $api }}
-        }
+            handle /static/pages/* {
+                reverse_proxy {{ $api }}
+            }
 
-        @pages_api {
-            path /api/v2/pages /api/v2/pages/*
-        }
-        handle @pages_api {
-            reverse_proxy {{ $api }}
-        }
+            @pages_api {
+                path /api/v2/pages /api/v2/pages/*
+            }
+            handle @pages_api {
+                reverse_proxy {{ $api }}
+            }
 
-        handle_path /api/v2/clickhouse/* {
-            reverse_proxy {{ $ch }}
-        }
+            handle_path /api/v2/clickhouse/* {
+                reverse_proxy {{ $ch }}
+            }
 
-        handle_path /v1beta/chaos/* {
-            reverse_proxy {{ $chaos }}
-        }
+            handle_path /v1beta/chaos/* {
+                reverse_proxy {{ $chaos }}
+            }
 
-        {{- if .Values.backends.ray.enabled }}
-        handle_path /api/v2/ray/* {
-            reverse_proxy {{ .Release.Name }}-ray-head:{{ .Values.backends.ray.dashboardPort | default 8265 }} {
-                transport http {
-                    response_header_timeout 600s
+            {{- if .Values.backends.ray.enabled }}
+            handle_path /api/v2/ray/* {
+                reverse_proxy {{ .Release.Name }}-ray-head:{{ .Values.backends.ray.dashboardPort | default 8265 }} {
+                    transport http {
+                        response_header_timeout 600s
+                    }
                 }
             }
-        }
-        {{- end }}
+            {{- end }}
 
-        @rustfs {
-            path /aegis-*
-        }
-        handle @rustfs {
-            reverse_proxy {{ .Release.Name }}-rustfs:9000 {
-                header_up Host {http.request.hostport}
+            @rustfs {
+                path /aegis-*
             }
-        }
+            handle @rustfs {
+                reverse_proxy {{ .Release.Name }}-rustfs:9000 {
+                    header_up Host {http.request.hostport}
+                }
+            }
 
-        handle /healthz {
-            respond `{"status":"ok"}` 200
-        }
+            handle /healthz {
+                respond `{"status":"ok"}` 200
+            }
 
-        handle /readyz {
-            respond `{"status":"ready"}` 200
-        }
+            handle /readyz {
+                respond `{"status":"ready"}` 200
+            }
 
-        {{- if .Values.backends.frontend.enabled }}
-        @api {
-            path /api/* /metrics /livez
-        }
-        handle @api {
-            reverse_proxy {{ $api }}
-        }
+            {{- if .Values.backends.frontend.enabled }}
+            @api {
+                path /api/* /metrics /livez
+            }
+            handle @api {
+                reverse_proxy {{ $api }}
+            }
 
-        handle {
-            reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.backends.frontend.port | default 80 }}
+            handle {
+                reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.backends.frontend.port | default 80 }}
+            }
+            {{- else }}
+            handle {
+                reverse_proxy {{ $api }}
+            }
+            {{- end }}
         }
-        {{- else }}
-        handle {
-            reverse_proxy {{ $api }}
-        }
-        {{- end }}
     }
 
     # gRPC intake (direct, no auth)

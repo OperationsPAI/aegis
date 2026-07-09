@@ -114,7 +114,16 @@ data:
     {{- end }}
     console_redirect_uris = "{{ $consoleURIs }}"
     login_redirect = "{{ $loginRedir }}"
-    accepted_issuers = "{{ .Values.configmap.sso.acceptedIssuers | default "" }}"
+    {{- $acceptedIssuers := .Values.configmap.sso.acceptedIssuers | default "" }}
+    {{- if and (.Values.global.casdoor.enabled) (.Values.global.publicBaseURL) }}
+      {{- $casdoorIssuer := .Values.global.publicBaseURL }}
+      {{- if $acceptedIssuers }}
+        {{- $acceptedIssuers = printf "%s,%s" $acceptedIssuers $casdoorIssuer }}
+      {{- else }}
+        {{- $acceptedIssuers = $casdoorIssuer }}
+      {{- end }}
+    {{- end }}
+    accepted_issuers = "{{ $acceptedIssuers }}"
 
     [jfs]
     backend = "{{ .Values.configmap.jfs.backend | default "filesystem" }}"

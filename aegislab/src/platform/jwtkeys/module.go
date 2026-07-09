@@ -26,9 +26,10 @@ func (s *Signer) PublicKey() *rsa.PublicKey {
 }
 
 type Verifier struct {
-	keys atomic.Pointer[map[string]*rsa.PublicKey]
-	mu   sync.Mutex
-	urls []string
+	keys   atomic.Pointer[map[string]*rsa.PublicKey]
+	mu     sync.Mutex
+	urls   []string
+	pinned map[string]*rsa.PublicKey // keys preserved across Refresh cycles
 }
 
 func NewVerifierWithKeys(keys map[string]*rsa.PublicKey) *Verifier {
@@ -92,6 +93,9 @@ func (v *Verifier) Refresh(ctx context.Context) error {
 			}
 		}
 	}
+	for kid, pub := range v.pinned {
+		merged[kid] = pub
+	}
 	if len(merged) == 0 {
 		if lastErr != nil {
 			return lastErr
@@ -132,16 +136,13 @@ func newVerifierFromSigner(lc fx.Lifecycle, s *Signer) *Verifier {
 	}
 	if len(urls) > 0 {
 		v.urls = urls
+		v.pinned = map[string]*rsa.PublicKey{s.Kid: s.PublicKey()}
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 				defer cancel()
 				if err := v.Refresh(fetchCtx); err != nil {
 					logrus.WithError(err).Warn("additional jwks fetch failed; refresh loop will retry")
-				} else {
-					merged := v.keys.Load()
-					(*merged)[s.Kid] = s.PublicKey()
-					v.keys.Store(merged)
 				}
 				return nil
 			},

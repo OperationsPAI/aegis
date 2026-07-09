@@ -56,7 +56,7 @@ data:
           "clientId": "{{ .Values.oidc.console.clientId }}",
           "clientSecret": "aegis-console-public",
           "redirectUris": {{ .Values.oidc.console.redirectUris | toJson }},
-          "grantTypes": ["authorization_code"],
+          "grantTypes": ["authorization_code", "password"],
           "tokenFormat": "JWT",
           "expireInHours": 24,
           "refreshExpireInHours": 168,
@@ -85,7 +85,7 @@ data:
           "clientId": "{{ .Values.oidc.cli.clientId }}",
           "clientSecret": "aegis-cli-public",
           "redirectUris": {{ .Values.oidc.cli.redirectUris | toJson }},
-          "grantTypes": ["authorization_code"],
+          "grantTypes": ["authorization_code", "password"],
           "tokenFormat": "JWT",
           "expireInHours": 24,
           "refreshExpireInHours": 168,
@@ -113,9 +113,8 @@ data:
           "displayName": "Admin",
           "email": "admin@aegis.local",
           "isAdmin": true,
-          "properties": {
-            "aegis_user_id": "1"
-          }
+          "properties": {}
+
         }
       ]
     }

@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -56,7 +57,14 @@ func (a *Authenticator) Verify(ctx context.Context, cred Credential) (Principal,
 	case CredBearer:
 		return a.verifyBearer(ctx, cred.BearerToken)
 	case CredTrustedHeader:
-		return a.verifyTrustedHeader(cred)
+		p, err := a.verifyTrustedHeader(cred)
+		if err == nil {
+			return p, nil
+		}
+		if errors.Is(err, ErrForgedSignature) {
+			log.Printf("auth: trusted-header HMAC failed, falling back to bearer")
+		}
+		return a.verifyBearer(ctx, cred.BearerToken)
 	case CredInternalToken:
 		return a.verifyInternalToken(cred.InternalToken)
 	default:

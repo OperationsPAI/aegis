@@ -67,9 +67,11 @@ func extractCredential(c *gin.Context) auth.Credential {
 
 	if sig := c.GetHeader(auth.HeaderSignature); sig != "" {
 		key := []byte(strings.TrimSpace(viper.GetString("gateway.trusted_header_key")))
+		token, _ := crypto.ExtractTokenFromHeader(c.GetHeader("Authorization"))
 		return auth.Credential{
-			Type:    auth.CredTrustedHeader,
-			HMACKey: key,
+			Type:        auth.CredTrustedHeader,
+			HMACKey:     key,
+			BearerToken: token,
 			Headers: auth.TrustedHeaderSet{
 				UserID:       c.GetHeader(auth.HeaderUserID),
 				UserEmail:    c.GetHeader(auth.HeaderUserEmail),
