@@ -118,8 +118,37 @@ func newSigner() (*Signer, error) {
 	return &Signer{PrivateKey: pk, Kid: kid}, nil
 }
 
-func newVerifierFromSigner(s *Signer) *Verifier {
-	return NewVerifierWithKeys(map[string]*rsa.PublicKey{s.Kid: s.PublicKey()})
+func newVerifierFromSigner(lc fx.Lifecycle, s *Signer) *Verifier {
+	keys := map[string]*rsa.PublicKey{s.Kid: s.PublicKey()}
+	v := NewVerifierWithKeys(keys)
+
+	var urls []string
+	if extra := config.GetString("sso.additional_jwks_urls"); extra != "" {
+		for _, u := range strings.Split(extra, ",") {
+			if u = strings.TrimSpace(u); u != "" {
+				urls = append(urls, u)
+			}
+		}
+	}
+	if len(urls) > 0 {
+		v.urls = urls
+		lc.Append(fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+				defer cancel()
+				if err := v.Refresh(fetchCtx); err != nil {
+					logrus.WithError(err).Warn("additional jwks fetch failed; refresh loop will retry")
+				} else {
+					merged := v.keys.Load()
+					(*merged)[s.Kid] = s.PublicKey()
+					v.keys.Store(merged)
+				}
+				return nil
+			},
+		})
+		startRefreshLoop(lc, v)
+	}
+	return v
 }
 
 func newRemoteVerifier(lc fx.Lifecycle) (*Verifier, error) {

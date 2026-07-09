@@ -63,94 +63,115 @@ data:
             format json
         }
 
-        aegis_auth {
-            jwks_url http://{{ .Release.Name }}-aegis-api:{{ int .Values.backends.aegisApi.httpPort }}/.well-known/jwks.json
-            {{- if .Values.global.casdoor.enabled }}
-            jwks_url http://{{ .Release.Name }}-casdoor:8000/.well-known/jwks
-            {{- end }}
-            hmac_key {env.GATEWAY_HMAC_KEY}
-            {{- if .Values.aegisAuth.jwksRefreshInterval }}
-            jwks_refresh_interval {{ .Values.aegisAuth.jwksRefreshInterval }}
-            {{- end }}
+        # ───────────────────────────────────────────────────────────
+        # Auth gate — a `route` block forces Caddyfile-order execution
+        # so request_header runs BEFORE aegis_auth, which runs BEFORE
+        # the handle-block routing below. Without `route`, Caddy's
+        # directive ordering puts aegis_auth after handle blocks.
+        # ───────────────────────────────────────────────────────────
+        route {
+            @no_auth {
+                path /.well-known/* /login/* /signup/* /v1/* /api/v2/auth/*
+                path /api/v2/blob/raw/* /s/* /p/* /static/pages/*
+                path /api/v2/pages /api/v2/pages/*
+                path /healthz /readyz
+                path /aegis-*
+                {{- if .Values.global.casdoor.enabled }}
+                path /api/login/* /api/login /api/userinfo /api/logout
+                path /api/get-application /api/get-app-login /api/get-account
+                path /api/get-resources /api/get-organization /api/get-user
+                path /api/get-css /api/get-default-application /api/get-captcha-status
+                path /static/js/* /static/css/* /static/media/* /favicon.png /manifest.json
+                {{- end }}
+            }
+            request_header @no_auth X-Aegis-Auth-Mode "none"
+
+            @portal_audience {
+                path /api/v2/inbox/* /api/v2/share /api/v2/share/*
+            }
+            request_header @portal_audience X-Aegis-Required-Audiences "portal"
+
+            @service_or_jwt {
+                path /api/v2/blob/buckets/*
+            }
+            request_header @service_or_jwt X-Aegis-Auth-Mode "jwt_or_service"
+
+            aegis_auth {
+                jwks_url http://{{ .Release.Name }}-aegis-api:{{ int .Values.backends.aegisApi.httpPort }}/.well-known/jwks.json
+                {{- if .Values.global.casdoor.enabled }}
+                jwks_url http://{{ .Release.Name }}-casdoor:8000/.well-known/jwks
+                {{- end }}
+                hmac_key {env.GATEWAY_HMAC_KEY}
+                {{- if .Values.aegisAuth.jwksRefreshInterval }}
+                jwks_refresh_interval {{ .Values.aegisAuth.jwksRefreshInterval }}
+                {{- end }}
+            }
         }
+
+        # ───────────────────────────────────────────────────────────
+        # Routing — handle blocks only route to the correct upstream.
+        # Auth mode is already set above; no request_header needed here.
+        # ───────────────────────────────────────────────────────────
 
         # ─── JWKS (no auth) ───
         handle /.well-known/jwks.json {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
         {{- if .Values.global.casdoor.enabled }}
         {{- $casdoor := printf "%s-casdoor:8000" .Release.Name }}
-        # ─── Casdoor IdP (no auth — browser OIDC redirect flow) ───
+        # ─── Casdoor IdP ───
         handle /.well-known/openid-configuration {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $casdoor }}
         }
         handle /login/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $casdoor }}
         }
         handle /signup/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $casdoor }}
         }
         @casdoor_api {
             path /api/login/* /api/login /api/userinfo /api/logout /api/get-application /api/get-app-login /api/get-account /api/get-resources /api/get-organization /api/get-user /api/get-css /api/get-default-application /api/get-captcha-status
         }
         handle @casdoor_api {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $casdoor }}
         }
         @casdoor_assets {
             path /static/js/* /static/css/* /static/media/* /favicon.png /manifest.json
         }
         handle @casdoor_assets {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $casdoor }}
         }
         {{- end }}
 
         handle_path /v1/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
-        # ─── Auth API ───
         handle /api/v2/auth/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
-        # ─── User/key/role management (jwt) ───
         @iam_jwt {
             path /api/v2/users* /api/v2/api-keys* /api/v2/roles* /api/v2/permissions* /api/v2/resources* /api/v2/github/*
         }
         handle @iam_jwt {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $api }}
         }
 
-        # ─── Notify (jwt, portal audience) ───
         handle /api/v2/inbox/* {
-            request_header X-Aegis-Auth-Mode "jwt"
-            request_header X-Aegis-Required-Audiences "portal"
             reverse_proxy {{ $notify }}
         }
 
         handle /api/v2/notifications/* {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $notify }}
         }
 
-        # ─── Blob ───
         handle /api/v2/blob/raw/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $blob }}
         }
 
         handle /api/v2/blob/buckets/* {
-            request_header X-Aegis-Auth-Mode "jwt_or_service"
             reverse_proxy {{ $blob }} {
                 transport http {
                     response_header_timeout 180s
@@ -159,7 +180,6 @@ data:
         }
 
         handle /api/v2/blob/* {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $blob }}
         }
 
@@ -167,24 +187,18 @@ data:
             path /api/v2/share /api/v2/share/*
         }
         handle @share {
-            request_header X-Aegis-Auth-Mode "jwt"
-            request_header X-Aegis-Required-Audiences "portal"
             reverse_proxy {{ $blob }}
         }
 
         handle /s/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $blob }}
         }
 
-        # ─── Pages (no auth — module does its own) ───
         handle /p/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
         handle /static/pages/* {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
@@ -192,26 +206,19 @@ data:
             path /api/v2/pages /api/v2/pages/*
         }
         handle @pages_api {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ $api }}
         }
 
-        # ─── ClickHouse proxy (jwt, strip prefix) ───
         handle_path /api/v2/clickhouse/* {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $ch }}
         }
 
-        # ─── Chaos (jwt, strip prefix) ───
         handle_path /v1beta/chaos/* {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $chaos }}
         }
 
         {{- if .Values.backends.ray.enabled }}
-        # ─── Ray Job API (jwt, strip prefix) ───
         handle_path /api/v2/ray/* {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ .Release.Name }}-ray-head:{{ .Values.backends.ray.dashboardPort | default 8265 }} {
                 transport http {
                     response_header_timeout 600s
@@ -220,46 +227,36 @@ data:
         }
         {{- end }}
 
-        # ─── Rustfs presigned-URL passthrough (no auth) ───
         @rustfs {
             path /aegis-*
         }
         handle @rustfs {
-            request_header X-Aegis-Auth-Mode "none"
             reverse_proxy {{ .Release.Name }}-rustfs:9000 {
                 header_up Host {http.request.hostport}
             }
         }
 
-        # ─── Health checks (no auth) ───
         handle /healthz {
-            request_header X-Aegis-Auth-Mode "none"
             respond `{"status":"ok"}` 200
         }
 
         handle /readyz {
-            request_header X-Aegis-Auth-Mode "none"
             respond `{"status":"ready"}` 200
         }
 
         {{- if .Values.backends.frontend.enabled }}
-        # ─── API catch-all (jwt) → aegis-api ───
         @api {
             path /api/* /metrics /livez
         }
         handle @api {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $api }}
         }
 
-        # ─── Frontend catch-all ───
         handle {
             reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.backends.frontend.port | default 80 }}
         }
         {{- else }}
-        # No frontend — everything goes to aegis-api
         handle {
-            request_header X-Aegis-Auth-Mode "jwt"
             reverse_proxy {{ $api }}
         }
         {{- end }}
