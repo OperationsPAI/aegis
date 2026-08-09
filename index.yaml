@@ -1,0 +1,73 @@
+apiVersion: v1
+entries:
+  rcabench:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-08-09T07:03:43.703929304Z"
+    dependencies:
+    - condition: notify.enabled
+      name: notify
+      repository: ""
+      version: 0.1.0
+    - condition: sso.enabled
+      name: sso
+      repository: ""
+      version: 0.1.0
+    - condition: rustfs.enabled
+      name: rustfs
+      repository: ""
+      version: 0.2.0
+    - condition: blob.enabled
+      name: blob
+      repository: ""
+      version: 0.1.0
+    - condition: gateway.enabled
+      name: gateway
+      repository: ""
+      version: 0.2.3
+    - alias: edgeProxy
+      condition: edgeProxy.enabled
+      name: edge-proxy
+      repository: ""
+      version: 0.1.1
+    - condition: configcenter.enabled
+      name: configcenter
+      repository: ""
+      version: 0.1.0
+    - alias: otelCollector
+      condition: otelCollector.enabled
+      name: otel-collector
+      repository: ""
+      version: 0.1.0
+    - condition: mysql.enabled
+      name: mysql
+      repository: ""
+      version: 0.2.0
+    - condition: redis.enabled
+      name: redis
+      repository: ""
+      version: 0.2.0
+    - condition: etcd.enabled
+      name: etcd
+      repository: ""
+      version: 0.1.0
+    - condition: chaos.enabled
+      name: chaos
+      repository: ""
+      version: 0.1.0
+    - condition: ray.enabled
+      name: ray
+      repository: ""
+      version: 0.1.0
+    - condition: casdoor.enabled
+      name: casdoor
+      repository: ""
+      version: 0.1.0
+    description: A Helm chart for Kubernetes
+    digest: fe7b3281ace2d2349d6706e31a33ac8af4d8d8e01fbca7b67f773694801ec6fa
+    name: rcabench
+    type: application
+    urls:
+    - https://operationspai.github.io/aegis/rcabench-0.2.9.tgz
+    version: 0.2.9
+generated: "2026-08-09T07:03:43.69858357Z"
