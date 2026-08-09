@@ -1,0 +1,474 @@
+---
+# Namespace for local development environment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: exp
+  labels:
+    environment: development
+    managed-by: manual
+
+---
+# JuiceFS Secret for RCABench
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rcabench-juicefs-secret
+  namespace: exp
+  labels:
+    app: rcabench
+    environment: development
+type: Opaque
+stringData:
+  name: "jfs"
+  metaurl: "redis://10.10.10.119:6379/1"
+  cache-size: "1024"
+
+---
+# StorageClass for JuiceFS
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: juicefs-sc
+  labels:
+    app: rcabench
+    environment: development
+provisioner: csi.juicefs.com
+parameters:
+  csi.storage.k8s.io/provisioner-secret-name: rcabench-juicefs-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: exp
+  csi.storage.k8s.io/node-publish-secret-name: rcabench-juicefs-secret
+  csi.storage.k8s.io/node-publish-secret-namespace: exp
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+
+---
+# ServiceAccount for RCABench
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rcabench-sa
+  namespace: exp
+  labels:
+    app: rcabench
+    environment: development
+
+---
+# ClusterRole with full permissions (same as production)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rcabench-dev-role
+  labels:
+    app: rcabench
+    environment: development
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+
+---
+# ClusterRoleBinding to bind ServiceAccount to ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rcabench-dev-rolebinding
+  labels:
+    app: rcabench
+    environment: development
+subjects:
+  - kind: ServiceAccount
+    name: rcabench-sa
+    namespace: exp
+roleRef:
+  kind: ClusterRole
+  name: rcabench-dev-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Static PV for JuiceFS Dataset
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rcabench-juicefs-dataset-pv
+  labels:
+    app: rcabench
+    environment: development
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: csi.juicefs.com
+    volumeHandle: rcabench-juicefs-dataset-pv
+    fsType: juicefs
+    nodePublishSecretRef:
+      name: rcabench-juicefs-secret
+      namespace: exp
+    volumeAttributes:
+      juicefs/mount-cpu-limit: "5000m"
+      juicefs/mount-memory-limit: "5Gi"
+      juicefs/mount-cpu-request: "100m"
+      juicefs/mount-memory-request: "512Mi"
+      subPath: "rcabench_dataset"
+
+---
+# PVC for JuiceFS Dataset
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rcabench-juicefs-dataset
+  namespace: exp
+  labels:
+    app: rcabench
+    environment: development
+    pvc-type: dataset
+  annotations:
+    description: "JuiceFS PVC for dataset storage in environment"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: rcabench-juicefs-dataset-pv
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+# Static PV for JuiceFS Experiment Storage
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rcabench-juicefs-experiment-storage-pv
+  labels:
+    app: rcabench
+    environment: development
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: csi.juicefs.com
+    volumeHandle: rcabench-juicefs-experiment-storage-pv
+    fsType: juicefs
+    nodePublishSecretRef:
+      name: rcabench-juicefs-secret
+      namespace: exp
+    volumeAttributes:
+      juicefs/mount-cpu-limit: "5000m"
+      juicefs/mount-memory-limit: "5Gi"
+      juicefs/mount-cpu-request: "100m"
+      juicefs/mount-memory-request: "512Mi"
+      subPath: "experiment_storage"
+
+---
+# PVC for JuiceFS Experiment Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rcabench-juicefs-experiment-storage
+  namespace: exp
+  labels:
+    app: rcabench
+    environment: development
+    pvc-type: experiment-storage
+  annotations:
+    description: "JuiceFS PVC for experiment storage in environment"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: rcabench-juicefs-experiment-storage-pv
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+# ============================================================
+# Grafana Alloy DaemonSet - Local Development Log Collection
+# Replaces: Filebeat DaemonSet + Logstash
+# K8s Job logs → Alloy → Loki (direct, no intermediary)
+# ============================================================
+
+---
+# Alloy ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rcabench-alloy
+  namespace: exp
+  labels:
+    app: alloy
+    environment: development
+
+---
+# Alloy ClusterRole (read-only permissions for K8s pod discovery)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rcabench-alloy-role
+  labels:
+    app: alloy
+    environment: development
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+
+---
+# Alloy ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rcabench-alloy-rolebinding
+  labels:
+    app: alloy
+    environment: development
+subjects:
+  - kind: ServiceAccount
+    name: rcabench-alloy
+    namespace: exp
+roleRef:
+  kind: ClusterRole
+  name: rcabench-alloy-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Alloy ConfigMap - Grafana Alloy River configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rcabench-alloy-config
+  namespace: exp
+data:
+  config.alloy: |
+    // ============================================================
+    // Grafana Alloy - RCABench Log Collection Pipeline
+    // ============================================================
+
+    // 1. Discover K8s pods on this node
+    discovery.kubernetes "pods" {
+      role = "pod"
+
+      selectors {
+        role  = "pod"
+        field = "spec.nodeName=" + coalesce(env("HOSTNAME"), constants.hostname)
+      }
+    }
+
+    // 2. Relabel: filter by rcabench labels, extract metadata
+    discovery.relabel "rcabench_pods" {
+      targets = discovery.kubernetes.pods.targets
+
+      // Keep only pods with job_name label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_job_name"]
+        action        = "keep"
+        regex         = ".+"
+      }
+
+      // Keep only pods with rcabench_app_id label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_rcabench_app_id"]
+        action        = "keep"
+        regex         = ".+"
+      }
+
+      // Extract labels
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_job_name"]
+        target_label  = "job_id"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_rcabench_app_id"]
+        target_label  = "rcabench_app_id"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_trace_id"]
+        target_label  = "trace_id"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_task_id"]
+        target_label  = "task_id"
+      }
+
+      // Set __path__ for log file discovery
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        target_label  = "__path__"
+        separator     = "/"
+        replacement   = "/var/log/pods/*$1/*.log"
+      }
+    }
+
+    // 3. Match log files on node filesystem
+    local.file_match "pods" {
+      path_targets = discovery.relabel.rcabench_pods.output
+    }
+
+    // 4. Read log files (tail)
+    loki.source.file "pods" {
+      targets    = local.file_match.pods.targets
+      forward_to = [loki.process.pipeline.receiver]
+    }
+
+    // 5. Process log lines
+    //    - High-cardinality fields (trace_id, task_id, job_id) → Structured Metadata
+    //    - Low-cardinality fields (rcabench_app_id, namespace, etc.) → Stream Labels
+    //    Structured Metadata is queryable via LogQL:
+    //      {app="rcabench"} | trace_id="xxx" | task_id="yyy"
+    loki.process "pipeline" {
+      stage.cri {}
+
+      // Move high-cardinality labels to Loki Structured Metadata
+      // (avoids index cardinality explosion, still queryable via LogQL filters)
+      // stage.structured_metadata reads from both extracted data AND stream labels
+      stage.structured_metadata {
+        values = {
+          trace_id = "",
+          task_id  = "",
+          job_id   = "",
+        }
+      }
+
+      // Drop high-cardinality + internal labels from stream labels
+      stage.label_drop {
+        values = ["trace_id", "task_id", "job_id", "filename"]
+      }
+
+      stage.static_labels {
+        values = {
+          app = "rcabench",
+        }
+      }
+
+      forward_to = [loki.write.default.receiver, otelcol.receiver.loki.backend.receiver]
+    }
+
+    // 6. Write to Loki
+    loki.write "default" {
+      endpoint {
+        url = "http://10.10.10.161:3100/loki/api/v1/push"
+      }
+    }
+
+    // 7. OTLP dual-write: bridge Loki format → OpenTelemetry format
+    otelcol.receiver.loki "backend" {
+      output {
+        logs = [otelcol.exporter.otlphttp.backend.input]
+      }
+    }
+
+    // 8. OTLP HTTP export to backend log receiver
+    otelcol.exporter.otlphttp "backend" {
+      client {
+        endpoint = "http://10.10.10.161:4319"
+      }
+
+      retry_on_failure {
+          enabled          = true
+          initial_interval = "1s"
+          max_interval     = "30s"
+          max_elapsed_time = "5m"
+      }
+
+      sending_queue {
+          enabled       = true
+          num_consumers = 4
+          queue_size    = 1000
+      }
+    }
+
+    prometheus.remote_write "default" {
+      endpoint {
+        url = "http://10.10.10.161:9090/api/v1/write"
+      }
+    }
+
+---
+# Alloy DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rcabench-alloy-daemon
+  namespace: exp
+  labels:
+    app: alloy
+    environment: development
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+    spec:
+      serviceAccountName: rcabench-alloy
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: alloy
+          image: 10.10.10.240/library/alloy:v1.13.1
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --stability.level=public-preview
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            runAsUser: 0
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: varlogcontainers
+              mountPath: /var/log/containers
+              readOnly: true
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: config
+              mountPath: /etc/alloy/config.alloy
+              subPath: config.alloy
+            - name: data
+              mountPath: /var/lib/alloy/data
+      volumes:
+        - name: varlogcontainers
+          hostPath:
+            path: /var/log/containers
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: config
+          configMap:
+            name: rcabench-alloy-config
+        - name: data
+          hostPath:
+            path: /var/lib/alloy-data
+            type: DirectoryOrCreate

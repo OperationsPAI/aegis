@@ -1,0 +1,19 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  system: ts
+  service: frontend
+  instance: default
+  chart_version: v3.2.0
+spec:
+  replace_scope: service
+  points:
+    - capability: pod_kill
+      target: {}
+      param_overrides: {}
+    - capability: http_latency
+      target:
+        endpoint: /api/login
+        method: POST
+      param_overrides:
+        delay_ms: { min: 100, max: 2000 }

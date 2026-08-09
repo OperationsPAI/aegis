@@ -1,0 +1,780 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-payment-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to lowercase"
+        method: "addMoney"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to lowercase"
+        method: "home"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to lowercase"
+        method: "pay"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to lowercase"
+        method: "query"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to uppercase"
+        method: "addMoney"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to uppercase"
+        method: "home"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to uppercase"
+        method: "pay"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Convert string to uppercase"
+        method: "query"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "addMoney"
+        mutation_from: "\"/payment/money\""
+        mutation_to: "\"mutated_/payment/money\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"/welcome\""
+        mutation_to: "\"mutated_/welcome\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"Welcome to [ Payment Service ] !\""
+        mutation_to: "\"mutated_Welcome to [ Payment Service ] !\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "pay"
+        mutation_from: "\"/payment\""
+        mutation_to: "\"mutated_/payment\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "query"
+        mutation_from: "\"/payment\""
+        mutation_to: "\"mutated_/payment\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with empty string"
+        method: "addMoney"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with empty string"
+        method: "home"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with empty string"
+        method: "pay"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with empty string"
+        method: "query"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with null"
+        method: "addMoney"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with null"
+        method: "home"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with null"
+        method: "pay"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string result with null"
+        method: "query"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string with random content"
+        method: "addMoney"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string with random content"
+        method: "home"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string with random content"
+        method: "pay"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Replace string with random content"
+        method: "query"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Reverse string content"
+        method: "addMoney"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Reverse string content"
+        method: "home"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Reverse string content"
+        method: "pay"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.controller.PaymentController"
+        description: "Reverse string content"
+        method: "query"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Convert string to lowercase"
+        method: "Payment"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Convert string to uppercase"
+        method: "Payment"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Mutate string constant to an error-oriented value"
+        method: "Payment"
+        mutation_from: "\"\""
+        mutation_to: "\"mutated_\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Replace string result with empty string"
+        method: "Payment"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Replace string result with null"
+        method: "Payment"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Replace string with random content"
+        method: "Payment"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.entity.Payment"
+        description: "Reverse string content"
+        method: "Payment"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Convert string to lowercase"
+        method: "run"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Convert string to uppercase"
+        method: "run"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"10000.0\""
+        mutation_to: "\"mutated_10000.0\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\""
+        mutation_to: "\"mutated_4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"5ad7750b-a68b-49c0-a8c0-32776b067701\""
+        mutation_to: "\"mutated_5ad7750b-a68b-49c0-a8c0-32776b067701\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Mutate string constant to an error-oriented value"
+        method: "run"
+        mutation_from: "\"5ad7750ba68b49c0a8c035276b067701\""
+        mutation_to: "\"mutated_5ad7750ba68b49c0a8c035276b067701\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Replace string result with empty string"
+        method: "run"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Replace string result with null"
+        method: "run"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Replace string with random content"
+        method: "run"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.init.InitData"
+        description: "Reverse string content"
+        method: "run"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to lowercase"
+        method: "addMoney"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to lowercase"
+        method: "pay"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to lowercase"
+        method: "query"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to uppercase"
+        method: "addMoney"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to uppercase"
+        method: "pay"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Convert string to uppercase"
+        method: "query"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate + to -"
+        method: "pay"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "pay"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "query"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "addMoney"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "pay"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "query"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "addMoney"
+        mutation_from: "\"Add Money Success\""
+        mutation_to: "\"mutated_Add Money Success\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "pay"
+        mutation_from: "\"Pay Failed, order not found with order id\""
+        mutation_to: "\"mutated_Pay Failed, order not found with order id\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "pay"
+        mutation_from: "\"Pay Success\""
+        mutation_to: "\"mutated_Pay Success\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "query"
+        mutation_from: "\"No Content\""
+        mutation_to: "\"mutated_No Content\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "query"
+        mutation_from: "\"Query Success\""
+        mutation_to: "\"mutated_Query Success\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with empty string"
+        method: "addMoney"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with empty string"
+        method: "pay"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with empty string"
+        method: "query"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with null"
+        method: "addMoney"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with null"
+        method: "pay"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string result with null"
+        method: "query"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string with random content"
+        method: "addMoney"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string with random content"
+        method: "pay"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Replace string with random content"
+        method: "query"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Reverse string content"
+        method: "addMoney"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Reverse string content"
+        method: "pay"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-payment-service"
+        class: "com.trainticket.service.PaymentServiceImpl"
+        description: "Reverse string content"
+        method: "query"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"

@@ -1,0 +1,88 @@
+apiVersion: v2
+name: rcabench
+description: A Helm chart for Kubernetes
+
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.2.9
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.0.0"
+
+# Subcharts extracted from this monolith so other releases (AgentM, etc.)
+# can consume them as shared services. Phase 1: notify only. SSO and Blob
+# will follow in subsequent phases. Subcharts live under `helm/charts/`
+# (local file:// reference, no external repo).
+dependencies:
+  - name: notify
+    version: "0.1.0"
+    repository: ""
+    condition: notify.enabled
+  - name: sso
+    version: "0.1.0"
+    repository: ""
+    condition: sso.enabled
+  - name: rustfs
+    version: "0.2.0"
+    repository: ""
+    condition: rustfs.enabled
+  - name: blob
+    version: "0.1.0"
+    repository: ""
+    condition: blob.enabled
+  - name: gateway
+    version: "0.2.3"
+    repository: ""
+    condition: gateway.enabled
+  - name: edge-proxy
+    alias: edgeProxy
+    version: "0.1.1"
+    repository: ""
+    condition: edgeProxy.enabled
+  - name: configcenter
+    version: "0.1.0"
+    repository: ""
+    condition: configcenter.enabled
+  - name: otel-collector
+    version: "0.1.0"
+    repository: ""
+    alias: otelCollector
+    condition: otelCollector.enabled
+  - name: mysql
+    version: "0.2.0"
+    repository: ""
+    condition: mysql.enabled
+  - name: redis
+    version: "0.2.0"
+    repository: ""
+    condition: redis.enabled
+  - name: etcd
+    version: "0.1.0"
+    repository: ""
+    condition: etcd.enabled
+  - name: chaos
+    version: "0.1.0"
+    repository: ""
+    condition: chaos.enabled
+  - name: ray
+    version: "0.1.0"
+    repository: ""
+    condition: ray.enabled
+  - name: casdoor
+    version: "0.1.0"
+    repository: ""
+    condition: casdoor.enabled

@@ -1,0 +1,73 @@
+{{/* Redis Service moved to charts/redis/ subchart. */}}
+{{/* MySQL Service moved to charts/mysql/ subchart. */}}
+{{/* etcd Services (headless + external) moved to charts/etcd/ subchart. */}}
+---
+# Aegis API (monolith) Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-aegis-api
+  {{- with .Values.microservices.aegisApi.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if eq .Values.configmap.system.env_mode "staging" }}
+  type: NodePort
+  {{- else }}
+  type: {{ .Values.microservices.aegisApi.service.type }}
+  {{- end }}
+  selector:
+    app: {{ .Release.Name }}-aegis-api
+  ports:
+    - name: http
+      port: {{ .Values.microservices.aegisApi.httpPort }}
+      targetPort: {{ .Values.microservices.aegisApi.httpPort }}
+      {{- if or (eq .Values.configmap.system.env_mode "staging") (and (eq .Values.microservices.aegisApi.service.type "NodePort") .Values.microservices.aegisApi.service.nodePort) }}
+      nodePort: {{ .Values.microservices.aegisApi.service.nodePort }}
+      {{- end }}
+    - name: intake-grpc
+      port: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
+      targetPort: intake-grpc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-runtime-worker-service
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-runtime-worker-service
+  ports:
+    - name: grpc
+      port: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
+      targetPort: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
+    - name: otlp
+      port: {{ .Values.configmap.otlp.port }}
+      targetPort: {{ .Values.configmap.otlp.port }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-buildkit
+spec:
+  selector:
+    app: {{ .Release.Name }}-buildkit
+  ports:
+    - port: {{ .Values.buildkit.port }}
+      targetPort: {{ .Values.buildkit.port }}
+  type: ClusterIP
+
+{{/* Loki / Prometheus Services removed — OTel + ClickHouse replaced the
+     legacy Loki/Prom/Grafana/Alloy observability stack. */}}
+
+{{/* aegis-notify Service moved to charts/notify/ subchart. */}}
+
+{{/* aegis-blob Service moved to charts/blob/ subchart. */}}
+
+{{/* aegis-gateway Service moved to charts/gateway/ subchart. */}}
+
+{{/* aegis-configcenter Service moved to charts/configcenter/ subchart. */}}
+{{/* Aegis SSO Service now rendered by the sso subchart. */}}

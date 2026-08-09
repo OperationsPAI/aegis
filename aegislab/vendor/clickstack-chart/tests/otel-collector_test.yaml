@@ -1,0 +1,60 @@
+suite: Test ClickStack ConfigMap - OTEL Collector Values
+templates:
+  - hyperdx/configmap.yaml
+
+tests:
+  - it: should contain CLICKHOUSE_ENDPOINT with default service name
+    set:
+      clickhouse:
+        nativePort: 9000
+    release:
+      name: test-release
+    asserts:
+      - matchRegex:
+          path: data.CLICKHOUSE_ENDPOINT
+          pattern: "tcp://test-release-clickstack-clickhouse-clickhouse-headless:9000"
+
+  - it: should contain CLICKHOUSE_SERVER_ENDPOINT
+    set:
+      clickhouse:
+        nativePort: 9000
+    release:
+      name: test-release
+    asserts:
+      - matchRegex:
+          path: data.CLICKHOUSE_SERVER_ENDPOINT
+          pattern: "test-release-clickstack-clickhouse-clickhouse-headless:9000"
+
+  - it: should contain OPAMP_SERVER_URL with default service name
+    set:
+      hyperdx:
+        opampPort: 4320
+    release:
+      name: test-release
+    asserts:
+      - equal:
+          path: data.OPAMP_SERVER_URL
+          value: "http://test-release-clickstack-app:4320"
+
+  - it: should contain CLICKHOUSE_USER from config
+    set:
+      hyperdx:
+        config:
+          CLICKHOUSE_USER: "myuser"
+    asserts:
+      - equal:
+          path: data.CLICKHOUSE_USER
+          value: "myuser"
+
+  - it: should contain Prometheus endpoint with correct service name
+    set:
+      clickhouse:
+        prometheus:
+          enabled: true
+          port: 9363
+    release:
+      name: test-release
+    asserts:
+      - matchRegex:
+          path: data.CLICKHOUSE_PROMETHEUS_METRICS_ENDPOINT
+          pattern: "test-release-clickstack-clickhouse-clickhouse-headless:9363"

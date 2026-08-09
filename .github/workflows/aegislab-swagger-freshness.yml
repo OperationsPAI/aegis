@@ -1,0 +1,35 @@
+name: aegislab swagger freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "aegislab/src/**"
+      - ".github/workflows/aegislab-swagger-freshness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  swagger-freshness:
+    name: swagger freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "aegislab/src/go.mod"
+
+      - name: Regenerate openapi2 via go generate
+        working-directory: aegislab/src
+        run: go generate ./...
+
+      - name: Assert committed openapi2 is up-to-date
+        working-directory: aegislab/src
+        run: |
+          if ! git diff --exit-code -- docs/openapi2; then
+            echo "::error::aegislab/src/docs/openapi2 is stale. Run 'cd aegislab/src && go generate ./...' and commit the result."
+            exit 1
+          fi

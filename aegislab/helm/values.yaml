@@ -1,0 +1,772 @@
+# values.yaml
+
+# Global values shared between the parent chart and every subchart.
+#
+# `global.*` keys are propagated by Helm into every subchart's scope.
+# These are the bits both the parent templates and extracted subcharts
+# (notify, future sso/blob) consume — shared backend image, SSO client
+# wiring, config mount paths. Parent templates read these directly via
+# `.Values.global.*`; this block is the single source of truth.
+global:
+  # Set to empty string to use default public registries
+  imageRegistry: ""
+  # Externally-reachable origin of this install (e.g.
+  # https://aegis.example.com, http://203.0.113.10:8082). Single source of
+  # truth — templates derive SSO consoleRedirectURIs + loginRedirect and any
+  # other "where does the browser reach us" value from it. Leave empty for
+  # in-cluster / dev installs (subcharts fall back to localhost defaults).
+  publicBaseURL: ""
+  # HMAC key the gateway uses to sign trusted-header identity forwarded to
+  # upstreams. MUST be shared with every upstream running TrustedHeaderAuth
+  # (aegis-api AND the sso subchart) — `global` is the only value visible to
+  # subcharts. Parent-chart consumers fall back to gateway.trustedHeaderKey
+  # when this is empty; the sso subchart reads ONLY this global.
+  gatewayTrustedHeaderKey: ""
+  # Extra `host:port` site addresses to attach to the edge-proxy Caddy
+  # site block alongside the one derived from publicBaseURL. Use when a
+  # second EIP / NAT CLB fronts the same backend (clients reach edge-proxy
+  # with a different Host header). NB: the `port` here is the in-pod
+  # LISTENER port Caddy binds — when an external CLB does port translation
+  # (e.g. 38082 → 8082), put the in-pod port (`8082`), not the external
+  # one. Caddy ignores the port in the Host header when matching, so the
+  # hostname is what does the routing. `tls internal` will also issue a
+  # local-CA cert covering every listed hostname. Each entry: `host:port`.
+  additionalSiteAddresses: []
+  # Casdoor OIDC provider toggle. When true, edge-proxy routes OIDC
+  # public endpoints away (frontend talks to Casdoor directly) and
+  # proxies RBAC/auth APIs to aegis-api instead of aegis-sso.
+  casdoor:
+    enabled: false
+  # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: latest
+      pullPolicy: Always
+    # Caddy image for the edge-proxy subchart. Lives under `global.images`
+    # because `global` is the only value the edge-proxy subchart can read.
+    caddy:
+      name: caddy
+      tag: "2-alpine"
+      pullPolicy: IfNotPresent
+  # SSO client config consumed by the backend (module/ssoclient).
+  # Rendered as AEGIS_SSO_* env vars on the aegis-api pod so config.toml
+  # template strings can pick them up. Bootstrap client secret is read
+  # from a separate Secret (default: `sso-bootstrap`).
+  ssoclient:
+    # Defaults assume `helm install rcabench ...` — aegis-api now serves
+    # the JWKS endpoint directly. Override only for split releases.
+    baseURL: "http://rcabench-aegis-api:8082"
+    jwksURL: "http://rcabench-aegis-api:8082/.well-known/jwks.json"
+    clientID: "aegis-backend"
+    clientSecretRef:
+      name: "sso-bootstrap"
+      key: "aegis-backend-secret"
+    # Name of a Secret (in the same namespace) containing the SSO private
+    # key. The secret must have a key named `sso-private.pem`. When set,
+    # both aegis-api and runtime-worker-service mount it so jwtkeys.Signer
+    # can mint service tokens.
+    privateKeySecretName: ""
+  # Config mount paths shared by every microservice container.
+  configmap:
+    configFile: "/etc/aegis/config.prod.toml"
+    configDir: "/etc/rcabench"
+  # Kubernetes deployment hints shared with subcharts. Mirrors
+  # `configmap.k8s.namespace` so subcharts (rustfs) that need to
+  # pin a namespace can read it without depending on the parent-only
+  # `configmap.*` tree. Empty string falls back to `.Release.Namespace`.
+  k8s:
+    namespace: "exp"
+  # Mirrors `configmap.system.env_mode`. Forwarded into subcharts
+  # (mysql/redis/etcd) so they can render the existing `staging`-only
+  # NodePort variants without depending on the parent scope.
+  envMode: "prod"
+
+images:
+  busybox:
+    name: busybox
+    tag: "1.35"
+    pullPolicy: IfNotPresent
+  buildkit:
+    name: moby/buildkit
+    tag: buildx-stable-1
+    pullPolicy: IfNotPresent
+
+# Edge proxy: thin reverse-proxy Service that anchors the external LB EIP.
+# Disabled by default; enable per environment that has an external
+# LoadBalancer controller (e.g. Volcengine on byte-cluster). When enabled,
+# move the LB-binding annotations onto `edgeProxy.service.annotations` and
+# leave `microservices.aegisApi.service.annotations` empty so aegis-api
+# upgrades stop churning the EIP.
+frontend:
+  # Toggle for inserting the static-SPA frontend into the edge-proxy path
+  # routing. When false, edge-proxy reverse-proxies everything to the API
+  # backend. When true, `/api/*`, `/auth/*`, `/s/*`, `/healthz`, `/metrics`,
+  # `/readyz`, `/livez` route to the API; everything else routes to the
+  # `<release>-frontend` Service (rendered by the `rcabench-frontend` chart
+  # installed alongside this one).
+  enabled: false
+  service:
+    port: 80
+
+# Dev anchors: placeholder Deployments + Services that telepresence can
+# intercept to forward /dev/* (frontend) and /dev/api/* (backend) traffic
+# from the edge-proxy down to a developer's laptop. Disabled by default;
+edgeProxy:
+  # Caddy fronting aegis-api + intake-grpc. Enabled by default so every pack
+  # (kind / local / byte-cluster / prod) presents the same external surface:
+  # consumers point at `<release>-edge-proxy:<port>` rather than the
+  # aegis-api Service. Byte-cluster anchors a Volcengine LB EIP on this
+  # Service (see edgeProxy.service.annotations override) so routine
+  # aegis-api upgrades don't churn the LB.
+  enabled: true
+  tls:
+    # Flip on to make Caddy terminate TLS. Required when the SPA is loaded
+    # over a non-localhost origin and needs `crypto.subtle.*` for PKCE.
+    # Off by default — kind / in-cluster talk plain HTTP.
+    enabled: false
+    # When set, Caddy serves `tls.crt` + `tls.key` from this Secret
+    # (mounted at /etc/caddy/tls) instead of Caddy's `tls internal`
+    # auto-CA. Use this when clients need a stable, trustable CA — the
+    # auto-CA's root lives only in the pod and rotates if the pod is
+    # recreated, which breaks Mac Keychain trust and browser password
+    # save. See manifests/byte-cluster/tls-local/README.md for the
+    # byte-cluster workflow (regen CA, kubectl create secret, install
+    # CA on Mac).
+    secretName: ""
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  # Optional extra listener that reuses this edge EIP as a direct passthrough
+  # to the agent-env/arl gateway. No SSO at the edge — arl runs its own
+  # fail-closed API-key auth, so clients present an arl API key. Off by default
+  # so non-arl installs render identically; byte-cluster turns it on and sets
+  # `upstream` to the in-cluster arl gateway Service.
+  arl:
+    enabled: false
+    port: 80
+    upstream: ""
+  # Upstream ports/toggles the edge-proxy Caddyfile routes to. Duplicated
+  # here because the edge-proxy subchart can't read sibling-subchart or
+  # parent values — keep these in sync with `microservices.aegisApi.*`,
+  # `frontend.*`, etc.
+  backends:
+    aegisApi:
+      httpPort: 8082
+      intakeGrpcPort: 9096
+    frontend:
+      enabled: false
+      port: 80
+
+buildkit:
+  enabled: true
+  port: 1234
+  metricsPort: 5678
+  fallbackRegistry: ""
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+
+harbor:
+  enabled: true
+  registry: "10.10.10.240"
+  username: "admin"
+  password: "Harbor12345"
+  certName: "harbor.lab.pj.crt"
+
+# Initialization settings for PVC setup during install/upgrade
+initialization:
+  enabled: true
+
+  initDrainTemplate:
+    enabled: false
+    image:
+      name: opspai/init-drain-template
+      tag: latest
+      pullPolicy: Always
+    env:
+      TARGET_PATH: /var/lib/rcabench/dataset/drain_template
+
+  initHelmCharts:
+    enabled: true
+    image:
+      name: opspai/init-helm-charts
+      tag: latest
+      pullPolicy: Always
+    env:
+      HELM_CHARTS_CONFIG: /app/config.json
+      HELM_CHARTS_TARGET_PATH: /var/lib/rcabench/dataset/helm-charts
+
+auth:
+  # JWT signing secret (AEGIS_JWT_SECRET). If empty, a random value is
+  # generated on first install and retained across helm upgrades.
+  jwtSecret: ""
+
+# SSO client configuration (consumed by aegis-api + notify) lives under
+# `global.ssoclient` above — both parent templates and subcharts read it
+# from there.
+
+# Aegis SSO service (OIDC provider + admin REST). Extracted to the `sso`
+# subchart at helm/charts/sso/ — defaults live there. Override any field
+# by setting `sso.<path>` here (Helm forwards top-level `sso:` into the
+# subchart's scope).
+sso:
+  enabled: false
+
+configmap:
+  name: "rcabench"
+  version: "1.0.0"
+  workspace: "/app"
+  # configFile / configDir live under `global.configmap` so subcharts
+  # (notify) share the same mount paths.
+  system:
+    env_mode: "prod"
+    timezone: "Asia/Shanghai"
+  initialization:
+    data_path: "/app/data/initial_data"
+  database:
+    mysql:
+      host: ""
+      user: "root"
+      port: "3306"
+      password: "yourpassword"
+      db: "rcabench"
+    clickhouse:
+      host: ""
+      port: "9000"
+      user: "otelcollector"
+      password: "otelcollectorpass"
+      db: "otel"
+      timezone: "UTC"
+  redis:
+    host: ""
+  tracing:
+    # OTLP HTTP receiver (host:port). Points at the chart-rendered
+    # `<release>-otel-collector` Service which exports to ClickStack
+    # ClickHouse — no separate Jaeger anymore.
+    endpoint: "rcabench-otel-collector:4318"
+  etcd:
+    endpoints: []
+    username: ""
+    password: ""
+    cluster:
+      name: "etcd0"
+      token: "rcabench-etcd-cluster"
+  k8s:
+    namespace: "exp"
+    service:
+      internalURL: ""
+    init_container:
+      busybox_image: "busybox:1.35"
+    job:
+      serviceAccount:
+        name: ""
+      volume_mount:
+        dataset:
+          name: "dataset"
+          mount_path: "/data"
+          source_type: "pvc"
+          claim_name: "rcabench-juicefs-dataset"
+        experiment_storage:
+          name: "experiment-storage"
+          mount_path: "/experiment_storage"
+          source_type: "pvc"
+          claim_name: "rcabench-juicefs-experiment-storage"
+  jfs:
+    # backend selects how datapack / helm-chart / dataset artefacts are
+    # persisted. "filesystem" (default) writes under dataset_path;
+    # "s3" stores them as objects in the buckets in s3.* below
+    # (typically served by in-cluster rustfs). Default stays
+    # "filesystem" for backward compatibility — overlays can flip.
+    backend: "filesystem"
+    container_path: "/app/containers"
+    dataset_path: "/var/lib/rcabench/dataset"
+    experiment_storage_path: "/var/lib/rcabench/experiment_storage"
+    s3:
+      datapack_bucket: "aegis-datapack"
+      helm_chart_bucket: "aegis-helm-chart"
+      dataset_bucket: "aegis-dataset"
+  buildkit:
+    address: ""
+  clients:
+    runtime:
+      target: ""
+    runtimeIntake:
+      target: ""
+  otlp:
+    port: 4319
+    max_request_size: 5242880
+  sso:
+    privateKeyPath: "/etc/aegis/sso-private.pem"
+    kid: "sso-v1"
+    # In-cluster defaults — kind / byte-cluster / prod all use the chart-rendered
+    # `<release>-sso` Service. The legacy kind-NodePort host (172.21.0.2:30083)
+    # was kept so the host-side console could reach SSO during dev with
+    # `make local-debug` + kind; that flow now uses the chart edge-proxy
+    # instead, so the cluster-internal hostname is the right default.
+    issuer: "http://rcabench-aegis-api:8082"
+    baseURL: "http://rcabench-aegis-api:8082"
+    jwksURL: "http://rcabench-aegis-api:8082/.well-known/jwks.json"
+    # Comma-separated list of additional JWKS endpoints (e.g. Casdoor).
+    additionalJwksURLs: ""
+    clientID: "aegis-backend"
+    clientSecret: ""
+    # Defaults to http://<release-name>-aegis-api:<port>/auth/oidc/callback.
+    # Only override if the API gateway is exposed under a different host.
+    backendRedirectURI: ""
+    seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
+    # Leave blank to derive from the top-level `publicBaseURL` (one URL +
+    # `/auth/callback` and `/auth/login`). Set explicitly for multi-origin
+    # whitelists or to keep localhost defaults when no public URL exists.
+    consoleRedirectURIs: ""
+    loginRedirect: ""
+
+microservices:
+  aegisApi:
+    replicaCount: 1
+    binaryName: "aegis-api"
+    service:
+      type: ClusterIP
+      # Annotations rendered onto the aegis-api Service. Kept in chart
+      # values (not just stamped out-of-band) so `helm upgrade` doesn't
+      # silently drop them — on byte-cluster the Volcengine LB controller
+      # uses these to bind a stable EIP to the underlying CLB; if helm
+      # reapplies the Service without them the controller re-creates the
+      # CLB and the EIP changes, breaking external clients. Override per
+      # environment; empty `{}` for environments without external LB
+      # (kind, dev). See manifests/byte-cluster/values.yaml.
+      annotations: {}
+    httpPort: 8082
+    # Port for the runtime-intake gRPC server (runtime-worker -> aegis-api).
+    intakeGrpcPort: 9096
+    # Pod resource requests/limits. HPA targetCPUUtilizationPercentage requires
+    # `requests.cpu` to be set; leave `resources: {}` to omit the block entirely.
+    resources: {}
+    # Horizontal Pod Autoscaler. Disabled by default; when enabled the chart
+    # emits an autoscaling/v2 HPA targeting this deployment. Requires
+    # metrics-server (or equivalent metrics.k8s.io provider) in the cluster.
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 0
+  runtimeWorkerService:
+    replicaCount: 1
+    binaryName: "runtime-worker-service"
+    grpcPort: 9094
+    resources: {}
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 0
+  # NOTE: notify has been extracted into the `notify` subchart (see
+  # `charts/notify/`). Top-level `notify:` block below drives it.
+  # NOTE: blob has been extracted into the `blob` subchart (see
+  # `charts/blob/`). Top-level `blob:` block below drives it.
+  # NOTE: gateway has been extracted into the `gateway` subchart (see
+  # `charts/gateway/`). Top-level `gateway:` block below drives it.
+  # NOTE: configcenter has been extracted into the `configcenter` subchart
+  # (see `charts/configcenter/`). Top-level `configcenter:` block below
+  # drives it.
+
+persistence:
+  # Global storage type setting - applies to containers, logs, and juicefs sections
+  # Options: "juicefs" | "volcengine" | "external"
+  storageType: "juicefs"
+
+  # Common StorageClass names for each type
+  storageClassNames:
+    juicefs: "juicefs-sc"
+    volcengine: "rcabench"
+    external: ""
+  containers:
+    enabled: true
+    accessMode: ReadWriteMany
+    size: 20Gi
+  juicefs:
+    enabled: true
+    size: 1000Gi
+    # Uses persistence.storageType for storage selection
+    useStaticPV: true # Only applies when storageType is "juicefs"
+    subPath:
+      dataset: "rcabench_dataset"
+      experiment_storage: "experiment_storage"
+    # Volcengine-specific settings (NAS supports ReadWriteMany)
+    volcengine:
+      accessMode: ReadWriteMany
+    # External-specific settings
+    external:
+      accessMode: ReadWriteMany
+
+# JuiceFS Configuration
+juicefs:
+  name: "jfs"
+  # JuiceFS metadata engine. Override per environment (e.g. local Redis or shared staging Redis).
+  metaurl: ""
+  cacheSize: "1024"
+  # Optional: configure object storage if needed
+  # storage: "s3"
+  # bucket: "your-bucket"
+  # accessKey: "your-access-key"
+  # secretKey: "your-secret-key"
+
+# Initial configuration
+# Only specify keys you want to override from environment metadata defaults
+# The defaults are defined in helm/_helpers.tpl based on the environment
+initialConfig:
+  force: false # Set to true to force reinitialize etcd config on pod restart
+  etcdInit:
+    endpoint: "" # Defaults to http://<release-name>-etcd-headless:2379
+    producer:
+      initKey: "/initialized_producer"
+      configPrefix: "/rcabench/config/producer"
+    consumer:
+      initKey: "/initialized_consumer"
+      configPrefix: "/rcabench/config/consumer"
+  producer:
+    settings: {}
+
+  consumer:
+    settings: {}
+
+# Initial data files - can be overridden via skaffold setFiles
+initialDataFiles:
+  data_yaml: ""
+  otel_demo_yaml: ""
+  ts_yaml: ""
+
+serviceAccount:
+  imagePullSecrets: []
+
+# Aegis multi-environment manifest published at GET /.well-known/aegis-environments.json.
+# Lets one UI build switch between prod/stage/dev installs that share this same manifest.
+# When `enabled: false` (default) no ConfigMap is rendered, no env var is injected, and
+# the handler returns 404 — single-env deployments stay untouched.
+# See `values-multi-env.example.yaml` for a populated example.
+aegisEnvironments:
+  enabled: false
+  # Populated only when `enabled: true`. The aegis-api handler validates this at startup.
+  manifest:
+    # `default` MUST reference one of the `id`s listed in `environments`.
+    default: ""
+    # Each entry: { id, label, baseUrl, badge }.
+    # `badge` is one of: default | info | warning | danger.
+    environments: []
+
+# rustfs — in-cluster S3-compatible storage server backing aegis-blob's s3
+# driver. Off by default so existing kind/prod/cn_mirror packs that pre-date
+# the s3 driver render identically. Byte-cluster pack flips `enabled: true`.
+#
+# When enabled, this chart renders:
+#   - Secret `rustfs-admin` (creds + per-bucket env aliases). Use
+#     `rustfs.auth.existingSecret` to pin a pre-created Secret instead.
+#   - PVC `rustfs-data` (kept on uninstall via `helm.sh/resource-policy`)
+#   - Deployment `rustfs` (single replica, Recreate strategy)
+#   - Service `rustfs` (ClusterIP, ports 9000 s3 / 9001 console)
+#   - Job `rustfs-init-bucket` as a post-install/upgrade hook that creates
+#     each bucket in `rustfs.initBuckets.names` via `mc mb -p`. Idempotent.
+rustfs:
+  enabled: false
+  image:
+    name: docker.io/opspai/rustfs
+    tag: 1.0.0-beta.6
+    pullPolicy: IfNotPresent
+  auth:
+    # When set, the chart skips the Secret render and points envFrom at this
+    # name instead. Otherwise the chart renders `rustfs-admin` from rootUser
+    # / rootPassword / bucketEnvAliases below.
+    existingSecret: ""
+    rootUser: "aegis-rustfs"
+    # OVERRIDE in production — the default value is a placeholder.
+    rootPassword: "change-me-in-prod-please"
+  persistence:
+    storageClass: "rcabench"
+    size: 200Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  extraEnv: []
+  # Buckets to create on install. The init Job calls `mc mb -p` for each.
+  initBuckets:
+    enabled: true
+    names:
+      - aegis-datapack
+      - aegis-execution
+      - aegis-shared
+      - aegis-helm-chart
+      - aegis-dataset
+    image:
+      name: docker.io/opspai/mc
+      tag: latest
+      pullPolicy: IfNotPresent
+  # Optional per-bucket env aliases written into the rustfs-admin Secret.
+  # Producers reference these names through `configmap.blob.buckets.<x>.{access_key_env,secret_key_env}`.
+  # Keep the values in sync with rootUser/rootPassword (default does).
+  bucketEnvAliases:
+    BLOB_S3_DATAPACK_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_DATAPACK_SECRET_KEY: "change-me-in-prod-please"
+    BLOB_S3_EXECUTION_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_EXECUTION_SECRET_KEY: "change-me-in-prod-please"
+    BLOB_S3_SHARED_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_SHARED_SECRET_KEY: "change-me-in-prod-please"
+
+# In-namespace OpenTelemetry Collector. Receives OTLP from every Aegis
+# microservice (`tracing.endpoint = <release>-otel-collector:4318`) and
+# exports to the operator-managed ClickStack ClickHouse. Replaces the
+# old `<release>-jaeger` StatefulSet.
+otelCollector:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: otel/opentelemetry-collector-contrib
+    tag: "0.122.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  clickhouse:
+    # ClickHouse native protocol endpoint. Default points at the
+    # operator-managed ClickStack cluster in the `monitoring` namespace.
+    endpoint: "tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default"
+    database: "otel"
+    tracesTable: "otel_traces"
+    logsTable: "otel_logs"
+    metricsTable: "otel_metrics"
+    ttl: "72h"
+
+# ---------------------------------------------------------------------------
+# etcd subchart values (forwarded into `charts/etcd/`).
+#
+# `cluster.{name,token}` mirror the legacy
+# `configmap.etcd.cluster.{name,token}` keys.
+# ---------------------------------------------------------------------------
+etcd:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: quay.io/coreos/etcd
+    tag: "v3.6.7"
+    pullPolicy: IfNotPresent
+  cluster:
+    name: "etcd0"
+    token: "rcabench-etcd-cluster"
+  service:
+    clientPort: 2379
+    peerPort: 2380
+    externalType: ClusterIP
+    nodePort: 31379
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: "openebs-hostpath"
+
+# ---------------------------------------------------------------------------
+# redis subchart values (forwarded into `charts/redis/`).
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+    nodePort: 32279
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: "openebs-hostpath"
+
+# ---------------------------------------------------------------------------
+# mysql subchart values (forwarded into `charts/mysql/`).
+#
+# `auth.{db,rootPassword}` mirror the legacy
+# `configmap.database.mysql.{db,password}` keys — the parent's
+# `[database.mysql]` ConfigMap section still reads from those, so keep
+# the two in sync per release.
+# ---------------------------------------------------------------------------
+mysql:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: mysql
+    tag: "8.0.43"
+    pullPolicy: IfNotPresent
+  auth:
+    db: "rcabench"
+    rootPassword: "yourpassword"
+  service:
+    type: ClusterIP
+    port: 3306
+    nodePort: 32206
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: "openebs-hostpath"
+  # Driven by parent's `configmap.system.env_mode` so the existing
+  # `staging` NodePort behavior survives extraction.
+  envMode: "prod"
+
+# ---------------------------------------------------------------------------
+# notify subchart values (forwarded into `charts/notify/`).
+#
+# Top-level keys matching a subchart name are passed straight into that
+# subchart's scope by Helm — so this block becomes the subchart's
+# `.Values`. The subchart additionally consumes `global.images.rcabench`,
+# `global.ssoclient`, and `global.configmap` from the parent.
+# ---------------------------------------------------------------------------
+notify:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8084
+  binaryName: "aegis-notify"
+  service:
+    type: ClusterIP
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# chaos subchart values (forwarded into `charts/chaos/`).
+#
+# DEFAULT OFF — design §11 migration step 4 prereq. Enabling this on an
+# existing deploy switches the inject pipeline to talk to aegis-chaos
+# via webhook, which depends on chaos-service being deployed. Keep
+# `enabled: false` until that runtime cut-over (step 4(i)) lands.
+# ---------------------------------------------------------------------------
+chaos:
+  enabled: false
+  # Mirror of charts/chaos/values.yaml httpPort. Parent reads this for
+  # the gateway federation route in templates/configmap.yaml so the
+  # `/v1beta/chaos/*` reverse-proxy upstream stays in sync.
+  httpPort: 8086
+  # Hook receiver — backend's POST /api/v1/hooks/chaos endpoint. Default
+  # points at the in-cluster aegis-api Service rendered by this umbrella
+  # chart. Override per-environment if aegis-chaos sits in a separate
+  # release. Empty disables webhook delivery (reconciler still runs).
+  backendURL: "http://rcabench-aegis-api:8082"
+
+  # §11 step-5b R1 shared bearer for the backend ↔ chaos service hop.
+  # The chaos subchart reads `chaosAuth.*` from its own values block (see
+  # charts/chaos/values.yaml); this `chaos.auth.*` block is consumed by
+  # the umbrella backend pods (aegis-api + runtime-worker) via the
+  # `chaos.outboundBearerEnv` helper. Both sides point at the SAME secret
+  # so rotation is one place. Operators create the Secret pre-install:
+  #   kubectl -n exp create secret generic rcabench-chaos-auth \
+  #     --from-literal=token="$(openssl rand -hex 24)"
+  # Both `secretName` and `literal` empty → no header attached (kind dev).
+  auth:
+    secretName: ""
+    secretKey: "token"
+    literal: ""
+  # The chaosAuth block below forwards the same values into the chaos
+  # subchart (charts/chaos/values.yaml). Keeping the two blocks in sync
+  # by default makes the single-secret rotation guarantee hold without
+  # operators having to touch two places.
+  chaosAuth:
+    secretName: ""
+    secretKey: "token"
+    literal: ""
+
+# ---------------------------------------------------------------------------
+# gateway subchart values (forwarded into `charts/gateway/`).
+# Parent configmap reads `trustedHeaderKey` / `rateLimit` / `cors` from
+# this block to render the shared `[gateway]` ConfigMap section consumed
+# by the gateway pod and the consumer-side route table.
+# ---------------------------------------------------------------------------
+gateway:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8086
+  binaryName: "aegis-gateway"
+  service:
+    type: ClusterIP
+  # ClickHouse HTTP upstream for /api/v2/clickhouse/* (trajectories
+  # sub-app). Defaults to the operator-managed ClickStack headless
+  # Service. Override per-environment if pointing at a different CH.
+  clickhouseUpstream: "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123"
+  trustedHeaderKey: ""
+  rateLimit:
+    rps: 200
+    burst: 400
+  cors:
+    allowedOrigins:
+      - http://localhost:3323
+      - http://127.0.0.1:3323
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# configcenter subchart values (forwarded into `charts/configcenter/`).
+# ---------------------------------------------------------------------------
+configcenter:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8087
+  binaryName: "aegis-configcenter"
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# blob subchart values (forwarded into `charts/blob/`).
+# ---------------------------------------------------------------------------
+blob:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8085
+  binaryName: "aegis-blob"
+  scratchRoot: "/var/lib/aegis-blob/scratch"
+  service:
+    type: ClusterIP
+  # Extra envFrom for the blob microservice. Byte-cluster wires the
+  # rustfs-admin Secret here so the in-process s3 driver can resolve
+  # BLOB_S3_*_ACCESS_KEY / *_SECRET_KEY at boot. Empty default keeps
+  # other packs (kind, prod, cn_mirror) rendering unchanged.
+  extraEnvFrom: []
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# casdoor subchart values (forwarded into `charts/casdoor/`).
+# ---------------------------------------------------------------------------
+casdoor:
+  enabled: false
+  mysql:
+    host: ""
+    port: 3306
+    user: root
+    password: ""
+    database: casdoor
+  origin: ""
+  oidc:
+    console:
+      clientId: "aegis-console"
+      redirectUris:
+        - "http://localhost:3000/callback"
+    cli:
+      clientId: "aegis-cli"
+      redirectUris:
+        - "http://localhost:*/callback"

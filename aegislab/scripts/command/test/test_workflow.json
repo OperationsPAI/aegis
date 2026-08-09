@@ -1,0 +1,12 @@
+{
+  "test_full_pipeline": [
+    {
+      "regression_case": "otel-demo-guided"
+    }
+  ],
+  "test_listen_trace_events": [
+    {
+      "regression_case": "otel-demo-guided"
+    }
+  ]
+}
