@@ -1,0 +1,14 @@
+apiVersion: v2
+name: aegis-points
+description: |
+  Helm library chart for chart-bound PointManifest delivery to aegis-chaos.
+  Consumer benchmark charts add this as a dependency and render
+  '{{ include "aegis-points.job" . }}' from any template; the include emits
+  a post-install Job + ConfigMap that imports every aegis-points/*.yaml
+  under the consumer chart into /v1beta/systems/{sys}/points/import.
+
+  Pairs with ADR-0009 (helm post-install delivery) and ADR-0010
+  (offline + dry-run validation). See aegislab/docs/aegis-chaos/point-manifest-spec.md.
+type: library
+version: 0.1.0
+appVersion: "1.0"

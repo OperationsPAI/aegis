@@ -1,0 +1,41 @@
+{{- if and .Values.enabled .Values.daemonset.enabled }}
+# RBAC for the node-local OTel collector DaemonSet.
+#
+# The `k8sattributes` processor needs cluster-wide read access on Pods,
+# Namespaces, Nodes, and ReplicaSets to enrich each log record with the
+# k8s.* resource attributes and to copy the `aegis.io/trace-id`
+# annotation into LogAttributes['trace_id']. ReplicaSets are needed so
+# the processor can walk Pod -> ReplicaSet -> Deployment owner refs.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-daemonset
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-daemonset
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-daemonset
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "otel-collector.fullname" . }}-daemonset
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "otel-collector.fullname" . }}-daemonset
+    namespace: {{ .Release.Namespace }}
+{{- end }}

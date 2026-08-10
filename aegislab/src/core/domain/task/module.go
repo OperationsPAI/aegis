@@ -1,0 +1,19 @@
+package task
+
+import "go.uber.org/fx"
+
+var Module = fx.Module("task",
+	fx.Provide(NewRepository),
+	fx.Provide(NewTaskQueueStore),
+	fx.Provide(NewClickHouseLogGateway),
+	fx.Provide(NewTaskLogService),
+	fx.Provide(NewService),
+	fx.Provide(AsHandlerService),
+	fx.Provide(NewHandler),
+	fx.Provide(
+		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),
+		fx.Annotate(RoleGrants, fx.ResultTags(`group:"role_grants"`)),
+		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
+	),
+)

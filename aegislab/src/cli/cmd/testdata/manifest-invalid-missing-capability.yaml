@@ -1,0 +1,13 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  system: ts
+  service: frontend
+  instance: default
+  chart_version: v3.2.0
+spec:
+  replace_scope: service
+  points:
+    - target:
+        endpoint: /api/login
+      param_overrides: {}

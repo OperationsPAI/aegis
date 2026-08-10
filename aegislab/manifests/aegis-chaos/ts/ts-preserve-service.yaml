@@ -1,0 +1,586 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-preserve-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+        server_address: "ts-preserve-service"
+        span_name: "POST /api/v1/preserveservice/preserve"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+        server_address: "ts-preserve-service"
+        span_name: "POST /api/v1/preserveservice/preserve"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/preserveservice/preserve"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-basic-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-basic-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/basicservice/basic/travel"
+        target_service: "ts-basic-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/orderservice/order"
+        target_service: "ts-order-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/travelservice/trip_detail"
+        target_service: "ts-travel-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-seat-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-seat-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/seatservice/seats"
+        target_service: "ts-seat-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-contacts-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/contactservice/contacts/{id}"
+        target_service: "ts-contacts-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-security-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-security-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/securityservice/securityConfigs/{accountId}"
+        target_service: "ts-security-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-user-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-user-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/userservice/users/id/{userId}"
+        target_service: "ts-user-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-food-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-food-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "POST /api/v1/foodservice/orders"
+        target_service: "ts-food-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-assurance-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-preserve-service"
+        domain_patterns:
+          - "ts-assurance-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        span_names:
+          - "GET /api/v1/assuranceservice/assurances/{typeIndex}/{orderId}"
+        target_service: "ts-assurance-service"

@@ -1,0 +1,396 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-rcabench-config
+data:
+  config.prod.toml: |
+    name = "{{ .Values.configmap.name }}"
+    version = "{{ .Values.configmap.version }}"
+    port = {{ .Values.microservices.aegisApi.httpPort }}
+    workspace = "{{ .Values.configmap.workspace }}"
+
+    [system]
+    timezone = "{{ .Values.configmap.system.timezone }}"
+
+    [initialization]
+    data_path = "{{ .Values.configmap.initialization.data_path }}"
+
+    [database.mysql]
+    host = "{{ .Values.configmap.database.mysql.host | default (printf "%s-mysql" .Release.Name) }}"
+    port = "{{ .Values.configmap.database.mysql.port }}"
+    user = "{{ .Values.configmap.database.mysql.user }}"
+    password = "{{ .Values.configmap.database.mysql.password }}"
+    db = "{{ .Values.configmap.database.mysql.db }}"
+
+    {{- if .Values.configmap.database.clickhouse.host }}
+    [database.clickhouse]
+    host = "{{ .Values.configmap.database.clickhouse.host }}"
+    port = "{{ .Values.configmap.database.clickhouse.port }}"
+    user = "{{ .Values.configmap.database.clickhouse.user }}"
+    password = "{{ .Values.configmap.database.clickhouse.password }}"
+    db = "{{ .Values.configmap.database.clickhouse.db }}"
+    timezone = "{{ .Values.configmap.database.clickhouse.timezone }}"
+    {{- end }}
+
+    [tracing]
+    endpoint = "{{ .Values.configmap.tracing.endpoint }}"
+
+    [redis]
+    host = "{{ .Values.configmap.redis.host | default (printf "%s-redis:6379" .Release.Name) }}"
+
+    [etcd]
+    endpoints = {{ .Values.configmap.etcd.endpoints | default (list (printf "http://%s-etcd-headless:2379" .Release.Name)) | toJson }}
+    username = "{{ .Values.configmap.etcd.username }}"
+    password = "{{ .Values.configmap.etcd.password }}"
+
+    [k8s]
+    namespace = "{{ .Values.configmap.k8s.namespace }}"
+    [k8s.service]
+    internal_url = "{{ .Values.configmap.k8s.service.internalURL | default (printf "http://%s-aegis-api:%v" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
+    [k8s.init_container]
+    {{- range $key, $value := .Values.configmap.k8s.init_container }}
+    {{ $key }} = {{ $value | quote }}
+    {{- end }}
+    [k8s.job.service_account]
+    name = "{{ .Values.configmap.k8s.job.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
+    {{- range $key, $value := .Values.configmap.k8s.job.volume_mount }}
+    [k8s.job.volume_mount.{{ $key }}]
+    name = {{ $value.name | quote }}
+    {{- if $value.mount_path }}
+    mount_path = {{ $value.mount_path | quote }}
+    {{- end }}
+    {{- if $value.host_path }}
+    host_path = {{ $value.host_path | quote }}
+    type = {{ $value.type | quote }}
+    {{- end }}
+    {{- if $value.source_type }}
+    source_type = {{ $value.source_type | quote }}
+    {{- end }}
+    {{- if $value.sub_path }}
+    sub_path = {{ $value.sub_path | quote }}
+    {{- end }}
+    {{- if $value.secret_name }}
+    secret_name = {{ $value.secret_name | quote }}
+    {{- end }}
+    {{- if $value.claim_name }}
+    claim_name = {{ $value.claim_name | quote }}
+    {{- end }}
+    {{- end }}
+
+    [sso]
+    private_key_path = "{{ .Values.configmap.sso.privateKeyPath }}"
+    kid = "{{ .Values.configmap.sso.kid }}"
+    issuer = "{{ .Values.configmap.sso.issuer }}"
+    base_url = "{{ .Values.configmap.sso.baseURL }}"
+    jwks_url = "{{ .Values.configmap.sso.jwksURL }}"
+    {{- $extraJwks := .Values.configmap.sso.additionalJwksURLs | default "" }}
+    {{- if .Values.global.casdoor.enabled }}
+      {{- $casdoorJwks := printf "http://%s-casdoor:8000/.well-known/jwks" .Release.Name }}
+      {{- if $extraJwks }}
+        {{- $extraJwks = printf "%s,%s" $extraJwks $casdoorJwks }}
+      {{- else }}
+        {{- $extraJwks = $casdoorJwks }}
+      {{- end }}
+    {{- end }}
+    additional_jwks_urls = "{{ $extraJwks }}"
+    client_id = "{{ .Values.configmap.sso.clientID }}"
+    client_secret = "{{ .Values.configmap.sso.clientSecret }}"
+    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-aegis-api:%v/auth/oidc/callback" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
+    seed_secret_dump_path = "{{ .Values.configmap.sso.seedSecretDumpPath }}"
+    {{- /*
+      consoleRedirectURIs / loginRedirect derive from `publicBaseURL` when set
+      (single source of truth for "where the browser reaches this install").
+      Explicit configmap.sso.* values still win for callers that need to point
+      at multiple origins.
+    */}}
+    {{- $pub := .Values.global.publicBaseURL | default "" -}}
+    {{- $consoleURIs := .Values.configmap.sso.consoleRedirectURIs -}}
+    {{- if and (not $consoleURIs) $pub }}
+      {{- $consoleURIs = printf "%s/auth/callback" $pub -}}
+    {{- end }}
+    {{- $loginRedir := .Values.configmap.sso.loginRedirect -}}
+    {{- if and (not $loginRedir) $pub }}
+      {{- $loginRedir = printf "%s/auth/login" $pub -}}
+    {{- end }}
+    console_redirect_uris = "{{ $consoleURIs }}"
+    login_redirect = "{{ $loginRedir }}"
+    {{- $acceptedIssuers := .Values.configmap.sso.acceptedIssuers | default "" }}
+    {{- if and (.Values.global.casdoor.enabled) (.Values.global.publicBaseURL) }}
+      {{- $casdoorIssuer := .Values.global.publicBaseURL }}
+      {{- if $acceptedIssuers }}
+        {{- $acceptedIssuers = printf "%s,%s" $acceptedIssuers $casdoorIssuer }}
+      {{- else }}
+        {{- $acceptedIssuers = $casdoorIssuer }}
+      {{- end }}
+    {{- end }}
+    accepted_issuers = "{{ $acceptedIssuers }}"
+
+    [jfs]
+    backend = "{{ .Values.configmap.jfs.backend | default "filesystem" }}"
+    container_path = "{{ .Values.configmap.jfs.container_path }}"
+    dataset_path = "{{ .Values.configmap.jfs.dataset_path }}"
+    experiment_storage_path = "{{ .Values.configmap.jfs.experiment_storage_path }}"
+
+    [jfs.s3]
+    datapack_bucket = "{{ .Values.configmap.jfs.s3.datapack_bucket | default "aegis-datapack" }}"
+    helm_chart_bucket = "{{ .Values.configmap.jfs.s3.helm_chart_bucket | default "aegis-helm-chart" }}"
+    dataset_bucket = "{{ .Values.configmap.jfs.s3.dataset_bucket | default "aegis-dataset" }}"
+
+    {{- if .Values.buildkit.enabled }}
+    [buildkit]
+    address = "{{ .Values.configmap.buildkit.address | default (printf "%s-buildkit:1234" .Release.Name) }}"
+    {{- end }}
+
+    [clients.runtime]
+    # aegis-api -> runtime-worker, query-only (queue/lock status).
+    target = "{{ .Values.configmap.clients.runtime.target | default (printf "%s-runtime-worker-service:%v" .Release.Name .Values.microservices.runtimeWorkerService.grpcPort) }}"
+
+    [clients.runtime_intake]
+    # runtime-worker -> aegis-api, execution/injection state writes.
+    target = "{{ .Values.configmap.clients.runtimeIntake.target | default (printf "%s-aegis-api:%v" .Release.Name (.Values.microservices.aegisApi.intakeGrpcPort | default 9096)) }}"
+
+    [runtime_worker.grpc]
+    addr = ":{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
+
+    [api_gateway.intake.grpc]
+    addr = ":{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}"
+
+    [gateway]
+    trusted_header_key = "{{ (.Values.global).gatewayTrustedHeaderKey | default .Values.gateway.trustedHeaderKey }}"
+
+    {{- if .Values.gateway.enabled }}
+    [gateway.rate_limit]
+    rps   = {{ .Values.gateway.rateLimit.rps | default 200 }}
+    burst = {{ .Values.gateway.rateLimit.burst | default 400 }}
+
+    [gateway.cors]
+    allowed_origins   = {{ .Values.gateway.cors.allowedOrigins | toJson }}
+    allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
+    allow_credentials = true
+    max_age_seconds   = 86400
+
+    {{- $apiUpstream := printf "%s-aegis-api:%v" .Release.Name .Values.microservices.aegisApi.httpPort }}
+
+    [[gateway.routes]]
+    prefix   = "/v1/"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/.well-known/"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix    = "/api/v2/inbox/"
+    upstream  = "{{ .Release.Name }}-notify:{{ .Values.notify.httpPort }}"
+    auth      = "jwt"
+    audiences = ["portal"]
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/notifications/"
+    upstream = "{{ .Release.Name }}-notify:{{ .Values.notify.httpPort }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/blob/raw/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    # Bucket ops, including the DuckDB query/schema endpoints. Machine
+    # clients (agentm) hit POST /buckets/{bucket}/query with a service
+    # token, so accept jwt-or-service and leave audiences unrestricted.
+    # Longer prefix wins over /api/v2/blob/ below. The query route does a
+    # big parquet scan before first byte — give it a generous timeout and
+    # extra rate-limit headroom over the global limiter.
+    prefix          = "/api/v2/blob/buckets/"
+    upstream        = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth            = "jwt-or-service"
+    timeout_seconds = 180
+    [gateway.routes.rate_limit]
+    rps   = 50
+    burst = 100
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/blob/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    # Drop trailing slash so the bare list endpoint (`GET /api/v2/share`) also
+    # routes here — `strings.HasPrefix` still matches `/api/v2/share/upload`,
+    # `/api/v2/share/{code}` via the same prefix.
+    prefix    = "/api/v2/share"
+    upstream  = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth      = "jwt"
+    audiences = ["portal"]
+
+    [[gateway.routes]]
+    prefix   = "/s/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth     = "none"
+
+    # Pages SSR + static assets. The aegis-api `/p/:slug` handler uses
+    # OptionalJWTAuth (private sites 404 for non-owners), so the gateway
+    # must let unauthenticated requests through; otherwise public pages
+    # would 401 before reaching the renderer.
+    [[gateway.routes]]
+    prefix   = "/p/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/static/pages/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
+    # Pages management API. The module enforces its own per-route auth
+    # (OptionalJWTAuth on /:id + /public for anonymous read access;
+    # JWTAuth + RequireAnyPermission on the authed subgroup), so the
+    # gateway must NOT force a JWT at the edge — doing so would 401
+    # anonymous detail/public-list fetches before the OptionalJWTAuth
+    # path is reached, and it would 401 SDK clients that were generated
+    # without a security requirement on the public endpoints.
+    [[gateway.routes]]
+    prefix   = "/api/v2/pages"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
+    {{- $chUpstream := .Values.gateway.clickhouseUpstream | default "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123" }}
+    [[gateway.routes]]
+    # ClickHouse HTTP proxy for the trajectories sub-app (read-only OTel
+    # trace queries). The frontend hits POST /api/v2/clickhouse/?... ;
+    # strip_prefix rewrites that to POST /?... before the ReverseProxy
+    # dials ClickHouse on 8123.
+    prefix       = "/api/v2/clickhouse/"
+    upstream     = "{{ $chUpstream }}"
+    auth         = "jwt"
+    strip_prefix = true
+
+    {{- if .Values.ray.enabled }}
+    [[gateway.routes]]
+    prefix          = "/api/v2/ray/"
+    upstream        = "{{ .Release.Name }}-ray-head:{{ .Values.ray.service.dashboardPort | default 8265 }}"
+    auth            = "jwt"
+    strip_prefix    = true
+    timeout_seconds = 600
+    [gateway.routes.rate_limit]
+    rps   = 20
+    burst = 40
+    {{- end }}
+
+    [[gateway.routes]]
+    # Federate aegis-chaos behind the same EIP as aegis-api. The /chaos
+    # segment is a gateway-side namespace; the chaos handler registers
+    # at /v1beta/* upstream. strip_prefix removes the matched
+    # "/v1beta/chaos" before forwarding (external
+    # /v1beta/chaos/v1beta/systems/X → upstream /v1beta/systems/X).
+    # aegis-chaos validates the bearer itself via TrustedHeaderAuth.
+    prefix       = "/v1beta/chaos"
+    upstream     = "{{ .Release.Name }}-chaos:{{ .Values.chaos.httpPort | default 8086 }}"
+    auth         = "jwt"
+    strip_prefix = true
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/github/"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/auth/"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/users"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/api-keys"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/roles"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/permissions"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/resources"
+    upstream = "{{ $apiUpstream }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "jwt"
+    {{- end }}
+
+    [otlp_receiver]
+    port = {{ .Values.configmap.otlp.port }}
+    max_request_size = {{ .Values.configmap.otlp.max_request_size }}
+
+    {{- /*
+      Blob client / buckets / share — schema and rendering live in the
+      `blob` subchart (helm/charts/blob/). Embedding it here keeps the
+      shared config.prod.toml the single artifact every component
+      mounts (aegis-api, runtime-worker, sso, blob itself).
+    */ -}}
+    {{- include "blob.tomlSection" (dict "ctx" . "indent" 4) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-etcd-producer-config
+data:
+  etcd.yaml: |
+{{ include "helm.etcd.mergedConfig" (dict "root" . "configType" "producer") | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-etcd-consumer-config
+data:
+  etcd.yaml: |
+{{ include "helm.etcd.mergedConfig" (dict "root" . "configType" "consumer") | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-initial-data
+data:
+  data.yaml: |
+{{- if .Values.initialDataFiles.data_yaml }}
+{{ .Values.initialDataFiles.data_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/data.yaml" | indent 4 }}
+{{- end }}
+  otel-demo.yaml: |
+{{- if .Values.initialDataFiles.otel_demo_yaml }}
+{{ .Values.initialDataFiles.otel_demo_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/otel-demo.yaml" | indent 4 }}
+{{- end }}
+  ts.yaml: |
+{{- if .Values.initialDataFiles.ts_yaml }}
+{{ .Values.initialDataFiles.ts_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/ts.yaml" | indent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-system-helm-configs
+data:
+  system_helm_configs.json: |
+{{ include "helm.systemHelmConfigs" . | indent 4 }}
+{{/* Aegis SSO ConfigMap now rendered by the sso subchart. */}}

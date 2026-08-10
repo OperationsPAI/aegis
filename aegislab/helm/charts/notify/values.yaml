@@ -1,0 +1,50 @@
+# notify subchart defaults.
+#
+# Self-contained values for the aegis-notify microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `notify:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+#
+# Shared cross-chart settings — container image, SSO client config, config
+# mount directory, the auth Secret name, and the consumer-side ConfigMap
+# name — are read from `.Values.global.*` so the parent chart can publish
+# them in one place without duplicating per-microservice.
+
+enabled: true
+replicaCount: 1
+httpPort: 8084
+binaryName: "aegis-notify"
+
+service:
+  type: ClusterIP
+  # nodePort: 30084   # only honored when service.type == NodePort
+
+# ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`
+# (preserves legacy rcabench parent behavior).
+serviceAccount:
+  name: ""
+
+# JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+# ConfigMap mounted at the config path. Empty `name` falls back to
+# `{{ .Release.Name }}-rcabench-config`.
+configMap:
+  name: ""
+
+# Literal env-var values injected into the container.
+env:
+  ENV: "prod"
+
+# SSO client-side wiring.
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+# Arbitrary additional env vars appended as-is (list of `{name,value}` /
+# `{name,valueFrom}` maps).
+extraEnv: []
+
+resources: {}
