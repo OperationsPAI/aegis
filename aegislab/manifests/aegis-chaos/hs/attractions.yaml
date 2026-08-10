@@ -1,0 +1,33 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "attractions"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "attractions"
+        namespace: "hs"
+    - capability: "pod_failure"
+      target:
+        app: "attractions"
+        namespace: "hs"
+    - capability: "container_kill"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hs"
+    - capability: "cpu_stress"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hs"
+    - capability: "time_skew"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hs"

@@ -1,0 +1,33 @@
+# Workspace manifest for aegis.
+# Consumed by validate_workspace_index.py and CLAUDE.md imports.
+# All paths are relative to this file's directory.
+
+workspace:
+  name: aegis
+  version: 1
+
+repos:
+  aegislab:
+    path: aegislab
+    role: backend
+    stack: [go, python]
+    # Requirement field name that carries this repo's code paths.
+    path_field: code
+  rcabench-platform:
+    path: rcabench-platform
+    role: rca-eval-platform
+    stack: [python]
+    path_field: rcabench_code
+
+# Named cross-repo contracts. Requirements reference these by key in a
+# `contracts:` array (added incrementally in Phase 3+; skeleton only here).
+contracts:
+  chaos-mesh-crd:
+    kind: external-crd
+    producer: external (chaos-mesh)
+    consumers: [aegislab]
+  dataset-schema:
+    kind: file-format
+    producer: aegislab
+    consumers: [rcabench-platform]
+    notes: "Parquet/JSON schemas written by aegislab collectors, read by rcabench-platform converters"

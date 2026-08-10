@@ -1,0 +1,45 @@
+dependencies:
+- name: notify
+  repository: ""
+  version: 0.1.0
+- name: sso
+  repository: ""
+  version: 0.1.0
+- name: rustfs
+  repository: ""
+  version: 0.2.0
+- name: blob
+  repository: ""
+  version: 0.1.0
+- name: gateway
+  repository: ""
+  version: 0.2.3
+- name: edge-proxy
+  repository: ""
+  version: 0.1.1
+- name: configcenter
+  repository: ""
+  version: 0.1.0
+- name: otel-collector
+  repository: ""
+  version: 0.1.0
+- name: mysql
+  repository: ""
+  version: 0.2.0
+- name: redis
+  repository: ""
+  version: 0.2.0
+- name: etcd
+  repository: ""
+  version: 0.1.0
+- name: chaos
+  repository: ""
+  version: 0.1.0
+- name: ray
+  repository: ""
+  version: 0.1.0
+- name: casdoor
+  repository: ""
+  version: 0.1.0
+digest: sha256:cb5f7e4b47515d57dc4b21d2095e6037c7acbcf847b2ef3324a69cfdbcbfa3bd
+generated: "2026-07-08T20:26:00.611041828+01:00"

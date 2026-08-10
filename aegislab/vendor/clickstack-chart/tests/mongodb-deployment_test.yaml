@@ -1,0 +1,133 @@
+suite: Test MongoDB Community Resources
+templates:
+  - mongodb/community.yaml
+  - mongodb/password-secret.yaml
+
+tests:
+  - it: should render MongoDBCommunity CR when enabled
+    templates:
+      - mongodb/community.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: MongoDBCommunity
+      - equal:
+          path: apiVersion
+          value: mongodbcommunity.mongodb.com/v1
+      - matchRegex:
+          path: metadata.name
+          pattern: .*-mongodb$
+
+  - it: should pass spec through from values
+    templates:
+      - mongodb/community.yaml
+    asserts:
+      - equal:
+          path: spec.members
+          value: 1
+      - equal:
+          path: spec.type
+          value: ReplicaSet
+      - equal:
+          path: spec.version
+          value: "5.0.32"
+      - equal:
+          path: spec.security.authentication.modes[0]
+          value: "SCRAM"
+      - equal:
+          path: spec.users[0].name
+          value: "hyperdx"
+      - equal:
+          path: spec.users[0].db
+          value: "hyperdx"
+
+  - it: should resolve template expressions in spec
+    templates:
+      - mongodb/community.yaml
+    asserts:
+      - matchRegex:
+          path: spec.users[0].passwordSecretRef.name
+          pattern: .*-mongodb-password$
+      - matchRegex:
+          path: spec.users[0].scramCredentialsSecretName
+          pattern: .*-mongodb-scram$
+
+  - it: should allow overriding spec values
+    templates:
+      - mongodb/community.yaml
+    set:
+      mongodb:
+        spec:
+          members: 3
+          type: ReplicaSet
+          version: "6.0.5"
+          security:
+            authentication:
+              modes: ["SCRAM"]
+          users:
+            - name: custom-user
+              db: admin
+              passwordSecretRef:
+                name: custom-password
+              roles:
+                - name: root
+                  db: admin
+              scramCredentialsSecretName: custom-scram
+    asserts:
+      - equal:
+          path: spec.members
+          value: 3
+      - equal:
+          path: spec.version
+          value: "6.0.5"
+      - equal:
+          path: spec.users[0].name
+          value: "custom-user"
+
+  - it: should not render CR when disabled
+    templates:
+      - mongodb/community.yaml
+    set:
+      mongodb:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render password Secret when enabled
+    templates:
+      - mongodb/password-secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Secret
+      - matchRegex:
+          path: metadata.name
+          pattern: .*-mongodb-password$
+      - equal:
+          path: stringData.password
+          value: "hyperdx"
+
+  - it: should use custom password in Secret
+    templates:
+      - mongodb/password-secret.yaml
+    set:
+      hyperdx:
+        secrets:
+          MONGODB_PASSWORD: "s3cret!"
+    asserts:
+      - equal:
+          path: stringData.password
+          value: "s3cret!"
+
+  - it: should not render Secret when disabled
+    templates:
+      - mongodb/password-secret.yaml
+    set:
+      mongodb:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

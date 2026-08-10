@@ -1,0 +1,964 @@
+package cmd
+
+import (
+	"bufio"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"aegis/cli/apiclient"
+	"aegis/cli/client"
+	"aegis/cli/output"
+	"aegis/platform/consts"
+
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
+	"gopkg.in/yaml.v3"
+)
+
+// systemCmd groups subcommands that manage aegis benchmark-system registration
+// (the 7 `injection.system.<name>.*` keys that live in etcd + dynamic_configs).
+var systemCmd = &cobra.Command{
+	Use:     "system",
+	Aliases: []string{"sys"},
+	Short:   "Register benchmark systems from data.yaml into etcd + dynamic_configs",
+	Long: `Every new benchmark integration requires 7 matching entries: one in etcd
+(/rcabench/config/global/injection.system.<name>.*) and one in the
+dynamic_configs DB table. Missing either half causes the system to show
+as "0 enabled" in backend logs and inject submits to fail with
+"system does not match any registered namespace pattern".
+
+These subcommands drive the existing backend /api/v2/systems endpoint
+(which atomically writes both halves) from a data.yaml seed entry so the
+seven keys always land together.`,
+}
+
+// --- Shared types ---
+
+type seedDynamicConfig struct {
+	Key          string `yaml:"key"`
+	DefaultValue string `yaml:"default_value"`
+	ValueType    int    `yaml:"value_type"`
+	Scope        int    `yaml:"scope"`
+	Category     string `yaml:"category"`
+	Description  string `yaml:"description"`
+	IsSecret     bool   `yaml:"is_secret"`
+}
+
+type seedDoc struct {
+	DynamicConfigs []seedDynamicConfig `yaml:"dynamic_configs"`
+}
+
+type systemSeed struct {
+	Name           string
+	Count          int
+	NsPattern      string
+	ExtractPattern string
+	DisplayName    string
+	AppLabelKey    string
+	IsBuiltin      bool
+	Status         int
+	Description    string
+	Raw            map[string]seedDynamicConfig
+}
+
+var expectedSystemFields = map[string]int{
+	"count":           2,
+	"ns_pattern":      0,
+	"extract_pattern": 0,
+	"display_name":    0,
+	"app_label_key":   0,
+	"is_builtin":      1,
+	"status":          2,
+}
+
+const systemScopeGlobal = 2
+
+// chaosSystemResp keeps the field set the system_test.go fake server emits.
+// Functionally equivalent to apiclient.ChaossystemChaosSystemResp but flat
+// (non-pointer) so tests can construct literals.
+type chaosSystemResp struct {
+	ID             int       `json:"id"`
+	Name           string    `json:"name"`
+	DisplayName    string    `json:"display_name"`
+	NsPattern      string    `json:"ns_pattern"`
+	ExtractPattern string    `json:"extract_pattern"`
+	AppLabelKey    string    `json:"app_label_key"`
+	Count          int       `json:"count"`
+	Description    string    `json:"description"`
+	IsBuiltin      bool      `json:"is_builtin"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// --- system register ---
+
+var (
+	systemRegisterFromSeed string
+	systemRegisterName     string
+	systemRegisterEnv      string
+	systemRegisterForce    bool
+)
+
+var systemRegisterCmd = &cobra.Command{
+	Use:   "register",
+	Short: "Register a benchmark system from a data.yaml seed entry",
+	Long: `Parse the dynamic_configs list in a data.yaml file, validate the 7
+injection.system.<name>.* entries for the requested system, and POST them
+to /api/v2/systems. The backend writes the dynamic_configs rows and the
+matching etcd keys under /rcabench/config/global/ in one call.
+
+--env prod|staging is a convenience resolver: when --from-seed points at a
+directory (or at data/initial_data/), it picks the file under that subdir.
+If --from-seed is a full file path it is used as-is.
+
+If the system is already registered the command fails unless --force is
+set, in which case the prior entry is deleted first and then re-created.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		if strings.TrimSpace(systemRegisterFromSeed) == "" {
+			return usageErrorf("--from-seed is required")
+		}
+		if strings.TrimSpace(systemRegisterName) == "" {
+			return usageErrorf("--name is required")
+		}
+
+		seedPath, err := resolveSeedPath(systemRegisterFromSeed, systemRegisterEnv)
+		if err != nil {
+			return err
+		}
+
+		doc, err := loadSeedDoc(seedPath)
+		if err != nil {
+			return err
+		}
+		seed, err := extractSystemSeed(doc, systemRegisterName)
+		if err != nil {
+			return err
+		}
+		if err := validateSystemSeed(seed); err != nil {
+			return err
+		}
+
+		c := newClient()
+
+		if systemRegisterForce {
+			if existing, lookupErr := findSystemByName(c, seed.Name); lookupErr == nil && existing != nil {
+				if err := deleteSystemByID(c, existing.ID); err != nil {
+					return fmt.Errorf("force re-register: delete existing system %q (id %d) failed: %w", existing.Name, existing.ID, err)
+				}
+				output.PrintInfo(fmt.Sprintf("Deleted pre-existing system %q (id %d) before re-register", existing.Name, existing.ID))
+			}
+		} else {
+			if existing, lookupErr := findSystemByName(c, seed.Name); lookupErr == nil && existing != nil {
+				return conflictErrorf("system %q already registered (id %d); re-run with --force to replace", existing.Name, existing.ID)
+			}
+		}
+
+		cli, ctx := newAPIClient()
+		req := apiclient.ChaossystemCreateChaosSystemReq{
+			Name:           seed.Name,
+			DisplayName:    seed.DisplayName,
+			NsPattern:      seed.NsPattern,
+			ExtractPattern: seed.ExtractPattern,
+			Count:          int32(seed.Count),
+		}
+		if seed.AppLabelKey != "" {
+			req.SetAppLabelKey(seed.AppLabelKey)
+		}
+		if seed.Description != "" {
+			req.SetDescription(seed.Description)
+		}
+		resp, _, err := cli.SystemsAPI.CreateChaosSystem(ctx).ChaossystemCreateChaosSystemReq(req).Execute()
+		if err != nil {
+			return fmt.Errorf("register system %q: %w", seed.Name, err)
+		}
+		data := resp.GetData()
+
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+		output.PrintInfo(fmt.Sprintf("Registered system %q (id %d) with 7 etcd + dynamic_config entries.",
+			data.GetName(), data.GetId()))
+		if !seed.IsBuiltin && data.GetIsBuiltin() {
+			output.PrintInfo("Note: backend stored is_builtin=true; seed requested false. Update via API if needed.")
+		}
+		return nil
+	},
+}
+
+// --- system list ---
+
+var systemListCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List registered benchmark systems",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		cli, ctx := newAPIClient()
+
+		resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(100).Execute()
+		if err != nil {
+			return err
+		}
+		data := resp.GetData()
+
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+
+		items := append([]apiclient.ChaossystemChaosSystemResp(nil), data.GetItems()...)
+		sort.Slice(items, func(i, j int) bool { return items[i].GetName() < items[j].GetName() })
+		rows := make([][]string, 0, len(items))
+		for _, s := range items {
+			rows = append(rows, []string{
+				s.GetName(),
+				s.GetDisplayName(),
+				s.GetNsPattern(),
+				strconv.Itoa(int(s.GetCount())),
+				strconv.FormatBool(s.GetIsBuiltin()),
+			})
+		}
+		output.PrintTable([]string{"Name", "Display", "NsPattern", "Count", "Builtin"}, rows)
+		return nil
+	},
+}
+
+// --- system unregister ---
+
+var (
+	systemUnregisterName string
+	systemUnregisterYes  bool
+)
+
+var systemUnregisterCmd = &cobra.Command{
+	Use:   "unregister",
+	Short: "Remove the 7 etcd keys + dynamic_config rows for a system",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		if strings.TrimSpace(systemUnregisterName) == "" {
+			return usageErrorf("--name is required")
+		}
+		c := newClient()
+
+		existing, err := findSystemByName(c, systemUnregisterName)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return notFoundErrorf("system %q is not registered", systemUnregisterName)
+		}
+
+		if err := confirmDeletion("system", existing.Name, existing.ID, systemUnregisterYes); err != nil {
+			return err
+		}
+		if err := deleteSystemByID(c, existing.ID); err != nil {
+			return err
+		}
+		output.PrintInfo(fmt.Sprintf("Unregistered system %q (id %d)", existing.Name, existing.ID))
+		return nil
+	},
+}
+
+// --- system enable / disable ---
+
+var systemDisableYes bool
+
+type setSystemStatusReq struct {
+	Status int `json:"status"`
+}
+
+// setSystemStatus resolves name -> id and issues PUT /api/v2/systems/{id}.
+// Kept on the legacy *client.Client for system_test.go's fake-server tests.
+func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemResp, error) {
+	existing, err := findSystemByName(c, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		known, lookupErr := listSystemNames(c)
+		if lookupErr != nil || len(known) == 0 {
+			return nil, notFoundErrorf("system %q is not registered", name)
+		}
+		return nil, notFoundErrorf("system %q is not registered; known systems: %s",
+			name, strings.Join(known, ", "))
+	}
+	var resp client.APIResponse[chaosSystemResp]
+	if err := c.Put(consts.APIPathSystem(existing.ID), setSystemStatusReq{Status: status}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Data, nil
+}
+
+func listSystemNames(c *client.Client) ([]string, error) {
+	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(resp.Data.Items))
+	for _, s := range resp.Data.Items {
+		names = append(names, s.Name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+var systemEnableSkipPrereqs bool
+
+var systemEnableCmd = &cobra.Command{
+	Use:   "enable <name>",
+	Short: "Enable a registered benchmark system (status=1)",
+	Long: `Flip injection.system.<name>.status to 1 via PUT /api/v2/systems/{id}.
+Name is resolved to the backend system ID by listing /api/v2/systems.
+Builtin systems cannot be enabled/disabled through this endpoint.
+
+If the system has any system_prerequisites rows (issue #115) whose status is
+not "reconciled", enable refuses with a list of pending prereqs. Use
+aegisctl system reconcile-prereqs --name <name> to install them, or
+--skip-prereqs to bypass the gate.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(args[0])
+		if name == "" {
+			return usageErrorf("system name is required")
+		}
+		c := newClient()
+		if !systemEnableSkipPrereqs {
+			pending, err := listPendingPrereqs(c, name)
+			if err != nil {
+				return fmt.Errorf("check prerequisites for %q: %w", name, err)
+			}
+			if len(pending) > 0 {
+				lines := make([]string, 0, len(pending))
+				for _, p := range pending {
+					lines = append(lines, fmt.Sprintf("  - %s/%s (status=%s)", p.Kind, p.Name, p.Status))
+				}
+				return fmt.Errorf("refusing to enable %q: %d prerequisite(s) not reconciled\n%s\n(run `aegisctl system reconcile-prereqs --name %s` or re-run with --skip-prereqs)",
+					name, len(pending), strings.Join(lines, "\n"), name)
+			}
+		}
+		updated, err := setSystemStatus(c, name, 1)
+		if err != nil {
+			return err
+		}
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(updated)
+			return nil
+		}
+		output.PrintInfo(fmt.Sprintf("Enabled system %q (id %d)", updated.Name, updated.ID))
+		return nil
+	},
+}
+
+var systemDisableCmd = &cobra.Command{
+	Use:   "disable <name>",
+	Short: "Disable a registered benchmark system (status=0)",
+	Long: `Flip injection.system.<name>.status to 0 via PUT /api/v2/systems/{id}.
+Disabled systems stay visible in list responses so they can be re-enabled.
+Builtin systems cannot be enabled/disabled through this endpoint.
+Use --yes to skip the confirmation prompt.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(args[0])
+		if name == "" {
+			return usageErrorf("system name is required")
+		}
+		c := newClient()
+		existing, err := findSystemByName(c, name)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			known, lookupErr := listSystemNames(c)
+			if lookupErr != nil || len(known) == 0 {
+				return notFoundErrorf("system %q is not registered", name)
+			}
+			return notFoundErrorf("system %q is not registered; known systems: %s",
+				name, strings.Join(known, ", "))
+		}
+		if err := confirmDisable(existing.Name, existing.ID, systemDisableYes); err != nil {
+			return err
+		}
+		updated, err := setSystemStatus(c, name, 0)
+		if err != nil {
+			return err
+		}
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(updated)
+			return nil
+		}
+		output.PrintInfo(fmt.Sprintf("Disabled system %q (id %d)", updated.Name, updated.ID))
+		return nil
+	},
+}
+
+func confirmDisable(name string, id int, yes bool) error {
+	if yes {
+		return nil
+	}
+	if flagNonInteractive {
+		return usageErrorf("refusing to disable without --yes in non-interactive mode")
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return usageErrorf("refusing to disable without --yes when stdin is not a TTY")
+	}
+	fmt.Fprintf(os.Stderr, "Disable system %s (id %d)? [y/N] ", name, id)
+	reader := bufio.NewReader(os.Stdin)
+	line, _ := reader.ReadString('\n')
+	line = strings.TrimSpace(strings.ToLower(line))
+	if line != "y" && line != "yes" {
+		return usageErrorf("aborted by user")
+	}
+	return nil
+}
+
+// --- Helpers ---
+
+func resolveSeedPath(raw, env string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	info, err := os.Stat(raw)
+	if err != nil {
+		return "", fmt.Errorf("--from-seed %q: %w", raw, err)
+	}
+	if !info.IsDir() {
+		return raw, nil
+	}
+	if env == "" {
+		return "", usageErrorf("--from-seed points to a directory (%s); --env prod|staging is required to resolve data.yaml", raw)
+	}
+	switch env {
+	case "prod", "staging":
+	default:
+		return "", usageErrorf("--env must be 'prod' or 'staging' (got %q)", env)
+	}
+	candidate := strings.TrimRight(raw, string(os.PathSeparator)) + string(os.PathSeparator) + env + string(os.PathSeparator) + "data.yaml"
+	if _, err := os.Stat(candidate); err == nil {
+		return candidate, nil
+	}
+	direct := strings.TrimRight(raw, string(os.PathSeparator)) + string(os.PathSeparator) + "data.yaml"
+	if _, err := os.Stat(direct); err == nil {
+		return direct, nil
+	}
+	return "", fmt.Errorf("could not locate data.yaml under %s for env=%s", raw, env)
+}
+
+func loadSeedDoc(path string) (*seedDoc, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read seed %q: %w", path, err)
+	}
+	var doc seedDoc
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse seed %q: %w", path, err)
+	}
+	return &doc, nil
+}
+
+func extractSystemSeed(doc *seedDoc, name string) (*systemSeed, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, usageErrorf("--name is required")
+	}
+	prefix := "injection.system." + name + "."
+	seed := &systemSeed{Name: name, Raw: map[string]seedDynamicConfig{}}
+	for _, row := range doc.DynamicConfigs {
+		if !strings.HasPrefix(row.Key, prefix) {
+			continue
+		}
+		field := strings.TrimPrefix(row.Key, prefix)
+		if _, ok := expectedSystemFields[field]; !ok {
+			continue
+		}
+		seed.Raw[field] = row
+	}
+	if len(seed.Raw) == 0 {
+		return nil, notFoundErrorf("no injection.system.%s.* entries found in seed", name)
+	}
+	return seed, nil
+}
+
+func validateSystemSeed(seed *systemSeed) error {
+	var missing []string
+	for field := range expectedSystemFields {
+		if _, ok := seed.Raw[field]; !ok {
+			missing = append(missing, field)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return fmt.Errorf("seed for system %q is missing key(s): injection.system.%s.{%s}",
+			seed.Name, seed.Name, strings.Join(missing, ","))
+	}
+
+	var problems []string
+	for field, expected := range expectedSystemFields {
+		row := seed.Raw[field]
+		if row.ValueType != expected {
+			problems = append(problems, fmt.Sprintf(
+				"injection.system.%s.%s: value_type=%d, expected %d",
+				seed.Name, field, row.ValueType, expected))
+		}
+		if row.Scope != systemScopeGlobal {
+			problems = append(problems, fmt.Sprintf(
+				"injection.system.%s.%s: scope=%d, expected %d (Global)",
+				seed.Name, field, row.Scope, systemScopeGlobal))
+		}
+	}
+	if len(problems) > 0 {
+		sort.Strings(problems)
+		return fmt.Errorf("seed for system %q has invalid row(s):\n  - %s",
+			seed.Name, strings.Join(problems, "\n  - "))
+	}
+
+	count, err := strconv.Atoi(strings.TrimSpace(seed.Raw["count"].DefaultValue))
+	if err != nil {
+		return fmt.Errorf("injection.system.%s.count default_value %q is not an int: %w",
+			seed.Name, seed.Raw["count"].DefaultValue, err)
+	}
+	status, err := strconv.Atoi(strings.TrimSpace(seed.Raw["status"].DefaultValue))
+	if err != nil {
+		return fmt.Errorf("injection.system.%s.status default_value %q is not an int: %w",
+			seed.Name, seed.Raw["status"].DefaultValue, err)
+	}
+	isBuiltin, err := strconv.ParseBool(strings.TrimSpace(seed.Raw["is_builtin"].DefaultValue))
+	if err != nil {
+		return fmt.Errorf("injection.system.%s.is_builtin default_value %q is not a bool: %w",
+			seed.Name, seed.Raw["is_builtin"].DefaultValue, err)
+	}
+
+	seed.Count = count
+	seed.Status = status
+	seed.IsBuiltin = isBuiltin
+	seed.NsPattern = seed.Raw["ns_pattern"].DefaultValue
+	seed.ExtractPattern = seed.Raw["extract_pattern"].DefaultValue
+	seed.DisplayName = seed.Raw["display_name"].DefaultValue
+	seed.AppLabelKey = seed.Raw["app_label_key"].DefaultValue
+	if d := seed.Raw["count"].Description; d != "" {
+		seed.Description = d
+	} else {
+		seed.Description = seed.Raw["display_name"].Description
+	}
+	return nil
+}
+
+// findSystemByName / deleteSystemByID stay on the handwritten *client.Client
+// so system_test.go's fake server can intercept the URL.
+func findSystemByName(c *client.Client, name string) (*chaosSystemResp, error) {
+	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
+		var apiErr *client.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+			return nil, nil
+		}
+		return nil, err
+	}
+	for i := range resp.Data.Items {
+		if resp.Data.Items[i].Name == name {
+			return &resp.Data.Items[i], nil
+		}
+	}
+	return nil, nil
+}
+
+func deleteSystemByID(c *client.Client, id int) error {
+	var resp client.APIResponse[any]
+	return c.Delete(consts.APIPathSystem(id), &resp)
+}
+
+// --- system create (atomic onboard) ---
+
+var (
+	systemCreateName             string
+	systemCreateDisplayName      string
+	systemCreateNsPattern        string
+	systemCreateExtractPattern   string
+	systemCreateAppLabelKey      string
+	systemCreateCount            int
+	systemCreateDescription      string
+	systemCreateIsBuiltin        bool
+	systemCreateContainerName    string
+	systemCreateContainerVersion string
+	systemCreateImageRef         string
+	systemCreateChartName        string
+	systemCreateChartVersion     string
+	systemCreateChartRepoName    string
+	systemCreateChartRepoURL     string
+)
+
+var systemCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Atomically onboard a benchmark system (identity + chart binding)",
+	Long: `Single-call composite of CreateSystem + CreateContainer that the
+chart-managed post-install Job uses to self-register. The backend writes
+the dynamic_config rows, the container/version/helm_config rows, and the
+7 etcd identity keys in one shot — partial failure leaves no orphans.
+
+Required flags: --name, --display-name, --ns-pattern, --extract-pattern,
+--image-ref, --chart-name, --chart-version, --chart-repo-name,
+--chart-repo-url. Use 'aegisctl system register --from-seed' for the
+cold-bootstrap path (data.yaml-driven).`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(systemCreateName)
+		if name == "" {
+			return usageErrorf("--name is required")
+		}
+		if strings.TrimSpace(systemCreateDisplayName) == "" {
+			return usageErrorf("--display-name is required")
+		}
+		if strings.TrimSpace(systemCreateNsPattern) == "" {
+			return usageErrorf("--ns-pattern is required")
+		}
+		if strings.TrimSpace(systemCreateExtractPattern) == "" {
+			return usageErrorf("--extract-pattern is required")
+		}
+		if strings.TrimSpace(systemCreateImageRef) == "" {
+			return usageErrorf("--image-ref is required")
+		}
+		if strings.TrimSpace(systemCreateChartName) == "" {
+			return usageErrorf("--chart-name is required")
+		}
+		if strings.TrimSpace(systemCreateChartVersion) == "" {
+			return usageErrorf("--chart-version is required")
+		}
+		if strings.TrimSpace(systemCreateChartRepoName) == "" {
+			return usageErrorf("--chart-repo-name is required")
+		}
+		if strings.TrimSpace(systemCreateChartRepoURL) == "" {
+			return usageErrorf("--chart-repo-url is required")
+		}
+
+		containerName := strings.TrimSpace(systemCreateContainerName)
+		if containerName == "" {
+			containerName = name
+		}
+
+		cli, ctx := newAPIClient()
+
+		sysPart := apiclient.ChaossystemCreateChaosSystemReq{
+			Name:           name,
+			DisplayName:    systemCreateDisplayName,
+			NsPattern:      systemCreateNsPattern,
+			ExtractPattern: systemCreateExtractPattern,
+			Count:          int32(systemCreateCount),
+		}
+		sysPart.SetAppLabelKey(systemCreateAppLabelKey)
+		if systemCreateDescription != "" {
+			sysPart.SetDescription(systemCreateDescription)
+		}
+		sysPart.SetIsBuiltin(systemCreateIsBuiltin)
+
+		containerPart := apiclient.ContainerCreateContainerReq{
+			Name: containerName,
+		}
+		containerPart.SetType(apiclient.CONSTSCONTAINERTYPE_ContainerTypePedestal)
+		containerPart.SetIsPublic(true)
+
+		versionPart := apiclient.ContainerCreateContainerVersionReq{
+			Name:     systemCreateContainerVersion,
+			ImageRef: systemCreateImageRef,
+		}
+		helmPart := apiclient.ContainerCreateHelmConfigReq{
+			Version:   systemCreateChartVersion,
+			ChartName: systemCreateChartName,
+			RepoName:  systemCreateChartRepoName,
+			RepoUrl:   systemCreateChartRepoURL,
+		}
+		versionPart.SetHelmConfig(helmPart)
+		containerPart.SetVersion(versionPart)
+
+		req := apiclient.ChaossystemOnboardSystemReq{
+			System:    sysPart,
+			Container: containerPart,
+		}
+		resp, _, err := cli.SystemsAPI.OnboardChaosSystem(ctx).ChaossystemOnboardSystemReq(req).Execute()
+		if err != nil {
+			return fmt.Errorf("onboard system %q: %w", name, err)
+		}
+		data := resp.GetData()
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+		sys := data.GetSystem()
+		cnt := data.GetContainer()
+		output.PrintInfo(fmt.Sprintf("Onboarded system %q (id %d) + container %q (id %d) atomically.",
+			sys.GetName(), sys.GetId(), cnt.GetName(), cnt.GetId()))
+		return nil
+	},
+}
+
+// --- system export-seed ---
+
+var systemExportSeedName string
+
+var systemExportSeedCmd = &cobra.Command{
+	Use:   "export-seed",
+	Short: "Dump a system's live DB+etcd state as a data.yaml-compatible YAML snippet",
+	Long: `Serialize the live state of one chaos system back into a YAML snippet
+that round-trips through 'aegisctl system register --from-seed'. Output
+goes to stdout for shell composition:
+
+  aegisctl system export-seed --name mysys >> data/initial_data/prod/data.yaml
+  git add data/initial_data/prod/data.yaml && git commit -m "seed: snapshot mysys"
+
+NOTE: runtime-added systems are lost on a fresh cluster rebuild unless
+their seed is committed back. Either run this command after each
+'aegisctl system create', or enforce chart-managed sourcing (the helm
+post-install Job re-registers on every install).`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(systemExportSeedName)
+		if name == "" {
+			return usageErrorf("--name is required")
+		}
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.SystemsAPI.ExportChaosSystemSeed(ctx, name).Execute()
+		if err != nil {
+			return fmt.Errorf("export-seed %q: %w", name, err)
+		}
+		data := resp.GetData()
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+		fmt.Print(data.GetYaml())
+		return nil
+	},
+}
+
+// --- init ---
+
+func init() {
+	systemRegisterCmd.Flags().StringVar(&systemRegisterFromSeed, "from-seed", "", "Path to data.yaml (file, env dir, or initial_data/ root) (required)")
+	systemRegisterCmd.Flags().StringVar(&systemRegisterName, "name", "", "Short code of the system to register, e.g. ts, otel-demo, hs (required)")
+	systemRegisterCmd.Flags().StringVar(&systemRegisterEnv, "env", "", "When --from-seed is a directory: 'prod' or 'staging'")
+	systemRegisterCmd.Flags().BoolVar(&systemRegisterForce, "force", false, "Replace an existing registration instead of erroring")
+
+	systemUnregisterCmd.Flags().StringVar(&systemUnregisterName, "name", "", "Short code of the system to remove (required)")
+	systemUnregisterCmd.Flags().BoolVar(&systemUnregisterYes, "yes", false, "Skip confirmation prompt")
+	systemUnregisterCmd.Flags().BoolVar(&systemUnregisterYes, "force", false, "Alias for --yes")
+
+	systemDisableCmd.Flags().BoolVar(&systemDisableYes, "yes", false, "Skip confirmation prompt")
+	systemDisableCmd.Flags().BoolVar(&systemDisableYes, "force", false, "Alias for --yes")
+
+	systemCmd.AddCommand(systemRegisterCmd)
+	systemCmd.AddCommand(systemListCmd)
+	systemCmd.AddCommand(systemUnregisterCmd)
+	systemCmd.AddCommand(systemEnableCmd)
+	systemCmd.AddCommand(systemDisableCmd)
+
+	systemCreateCmd.Flags().StringVar(&systemCreateName, "name", "", "System short code (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateDisplayName, "display-name", "", "Human-readable display name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateNsPattern, "ns-pattern", "", "Namespace regex pattern (required, e.g. ^mysys\\d+$)")
+	systemCreateCmd.Flags().StringVar(&systemCreateExtractPattern, "extract-pattern", "", "Extraction regex (required, e.g. ^(mysys)(\\d+)$)")
+	systemCreateCmd.Flags().StringVar(&systemCreateAppLabelKey, "app-label-key", "app", "Kubernetes pod label key used to select workloads (matches server default; existing benchmark seeds use \"app\")")
+	systemCreateCmd.Flags().IntVar(&systemCreateCount, "count", 1, "Initial pool count")
+	systemCreateCmd.Flags().StringVar(&systemCreateDescription, "description", "", "Description")
+	systemCreateCmd.Flags().BoolVar(&systemCreateIsBuiltin, "is-builtin", false, "Mark as builtin benchmark system")
+	systemCreateCmd.Flags().StringVar(&systemCreateContainerName, "container-name", "", "Container row name (defaults to --name)")
+	systemCreateCmd.Flags().StringVar(&systemCreateContainerVersion, "container-version", "0.1.0", "Container version (semver)")
+	systemCreateCmd.Flags().StringVar(&systemCreateImageRef, "image-ref", "", "Container image reference (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartName, "chart-name", "", "Helm chart name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartVersion, "chart-version", "", "Helm chart version (required, semver)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartRepoName, "chart-repo-name", "", "Helm chart repo short name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartRepoURL, "chart-repo-url", "", "Helm chart repo URL (required, e.g. https://my-charts.example.com)")
+	systemCmd.AddCommand(systemCreateCmd)
+
+	systemExportSeedCmd.Flags().StringVar(&systemExportSeedName, "name", "", "Short code of the system to export (required)")
+	systemCmd.AddCommand(systemExportSeedCmd)
+
+	systemReseedCmd.Flags().StringVar(&systemReseedName, "name", "", "Short code of a single system to reseed (empty = all systems)")
+	systemReseedCmd.Flags().StringVar(&systemReseedEnv, "env", "", "Environment: 'prod' or 'staging' (server resolves relative to initialization.data_path)")
+	systemReseedCmd.Flags().StringVar(&systemReseedDataPath, "data-path", "", "Override server-side initialization.data_path (advanced)")
+	systemReseedCmd.Flags().BoolVar(&systemReseedApply, "apply", false, "Actually write changes (default is dry-run for safety)")
+	systemReseedCmd.Flags().BoolVar(&systemReseedResetOverrides, "reset-overrides", false, "Replace live etcd values that differ from the new default")
+	systemCmd.AddCommand(systemReseedCmd)
+}
+
+// --- system reseed ---------------------------------------------------------
+
+var (
+	systemReseedName           string
+	systemReseedEnv            string
+	systemReseedDataPath       string
+	systemReseedApply          bool
+	systemReseedResetOverrides bool
+)
+
+// reseedActionResp / reseedReportResp mirror initialization.ReseedAction /
+// ReseedReport. The generated client returns the response payload as `Any`
+// (`map[string]interface{}`), so we still decode it manually here.
+type reseedActionResp struct {
+	Layer    string `json:"layer"`
+	System   string `json:"system"`
+	Key      string `json:"key"`
+	OldValue string `json:"old_value"`
+	NewValue string `json:"new_value"`
+	Note     string `json:"note"`
+	Applied  bool   `json:"applied"`
+}
+
+type reseedReportResp struct {
+	Env             string             `json:"env"`
+	DryRun          bool               `json:"dry_run"`
+	ResetOverrides  bool               `json:"reset_overrides"`
+	SystemFilter    string             `json:"system_filter"`
+	SeedPath        string             `json:"seed_path"`
+	Actions         []reseedActionResp `json:"actions"`
+	PreservedCount  int                `json:"preserved_overrides"`
+	NewVersions     int                `json:"new_versions"`
+	DefaultsUpdated int                `json:"defaults_updated"`
+	EtcdPublished   int                `json:"etcd_published"`
+}
+
+var systemReseedCmd = &cobra.Command{
+	Use:   "reseed",
+	Short: "Propagate data.yaml bumps (chart / version / defaults) to DB + etcd",
+	Long: `Diff the server-side data.yaml against the live DB + etcd and apply drift.
+Defaults to DRY-RUN for safety — pass --apply to actually write.
+
+What is written:
+  - container_versions: a new version INSERTs a new row (history preserved;
+    existing versions are never mutated).
+  - helm_configs: a new version gets its helm_config. Chart drift on an
+    already-seeded version is reported but NOT applied — bump the version
+    name in data.yaml to honor the history contract.
+  - dynamic_configs: default_value drift is UPDATEd in DB.
+  - etcd: if the live etcd value equals the old default (i.e. no operator
+    override), follow it forward. A live value that differs from both the
+    old and new default is treated as a user override and preserved unless
+    --reset-overrides is passed.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		cli, ctx := newAPIClient()
+		body := apiclient.ChaossystemReseedSystemReq{}
+		if v := strings.TrimSpace(systemReseedName); v != "" {
+			body.SetName(v)
+		}
+		if v := strings.TrimSpace(systemReseedEnv); v != "" {
+			body.SetEnv(v)
+		}
+		if v := strings.TrimSpace(systemReseedDataPath); v != "" {
+			body.SetDataPath(v)
+		}
+		body.SetApply(systemReseedApply)
+		body.SetResetOverrides(systemReseedResetOverrides)
+
+		resp, _, err := cli.SystemsAPI.ReseedChaosSystems(ctx).ChaossystemReseedSystemReq(body).Execute()
+		if err != nil {
+			return fmt.Errorf("reseed: %w (hint: retry with --apply=false to diff without writing; check backend logs for which subsystem failed)", err)
+		}
+		// Generated wrapper exposes data as `interface{}`; round-trip through
+		// JSON to recover the typed report shape.
+		raw, err := json.Marshal(resp.GetData())
+		if err != nil {
+			return fmt.Errorf("encode reseed response: %w", err)
+		}
+		var report reseedReportResp
+		if err := json.Unmarshal(raw, &report); err != nil {
+			return fmt.Errorf("decode reseed response: %w", err)
+		}
+
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(report)
+			return nil
+		}
+		printReseedReport(&report)
+		return nil
+	},
+}
+
+func printReseedReport(r *reseedReportResp) {
+	mode := "APPLY"
+	if r.DryRun {
+		mode = "DRY-RUN"
+	}
+	output.PrintInfo(fmt.Sprintf("reseed %s (seed=%s%s)", mode, r.SeedPath, func() string {
+		if r.SystemFilter != "" {
+			return " filter=" + r.SystemFilter
+		}
+		return ""
+	}()))
+
+	if len(r.Actions) == 0 {
+		output.PrintInfo("No drift — DB + etcd already in sync with data.yaml.")
+		return
+	}
+
+	actions := append([]reseedActionResp(nil), r.Actions...)
+	sort.SliceStable(actions, func(i, j int) bool {
+		if actions[i].Layer != actions[j].Layer {
+			return actions[i].Layer < actions[j].Layer
+		}
+		if actions[i].System != actions[j].System {
+			return actions[i].System < actions[j].System
+		}
+		return actions[i].Key < actions[j].Key
+	})
+
+	rows := make([][]string, 0, len(actions))
+	for _, a := range actions {
+		status := "plan"
+		if a.Applied {
+			status = "applied"
+		} else if r.DryRun {
+			status = "would-apply"
+		} else if a.Note != "" && strings.Contains(a.Note, "preserved") {
+			status = "preserved"
+		} else if a.Note != "" && strings.Contains(a.Note, "bump container_version") {
+			status = "skipped"
+		}
+		rows = append(rows, []string{
+			a.Layer,
+			a.System,
+			truncCell(a.Key, 48),
+			truncCell(a.OldValue, 28),
+			truncCell(a.NewValue, 28),
+			status,
+			truncCell(a.Note, 48),
+		})
+	}
+	output.PrintTable([]string{"Layer", "System", "Key", "Old", "New", "Status", "Note"}, rows)
+	output.PrintInfo(fmt.Sprintf("Summary: new_versions=%d defaults_updated=%d etcd_published=%d preserved_overrides=%d",
+		r.NewVersions, r.DefaultsUpdated, r.EtcdPublished, r.PreservedCount))
+	if r.DryRun && r.PreservedCount == 0 && len(actions) > 0 {
+		output.PrintInfo("Re-run with --apply to write the planned changes.")
+	}
+	if r.PreservedCount > 0 && !r.ResetOverrides {
+		output.PrintInfo(fmt.Sprintf("%d etcd override(s) preserved; re-run with --reset-overrides to replace.", r.PreservedCount))
+	}
+}
+
+func truncCell(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-1] + "…"
+}
+

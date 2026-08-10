@@ -1,0 +1,11 @@
+suite: Test ClickHouse Cluster Service Configuration
+templates:
+  - clickhouse/cluster.yaml
+
+tests:
+  - it: should render ClickHouseCluster CR with default settings
+    asserts:
+      - isKind:
+          of: ClickHouseCluster
+      - isNotNull:
+          path: spec.settings.extraConfig

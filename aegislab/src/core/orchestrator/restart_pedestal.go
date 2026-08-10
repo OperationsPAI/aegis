@@ -1,0 +1,996 @@
+package consumer
+
+import (
+	"aegis/core/orchestrator/common"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	helm "aegis/platform/helm"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
+	"aegis/platform/tracing"
+	"aegis/platform/utils"
+	"context"
+	"errors"
+	"fmt"
+	"math"
+	"math/rand"
+	"regexp"
+	"strings"
+	"time"
+
+	"aegis/platform/model"
+
+	chaos "aegis/platform/chaos"
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/trace"
+	"gorm.io/gorm"
+)
+
+// defaultHelmRepoURL resolves a repository URL for the given repo_name from
+// etcd-backed dynamic config (`helm.repo.<name>.url`). Used when
+// helm_configs.repo_url is empty — lets RestartPedestal self-install the chart
+// without requiring the operator to pre-stage a local tgz.
+//
+// Returns an empty string when no override is configured; caller then falls
+// back to the local tgz (if any) or fails with a clear error.
+func defaultHelmRepoURL(name string) string {
+	if name == "" {
+		return ""
+	}
+	return config.GetString(fmt.Sprintf("helm.repo.%s.url", name))
+}
+
+// helmInstallTimeouts resolves the (overall, k8s-wait) timeouts used when
+// helm-installing a pedestal chart. Defaults are 1800s overall / 600s wait,
+// overridable via dynamic config keys so ops can retune without a rebuild:
+//
+//	helm.restart_pedestal.timeout_seconds       (overall install timeout)
+//	helm.restart_pedestal.wait_timeout_seconds  (k8s readiness wait timeout)
+//
+// Non-positive values fall back to the defaults.
+func helmInstallTimeouts() (time.Duration, time.Duration) {
+	overall := 1800 * time.Second
+	wait := 600 * time.Second
+	if v := config.GetInt("helm.restart_pedestal.timeout_seconds"); v > 0 {
+		overall = time.Duration(v) * time.Second
+	}
+	if v := config.GetInt("helm.restart_pedestal.wait_timeout_seconds"); v > 0 {
+		wait = time.Duration(v) * time.Second
+	}
+	return overall, wait
+}
+
+// restartWorkloadReadyTimeout is the legacy fallback timeout for the
+// pod-level wait (see waitForPedestalWorkloadReady). Preserved so existing
+// `restart_pedestal.workload_ready_timeout_seconds` overrides keep working
+// in the rare case where the per-system readiness probe is bypassed.
+func restartWorkloadReadyTimeout() time.Duration {
+	timeout := 600 * time.Second
+	if v := config.GetInt("restart_pedestal.workload_ready_timeout_seconds"); v > 0 {
+		timeout = time.Duration(v) * time.Second
+	}
+	return timeout
+}
+
+// restartPostReadySoakDuration is the warmup window between workload-Ready
+// and the start of the normal-data window. The per-system override
+// (`injection.system.<sys>.warmup_seconds`, exposed as cfg.Warmup()) wins when
+// set; otherwise it falls back to the global `orchestrator.pedestal.warmup_seconds`
+// and finally to consts.DefaultFixedPedestalWarmupSeconds. This duration is
+// the floor — even when the traffic-presence gate confirms spans earlier, the
+// inject time is never pulled in before readyAt + this soak.
+func restartPostReadySoakDuration(cfg config.ChaosSystemConfig) time.Duration {
+	if d := cfg.Warmup(); d > 0 {
+		return d
+	}
+	secs := config.GetInt("orchestrator.pedestal.warmup_seconds")
+	if secs <= 0 {
+		secs = consts.DefaultFixedPedestalWarmupSeconds
+	}
+	return time.Duration(secs) * time.Second
+}
+
+// trafficGateParams resolves the traffic-presence gate knobs from dynamic
+// config, falling back to the consts defaults. Read on each call so a runtime
+// etcd push applies without a rebuild (same pattern as the freshness probe).
+func trafficGateParams() (minSpans uint64, poll, timeout time.Duration) {
+	min := config.GetInt(consts.PedestalTrafficGateMinSpansKey)
+	if min <= 0 {
+		min = consts.DefaultPedestalTrafficGateMinSpans
+	}
+	p := config.GetInt(consts.PedestalTrafficGatePollKey)
+	if p <= 0 {
+		p = consts.DefaultPedestalTrafficGatePollSeconds
+	}
+	t := config.GetInt(consts.PedestalTrafficGateTimeoutKey)
+	if t <= 0 {
+		t = consts.DefaultPedestalTrafficGateTimeoutSeconds
+	}
+	return uint64(min), time.Duration(p) * time.Second, time.Duration(t) * time.Second
+}
+
+// waitForTrafficPresence polls ClickHouse for spans emitted by the target
+// namespace and returns once at least minSpans have arrived in the trailing
+// poll window. Returns true when traffic was confirmed; false (without error)
+// when the bounded timeout was exhausted or the probe is unavailable — the
+// caller then degrades to the fixed warmup timer rather than hard-failing.
+//
+// This is the correctness fix for cold-start DSB bootstraps (sn/media/hs):
+// pods go Ready in seconds but the chart's data-init-job + load-generator take
+// minutes to emit the first spans, so injecting at the fixed 1-min warmup
+// produced an empty abnormal window and a no-spans BuildDatapack.
+func waitForTrafficPresence(ctx context.Context, probe trafficProbe, namespace string, logEntry *logrus.Entry) bool {
+	if probe == nil {
+		logEntry.Warn("traffic-presence gate skipped: no ClickHouse probe wired; falling back to fixed warmup timer")
+		return false
+	}
+
+	minSpans, poll, timeout := trafficGateParams()
+	deadline := time.Now().Add(timeout)
+	attempt := 0
+	for {
+		attempt++
+		n, err := probe.RecentSpanCount(ctx, namespace, poll)
+		if err != nil {
+			// CH unreachable / misconfigured: don't block the restart on a
+			// probe we can't run. Degrade to the warmup timer (the per-system
+			// floor still applies). Logged at WARN so ops can see the gate was
+			// bypassed.
+			logEntry.WithError(err).WithField("namespace", namespace).
+				Warn("traffic-presence gate: ClickHouse probe failed; falling back to fixed warmup timer")
+			return false
+		}
+		logEntry.WithFields(logrus.Fields{
+			"attempt":    attempt,
+			"namespace":  namespace,
+			"span_count": n,
+			"min_spans":  minSpans,
+		}).Info("traffic-presence gate probe")
+		if n >= minSpans {
+			return true
+		}
+		if time.Now().After(deadline) {
+			logEntry.WithFields(logrus.Fields{
+				"namespace":  namespace,
+				"waited":     timeout.String(),
+				"span_count": n,
+				"min_spans":  minSpans,
+			}).Warn("traffic-presence gate timed out; falling back to fixed warmup timer")
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			logEntry.WithField("namespace", namespace).Warn("traffic-presence gate cancelled; falling back to fixed warmup timer")
+			return false
+		case <-time.After(poll):
+		}
+	}
+}
+
+// pedestalRestartTimeout returns the workload-readiness timeout for a
+// pedestal restart. Config key
+// `orchestrator.pedestal.restart_timeout_seconds` (falls back to
+// consts.DefaultFixedPedestalRestartTimeoutSeconds).
+func pedestalRestartTimeout() time.Duration {
+	secs := config.GetInt("orchestrator.pedestal.restart_timeout_seconds")
+	if secs <= 0 {
+		secs = consts.DefaultFixedPedestalRestartTimeoutSeconds
+	}
+	return time.Duration(secs) * time.Second
+}
+
+func extractPreDuration(injectPayload map[string]any) time.Duration {
+	if injectPayload == nil {
+		return 0
+	}
+	raw, ok := injectPayload[consts.InjectPreDuration]
+	if !ok || raw == nil {
+		return 0
+	}
+
+	switch v := raw.(type) {
+	case float64:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case float32:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case int:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case int64:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	}
+	return 0
+}
+
+// waitForPedestalWorkloadReady gates RestartPedestal on the helm-installed
+// chart actually being Ready cluster-side. Two-phase:
+//
+//  1. Workload-level probe (Deployments/StatefulSets/DaemonSets/Jobs) with
+//     the per-system `readiness_timeout_seconds` from chaos-system config —
+//     defaults to 15 min, DSB systems (TT, hs, sn, mm) typically bump to
+//     20–25 min. This is the long-running phase that previously was
+//     compressed into the helm `Wait=true` 5-min timeout and reliably
+//     failed restart.pedestal on cold clusters.
+//
+//  2. Pod-level Ready check with the legacy
+//     `restart_pedestal.workload_ready_timeout_seconds` knob (default 10
+//     min). Defense-in-depth: catches edge cases where a controller reports
+//     `availableReplicas == replicas` momentarily but a pod flaps right
+//     after.
+//
+// Followed by the post-ready soak, used to ensure the inject window doesn't
+// fire mid-warmup.
+func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, probe trafficProbe, cfg config.ChaosSystemConfig, namespace string, readinessTimeout time.Duration, logEntry *logrus.Entry) (time.Time, error) {
+	if logEntry == nil {
+		logEntry = logrus.NewEntry(logrus.StandardLogger())
+	}
+	if gateway == nil {
+		logrus.Warnf("k8s gateway is nil; skipping workload-ready wait for namespace %q", namespace)
+		return time.Now(), nil
+	}
+
+	if readinessTimeout <= 0 {
+		readinessTimeout = pedestalRestartTimeout()
+	}
+	if err := gateway.WaitNamespaceReady(ctx, namespace, readinessTimeout); err != nil {
+		return time.Time{}, err
+	}
+
+	timeout := restartWorkloadReadyTimeout()
+	if err := gateway.WaitForNamespacePodsReady(ctx, namespace, timeout); err != nil {
+		return time.Time{}, err
+	}
+
+	readyAt := time.Now()
+	soak := restartPostReadySoakDuration(cfg)
+
+	// Traffic-presence gate: prefer confirmed span flow over a blind timer.
+	// When the gate confirms traffic, the warmup floor (soak, measured from
+	// pod-Ready) still applies so we never inject before the per-system
+	// warmup_seconds elapses. When the gate times out or CH is unavailable we
+	// degrade silently to the fixed soak — the gate is a correctness
+	// optimization, not a new failure mode.
+	trafficConfirmed := waitForTrafficPresence(ctx, probe, namespace, logEntry)
+
+	floorReachedAt := readyAt.Add(soak)
+	if trafficConfirmed {
+		// Spans are flowing. Respect the warmup floor but don't soak further.
+		if remaining := time.Until(floorReachedAt); remaining > 0 {
+			if err := sleepCtx(ctx, remaining); err != nil {
+				return time.Time{}, err
+			}
+		}
+		return time.Now(), nil
+	}
+
+	if soak <= 0 {
+		return time.Now(), nil
+	}
+
+	var warmedAt time.Time
+	err := tracing.WithSpanNamed(ctx, "helm.post_ready_soak", func(c context.Context) error {
+		if remaining := time.Until(floorReachedAt); remaining > 0 {
+			if serr := sleepCtx(c, remaining); serr != nil {
+				return serr
+			}
+		}
+		warmedAt = time.Now()
+		return nil
+	})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return warmedAt, nil
+}
+
+// sleepCtx blocks for d, returning early with the context error if ctx is
+// cancelled first.
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt time.Time, injectPayload map[string]any) time.Time {
+	minInjectTime := warmupReadyAt.Add(extractPreDuration(injectPayload))
+	if injectTime.Before(minInjectTime) {
+		return minInjectTime
+	}
+	return injectTime
+}
+
+type restartPayload struct {
+	pedestal      dto.ContainerVersionItem
+	interval      int
+	faultDuration int
+	injectPayload map[string]any
+	skipInstall   bool
+	// requiredNamespace, when non-empty, pins this RestartPedestal task to a
+	// specific namespace instead of picking one from the NsPattern pool.
+	// Populated by SubmitFaultInjection whenever a guided config names a
+	// namespace — see #156 for the silent-fallback bug this fixes.
+	requiredNamespace string
+}
+
+// tokenIssuer is the minimum surface of TokenBucketRateLimiter that
+// executeRestartPedestal touches. Pulled out as an interface so the
+// two-stage rate-limit flow (restart token -> warming token) can be unit
+// tested with a fake.
+type tokenIssuer interface {
+	AcquireToken(ctx context.Context, taskID, traceID string) (bool, error)
+	WaitForToken(ctx context.Context, taskID, traceID string) (bool, error)
+	ReleaseToken(ctx context.Context, taskID, traceID string) error
+}
+
+// acquiredTokens tracks which of the two rate-limit tokens (restart-pedestal
+// and namespace-warming) are currently held by this task. The deferred
+// release path uses it to release exactly the tokens that were actually
+// acquired — never double-releasing, never leaking. See PR #205 reviewer
+// feedback: the previous single-bool design conflated the two pools and
+// gated the entire campaign on the small (max=5) restart bound.
+type acquiredTokens struct {
+	restart bool
+	warming bool
+}
+
+// release frees whichever of the two tokens are still held. Errors are
+// logged at error level but do not propagate — the caller has already
+// returned its primary error / success status.
+func (a *acquiredTokens) release(ctx context.Context, restart, warming tokenIssuer, taskID, traceID string, logEntry *logrus.Entry) {
+	if a.restart && restart != nil {
+		if err := restart.ReleaseToken(ctx, taskID, traceID); err != nil {
+			logEntry.Errorf("failed to release restart pedestal token: %v", err)
+		}
+		a.restart = false
+	}
+	if a.warming && warming != nil {
+		if err := warming.ReleaseToken(ctx, taskID, traceID); err != nil {
+			logEntry.Errorf("failed to release namespace warming token: %v", err)
+		}
+		a.warming = false
+	}
+}
+
+// executeRestartPedestal handles the execution of a restart pedestal task
+func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
+	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
+		span := trace.SpanFromContext(childCtx)
+		span.AddEvent(fmt.Sprintf("Starting restarting pedestal attempt %d", task.ReStartNum+1))
+		logEntry := logrus.WithFields(logrus.Fields{
+			"task_id":  task.TaskID,
+			"trace_id": task.TraceID,
+		})
+		helmGateway := deps.HelmGateway
+		if helmGateway == nil {
+			return handleExecutionError(span, logEntry, "helm gateway not initialized", fmt.Errorf("helm gateway not initialized"))
+		}
+		redisGateway := deps.RedisGateway
+		if redisGateway == nil {
+			return handleExecutionError(span, logEntry, "redis gateway not initialized", fmt.Errorf("redis gateway not initialized"))
+		}
+
+		warmingLimiter := deps.NsWarmingRateLimiter
+		if warmingLimiter == nil {
+			return handleExecutionError(span, logEntry, "namespace warming rate limiter not initialized", errors.New("namespace warming rate limiter not initialized"))
+		}
+
+		// Parse the payload BEFORE acquiring the restart token: the restart
+		// token bucket is per-system (one slow system, e.g. ts, must not
+		// starve restart slots for the rest), and the system is only known
+		// from the pedestal payload. The parse has no dependency on a token,
+		// so doing it first is free.
+		payload, err := parseRestartPayload(task.Payload)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to parse restart payload", err)
+		}
+
+		system := chaos.SystemType(payload.pedestal.ContainerName)
+		if !system.IsValid() {
+			return handleExecutionError(span, logEntry, fmt.Sprintf("invalid pedestal system type: %s", payload.pedestal.Name), fmt.Errorf("invalid pedestal system type: %s", payload.pedestal.Name))
+		}
+
+		restartLimiter := resolveRestartLimiter(deps, system.String())
+		if restartLimiter == nil {
+			return handleExecutionError(span, logEntry, "restart pedestal rate limiter not initialized", errors.New("restart pedestal rate limiter not initialized"))
+		}
+
+		// tokens tracks which of the two rate-limit tokens (restart-pedestal,
+		// namespace-warming) are currently held by this task. The deferred
+		// block at the bottom of this function uses tokens.release to free
+		// exactly the tokens that were acquired — never double-releasing,
+		// never leaking. See PR #205 reviewer feedback.
+		var tokens acquiredTokens
+
+		acquired, err := restartLimiter.AcquireToken(childCtx, task.TaskID, task.TraceID)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to acquire rate limit token", err)
+		}
+
+		if !acquired {
+			span.AddEvent("no token available, waiting")
+			logEntry.Warn("No restart pedestal token available, waiting...")
+
+			err = tracing.WithSpanNamed(childCtx, "ratelimit.wait/restart", func(c context.Context) error {
+				var werr error
+				acquired, werr = restartLimiter.WaitForToken(c, task.TaskID, task.TraceID)
+				return werr
+			})
+			if err != nil {
+				return handleExecutionError(span, logEntry, "failed to wait for token", err)
+			}
+
+			if !acquired {
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, "rate limited, retrying later"); err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+		tokens.restart = true
+
+		cfg, exists := config.GetChaosSystemConfigManager().Get(system)
+		if !exists {
+			return handleExecutionError(span, logEntry, fmt.Sprintf("no configuration found for system type: %s", system), fmt.Errorf("no configuration found for system type: %s", system))
+		}
+
+		monitor := deps.Monitor
+		if monitor == nil {
+			return handleExecutionError(span, logEntry, "monitor not initialized", errors.New("monitor not initialized"))
+		}
+
+		toReleased := false
+
+		var namespace string
+		defer func() {
+			tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
+			if toReleased && namespace != "" {
+				if err := monitor.ReleaseLock(childCtx, namespace, task.TraceID); err != nil {
+					if err := handleExecutionError(span, logEntry, fmt.Sprintf("failed to release lock for namespace %s", namespace), err); err != nil {
+						logEntry.Error(err)
+						return
+					}
+				}
+			}
+		}()
+
+		t := time.Now()
+		deltaTime := time.Duration(payload.interval) * consts.DefaultTimeUnit
+		lockEndTime := t.Add(deltaTime)
+
+		// #156: honor the guided-submitted namespace as a hard constraint.
+		// Without this branch, GetNamespaceToRestart would iterate every
+		// enabled ns matching cfg.NsPattern and silently downgrade a
+		// `sockshop14` request to `sockshop0`. If the required ns is not
+		// (yet) registered in the chaos-system config, AcquireLock will
+		// return a clear "not found in current configuration" error — the
+		// user's next step is to bump that system's Count and retry, not
+		// have the submit quietly reroute.
+		if payload.requiredNamespace != "" {
+			rx, patternErr := regexp.Compile(cfg.NsPattern)
+			if patternErr != nil {
+				toReleased = false
+				return handleExecutionError(span, logEntry,
+					fmt.Sprintf("invalid NsPattern %q for system %s", cfg.NsPattern, system),
+					patternErr)
+			}
+			if !rx.MatchString(payload.requiredNamespace) {
+				toReleased = false
+				return handleExecutionError(span, logEntry,
+					fmt.Sprintf("required namespace %q does not match system %s NsPattern %q",
+						payload.requiredNamespace, system, cfg.NsPattern),
+					fmt.Errorf("namespace/system mismatch"))
+			}
+
+			var lockErr error
+			_ = tracing.WithSpanNamed(childCtx, "monitor.acquire_namespace", func(_ context.Context) error {
+				lockErr = monitor.AcquireNamespaceForRestart(payload.requiredNamespace, lockEndTime, task.TraceID)
+				return nil
+			})
+			if lockErr != nil {
+				// Release the restart token immediately so we don't pin a
+				// scarce slot waiting for reschedule. tokens.release is a
+				// no-op for any token that was already released.
+				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
+				reason := fmt.Sprintf("failed to acquire lock for required namespace %s: %v, retrying", payload.requiredNamespace, lockErr)
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, reason); err != nil {
+					return err
+				}
+				return nil
+			}
+			namespace = payload.requiredNamespace
+		} else {
+			_ = tracing.WithSpanNamed(childCtx, "monitor.acquire_namespace", func(_ context.Context) error {
+				namespace = monitor.GetNamespaceToRestart(lockEndTime, cfg.NsPattern, task.TraceID)
+				return nil
+			})
+			if namespace == "" {
+				// Failed to acquire namespace lock, immediately release rate
+				// limit token so a stuck reschedule loop doesn't pin slots.
+				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, deps.Monitor, task, "failed to acquire lock for namespace, retrying"); err != nil {
+					return err
+				}
+
+				return nil
+			}
+		}
+
+		deltaTime = time.Duration(payload.interval-payload.faultDuration) * consts.DefaultTimeUnit
+		injectTime := t.Add(deltaTime)
+
+		index, err := cfg.ExtractNsNumber(namespace)
+		if err != nil {
+			toReleased = true
+			return handleExecutionError(span, logEntry, "failed to read namespace index", err)
+		}
+
+		updateTaskState(childCtx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				consts.TaskTypeRestartPedestal,
+				consts.TaskRunning,
+				fmt.Sprintf("Restarting pedestal in namespace %s", namespace),
+			).withSimpleEvent(consts.EventRestartPedestalStarted).withDB(deps.DB).withRedis(redisGateway),
+		)
+
+		if payload.pedestal.Extra == nil {
+			toReleased = true
+			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+				TaskID:    task.TaskID,
+				TaskType:  consts.TaskTypeRestartPedestal,
+				EventName: consts.EventRestartPedestalFailed,
+				Payload:   "missing extra info in pedestal item",
+			})
+
+			return handleExecutionError(span, logEntry, "missing extra info in pedestal item", fmt.Errorf("missing extra info in pedestal item"))
+		}
+
+		// Best-effort: reap any zombie chaos-mesh.org CRs left behind in this
+		// namespace by an earlier round (e.g. an HTTPChaos whose finalizer
+		// can't complete because PodHttpChaos was never created — common when
+		// the targeted pod was helm-uninstalled before duration expired).
+		// Stripping finalizers + force-delete here gives the next round a
+		// clean slate. Any failure is logged and ignored — chaos-CR cleanup
+		// MUST NOT block the helm restart.
+		_ = tracing.WithSpanNamed(childCtx, "chaos.reap_namespace", func(c context.Context) error {
+			reapNamespaceChaosResources(c, deps.K8sGateway, namespace, logEntry)
+			return nil
+		})
+
+		// Skip the helm install when the caller has pre-installed the chart
+		// out-of-band (e.g. `aegisctl pedestal chart install` +
+		// wait-for-ready) and the release is already deployed. Namespace
+		// lock, index extraction, and the FaultInjection handoff below still
+		// run unchanged. Falls through to a real install if the release is
+		// missing, in a non-deployed state, or the status check errors out.
+		//
+		// The skip decision must reflect the cluster RIGHT NOW, not a cached
+		// "already deployed" assumption: the idle-namespace reclaimer can
+		// drop the helm release + namespace between rounds for systems with
+		// no organic traffic (DSB sn/media). A deployed-status release with
+		// zero workloads (e.g. release secret lingered but pods are gone)
+		// would otherwise skip install and hand off to an empty namespace,
+		// surfacing as fault.injection.failed when the dispatcher finds no
+		// pods. Require both a deployed release AND live workloads before
+		// skipping.
+		skippedInstall := false
+		if payload.skipInstall {
+			deployed, checkErr := helmGateway.IsReleaseDeployed(namespace, namespace)
+			switch {
+			case checkErr != nil:
+				logEntry.Warnf("skip_install requested but status check failed (%v); falling back to install", checkErr)
+			case !deployed:
+				logEntry.Infof("skip_install requested but release %s/%s not deployed; installing", namespace, namespace)
+			default:
+				hasWorkload, wlErr := deps.K8sGateway.NamespaceHasWorkload(childCtx, namespace)
+				switch {
+				case wlErr != nil:
+					logEntry.Warnf("skip_install requested but workload check failed (%v); falling back to install", wlErr)
+				case !hasWorkload:
+					logEntry.Infof("skip_install requested but namespace %s has no workloads (reclaimed?); installing", namespace)
+				default:
+					logEntry.Infof("skip_install: release %s/%s already deployed with live workloads; skipping helm install", namespace, namespace)
+					skippedInstall = true
+				}
+			}
+		}
+
+		if !skippedInstall {
+			if err := installPedestal(childCtx, helmGateway, namespace, index, payload.pedestal.Extra); err != nil {
+				toReleased = true
+				// helm-apply failed: keep the restart token until the deferred
+				// release fires. We never acquired a warming token, so there's
+				// nothing to leak on the warming pool.
+				publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+					TaskID:    task.TaskID,
+					TaskType:  consts.TaskTypeRestartPedestal,
+					EventName: consts.EventRestartPedestalFailed,
+					Payload:   err.Error(),
+				})
+
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to install pedestal of system %s", system), err)
+			}
+		}
+
+		// Two-stage rate limit: helm-apply is done (or skipped), so release
+		// the small `restart_pedestal` token (default cap = 5, sized for
+		// "API server hammer"). Then acquire a slot from the larger
+		// `namespace_warming` pool (default cap = 30) to gate the long
+		// readiness probe. This decouples "how many helm operations can
+		// run at once" from "how many namespaces can be cold-starting in
+		// parallel" — a campaign with 30 concurrent rounds no longer
+		// queues behind 5 helm slots throughout 15+ min of warming.
+		// See PR #205 reviewer feedback.
+		logEntry.Info("restart-pedestal helm-apply complete, releasing restart token, acquiring warming token")
+		// Clear the flag BEFORE the release call so a deferred fire under
+		// any error / panic path doesn't try to release the same token
+		// twice.
+		tokens.restart = false
+		if releaseErr := restartLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
+			logEntry.Errorf("failed to release restart pedestal token after helm-apply: %v", releaseErr)
+		}
+
+		warmingAcquired, err := warmingLimiter.AcquireToken(childCtx, task.TaskID, task.TraceID)
+		if err != nil {
+			toReleased = true
+			return handleExecutionError(span, logEntry, "failed to acquire namespace warming token", err)
+		}
+		if !warmingAcquired {
+			span.AddEvent("no warming token available, waiting")
+			logEntry.Warn("No namespace warming token available, waiting...")
+			err = tracing.WithSpanNamed(childCtx, "ratelimit.wait/ns_warming", func(c context.Context) error {
+				var werr error
+				warmingAcquired, werr = warmingLimiter.WaitForToken(c, task.TaskID, task.TraceID)
+				return werr
+			})
+			if err != nil {
+				toReleased = true
+				return handleExecutionError(span, logEntry, "failed to wait for namespace warming token", err)
+			}
+			if !warmingAcquired {
+				toReleased = true
+				err := fmt.Errorf("namespace warming pool full, all slots busy")
+				publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+					TaskID:    task.TaskID,
+					TaskType:  consts.TaskTypeRestartPedestal,
+					EventName: consts.EventRestartPedestalFailed,
+					Payload:   err.Error(),
+				})
+				return handleExecutionError(span, logEntry, "namespace warming pool exhausted", err)
+			}
+		}
+		tokens.warming = true
+		logEntry.Infof("acquired warming token for ns %s", namespace)
+
+		// deps.FreshnessProbe is the shared clickHouseFreshnessProbe (wired in
+		// worker/module.go); it also satisfies trafficProbe. The assertion is
+		// nil-safe — a nil or non-trafficProbe value yields a nil probe and
+		// the gate degrades to the fixed warmup timer.
+		trafficGateProbe, _ := deps.FreshnessProbe.(trafficProbe)
+		var warmupReadyAt time.Time
+		err = tracing.WithSpanNamed(childCtx, "helm.wait_ready", func(c context.Context) error {
+			var werr error
+			warmupReadyAt, werr = waitForPedestalWorkloadReady(c, deps.K8sGateway, trafficGateProbe, cfg, namespace, pedestalRestartTimeout(), logEntry)
+			return werr
+		})
+		if err != nil {
+			toReleased = true
+			// Surface the failure as a restart.pedestal.failed trace event so
+			// the operator can see the stuck-resource list rather than
+			// silently rolling forward into a doomed inject. The pedestal
+			// restart timeout is fixed at consts.FixedPedestalRestartTimeoutSeconds
+			// (25 min) — sized for cold DSB systems without pre-warm;
+			// pre-warmed pedestals settle in 30-90 s so the timeout is
+			// a ceiling, not a target.
+			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+				TaskID:    task.TaskID,
+				TaskType:  consts.TaskTypeRestartPedestal,
+				EventName: consts.EventRestartPedestalFailed,
+				Payload:   err.Error(),
+			})
+			return handleExecutionError(span, logEntry, "workload readiness/warmup wait failed", err)
+		}
+		adjustedInjectTime := adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt, payload.injectPayload)
+		if !adjustedInjectTime.Equal(injectTime) {
+			logEntry.WithFields(logrus.Fields{
+				"old_inject_time": injectTime.String(),
+				"new_inject_time": adjustedInjectTime.String(),
+				"pre_duration":    extractPreDuration(payload.injectPayload).String(),
+			}).Warn("inject time adjusted to guarantee warm-up and normal-window coverage")
+			injectTime = adjustedInjectTime
+		}
+
+		message := fmt.Sprintf("Injection start at %s, duration %dm", injectTime.Local().String(), payload.faultDuration)
+		updateTaskState(childCtx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				consts.TaskTypeRestartPedestal,
+				consts.TaskCompleted,
+				message,
+			).withEvent(consts.EventRestartPedestalCompleted, message).withDB(deps.DB).withRedis(redisGateway),
+		)
+
+		tracing.SetSpanAttribute(childCtx, consts.TaskStateKey, consts.GetTaskStateName(consts.TaskCompleted))
+
+		payload.injectPayload[consts.InjectNamespace] = namespace
+		payload.injectPayload[consts.InjectPedestal] = system
+		payload.injectPayload[consts.InjectPedestalID] = payload.pedestal.ID
+		// Seeded catalog rows hash with chart_version="seed-genesis" (see
+		// aegislab/manifests/aegis-chaos/<sys>/*.yaml). Until the catalog is
+		// regenerated with real chart_versions tied to each helm release,
+		// the dispatcher must address points with the seed-genesis hash —
+		// the pedestal's actual chart version diverges and 404s.
+		payload.injectPayload[consts.InjectChaosInstance] = "seed"
+		payload.injectPayload[consts.InjectChartVersion] = "seed-genesis"
+		_ = payload.pedestal // chartVersion override retained above; field reserved for future per-release catalog rotation
+
+		if err := common.ProduceFaultInjectionTasksWithDB(childCtx, deps.DB, deps.RedisGateway, task, injectTime, payload.injectPayload); err != nil {
+			toReleased = true
+			return handleExecutionError(span, logEntry, "failed to submit inject task", err)
+		}
+
+		return nil
+	})
+}
+
+// restartPedestalMaxReschedule resolves the abandon cap for RestartPedestal
+// reschedules from dynamic config, falling back to the consts default. Read on
+// every reschedule so an etcd push applies without a rebuild.
+func restartPedestalMaxReschedule() int {
+	v := config.GetInt(consts.RestartPedestalMaxRescheduleKey)
+	if v <= 0 {
+		return consts.DefaultRestartPedestalMaxReschedule
+	}
+	return v
+}
+
+// rescheduleRestartPedestalTask reschedules a pedestal restart task with
+// exponential backoff and jitter. Once task.ReStartNum has reached the abandon
+// cap (issue #531) it stops rescheduling and instead fails the trace and
+// releases the namespace lock the submit-time allocator pinned under this
+// traceID — otherwise a permanently-unsatisfiable required namespace
+// reschedules forever, holding its dedup topology slot and saturating workers.
+func rescheduleRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, monitor NamespaceMonitor, task *dto.UnifiedTask, reason string) error {
+	if task.ReStartNum >= restartPedestalMaxReschedule() {
+		return abandonRestartPedestalTask(ctx, db, redisGateway, monitor, task, reason)
+	}
+	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
+		span := trace.SpanFromContext(ctx)
+
+		randomFactor := 0.3 + rand.Float64()*0.7 // Random factor between 0.3 and 1.0
+		deltaTime := time.Duration(math.Min(math.Pow(2, float64(task.ReStartNum)), 5.0)*randomFactor) * consts.DefaultTimeUnit
+		executeTime := time.Now().Add(deltaTime)
+
+		span.AddEvent(fmt.Sprintf("rescheduling task: %s", reason))
+		logrus.WithFields(logrus.Fields{
+			"task_id":     task.TaskID,
+			"trace_id":    task.TraceID,
+			"delay_mins":  deltaTime.Minutes(),
+			"retry_count": task.ReStartNum + 1,
+		}).Warnf("%s: %s", reason, executeTime)
+
+		tracing.SetSpanAttribute(ctx, consts.TaskStateKey, consts.GetTaskStateName(consts.TaskPending))
+
+		updateTaskState(ctx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				consts.TaskTypeRestartPedestal,
+				consts.TaskRescheduled,
+				reason,
+			).withEvent(consts.EventNoNamespaceAvailable, executeTime.String()).withDB(db).withRedis(redisGateway),
+		)
+
+		task.Reschedule(executeTime)
+		if err := common.SubmitTaskWithDB(ctx, db, redisGateway, task); err != nil {
+			span.RecordError(err)
+			span.AddEvent("failed to submit rescheduled task")
+			return fmt.Errorf("failed to submit rescheduled restart task: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// abandonRestartPedestalTask finalizes a RestartPedestal task that has
+// exhausted its reschedule budget (issue #531). It marks the task errored and
+// the trace failed, emits a restart.pedestal.failed event, and releases the
+// namespace lock the submit-time allocator pinned under this traceID so the
+// topology becomes re-injectable instead of holding a dedup slot forever.
+func abandonRestartPedestalTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, monitor NamespaceMonitor, task *dto.UnifiedTask, reason string) error {
+	logEntry := logrus.WithFields(logrus.Fields{
+		"task_id":     task.TaskID,
+		"trace_id":    task.TraceID,
+		"retry_count": task.ReStartNum,
+	})
+	message := fmt.Sprintf("restart pedestal abandoned after %d reschedules: %s", task.ReStartNum, reason)
+	logEntry.Warn(message)
+
+	updateTaskState(ctx,
+		newTaskStateUpdate(
+			task.TraceID,
+			task.TaskID,
+			consts.TaskTypeRestartPedestal,
+			consts.TaskError,
+			message,
+		).withEvent(consts.EventRestartPedestalFailed, message).withDB(db).withRedis(redisGateway),
+	)
+
+	if err := db.WithContext(ctx).Model(&model.Trace{}).
+		Where("id = ? AND state = ?", task.TraceID, consts.TraceRunning).
+		Updates(map[string]any{
+			"state":      consts.TraceFailed,
+			"last_event": consts.EventRestartPedestalFailed,
+			"end_time":   time.Now(),
+		}).Error; err != nil {
+		logEntry.WithError(err).Warn("failed to mark trace failed on restart-pedestal abandon (continuing)")
+	}
+
+	namespace := namespaceFromRestartPayloadMap(task.Payload)
+	if namespace != "" && monitor != nil {
+		if err := monitor.ReleaseLock(ctx, namespace, task.TraceID); err != nil {
+			logEntry.WithError(err).WithField("namespace", namespace).
+				Warn("failed to release namespace lock on restart-pedestal abandon (continuing)")
+		}
+	}
+	return nil
+}
+
+// namespaceFromRestartPayloadMap extracts the namespace a RestartPedestal task
+// is operating against from its in-memory payload map. Mirrors
+// namespaceFromRestartPayload (which parses the persisted JSON string).
+func namespaceFromRestartPayloadMap(payload map[string]any) string {
+	if payload == nil {
+		return ""
+	}
+	if v, ok := payload[consts.RestartRequiredNamespace].(string); ok {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+	if inner, ok := payload[consts.RestartInjectPayload].(map[string]any); ok {
+		if v, ok := inner[consts.InjectNamespace].(string); ok {
+			if s := strings.TrimSpace(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// parseRestartPayload parses the payload for a restart pedestal task
+func parseRestartPayload(payload map[string]any) (*restartPayload, error) {
+	message := "invalid or missing '%s' in task payload"
+
+	pedestal, err := utils.ConvertToType[dto.ContainerVersionItem](payload[consts.RestartPedestal])
+	if err != nil {
+		return nil, fmt.Errorf(message, consts.RestartPedestal)
+	}
+
+	intervalFloat, ok := payload[consts.RestartIntarval].(float64)
+	if !ok || intervalFloat <= 0 {
+		return nil, fmt.Errorf(message, consts.RestartIntarval)
+	}
+	interval := int(intervalFloat)
+
+	faultDurationFloat, ok := payload[consts.RestartFaultDuration].(float64)
+	if !ok || faultDurationFloat <= 0 {
+		return nil, fmt.Errorf(message, consts.RestartFaultDuration)
+	}
+	faultDuration := int(faultDurationFloat)
+
+	injectPayload, ok := payload[consts.RestartInjectPayload].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf(message, consts.RestartInjectPayload)
+	}
+
+	// skipInstall is optional — absent or non-bool payloads fall through to
+	// "run the helm install normally".
+	skipInstall, _ := payload[consts.RestartSkipInstall].(bool)
+
+	// requiredNamespace is optional. When set (guided submit carried a
+	// user-specified namespace) we bypass pool selection; see #156.
+	requiredNamespace, _ := payload[consts.RestartRequiredNamespace].(string)
+
+	return &restartPayload{
+		pedestal:          pedestal,
+		interval:          interval,
+		faultDuration:     faultDuration,
+		injectPayload:     injectPayload,
+		skipInstall:       skipInstall,
+		requiredNamespace: strings.TrimSpace(requiredNamespace),
+	}, nil
+}
+
+// installPedestal installs or upgrades the pedestal using Helm.
+//
+// Two responsibilities live here (orchestrator-only — not in the shared
+// helm.InstallPedestal helper):
+//
+//  1. Template-string substitution on DynamicValues using namespaceIdx
+//     (the per-pool namespace index, e.g. "ts-1" → idx=1). The shared helper
+//     receives the already-resolved values.
+//  2. Etcd-backed `helm.repo.<repo_name>.url` fallback when
+//     helm_configs.repo_url is empty. The admin /pedestals install path
+//     resolves repo URL via its own service-layer hook so the helper stays
+//     dependency-light.
+//
+// After resolution, delegates to helm.InstallPedestal which encapsulates
+// the remote-with-local-fallback flow used by both call sites.
+func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName string, namespaceIdx int, item *dto.HelmConfigItem) error {
+	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
+		span := trace.SpanFromContext(childCtx)
+		logEntry := logrus.WithFields(logrus.Fields{
+			"release_name":  releaseName,
+			"namespace_idx": namespaceIdx,
+		})
+
+		if item == nil {
+			return handleExecutionError(span, logEntry, "missing helm config in container extra info", fmt.Errorf("missing helm config in container extra info"))
+		}
+
+		paramItems := item.DynamicValues
+		for i := range paramItems {
+			if paramItems[i].TemplateString != "" {
+				paramItems[i].Value = fmt.Sprintf(paramItems[i].TemplateString, namespaceIdx)
+			}
+		}
+
+		// If the operator didn't record a repo_url, try the etcd-backed
+		// override `helm.repo.<repo_name>.url`. Lets ops swap defaults at
+		// runtime without a DB migration.
+		if item.RepoURL == "" && item.RepoName != "" {
+			if url := defaultHelmRepoURL(item.RepoName); url != "" {
+				logEntry.Infof("helm_configs.repo_url empty for %q; using etcd override %q", item.RepoName, url)
+				item.RepoURL = url
+			}
+		}
+
+		overallTO, waitTO := helmInstallTimeouts()
+		return helm.InstallPedestal(childCtx, gateway, helm.PedestalInstallSpec{
+			Namespace:      releaseName,
+			ReleaseName:    releaseName,
+			ChartName:      item.ChartName,
+			Version:        item.Version,
+			RepoURL:        item.RepoURL,
+			RepoName:       item.RepoName,
+			LocalPath:      item.LocalPath,
+			Values:         item.GetValuesMap(),
+			OverallTimeout: overallTO,
+			WaitTimeout:    waitTO,
+		})
+	})
+}
+
+// reapNamespaceChaosResources is the best-effort wrapper around the k8s
+// gateway's namespace-scoped chaos cleanup. Wrapped here (instead of called
+// inline in executeRestartPedestal) so the call site stays readable and so
+// every error path lands on a single Warn — never a task failure.
+func reapNamespaceChaosResources(ctx context.Context, gateway *k8s.Gateway, namespace string, logEntry *logrus.Entry) {
+	if gateway == nil {
+		logEntry.Debugf("k8s gateway nil; skipping chaos-CR cleanup for namespace %q", namespace)
+		return
+	}
+	summary, warnings := gateway.CleanupNamespaceChaosResources(ctx, namespace)
+	if line := k8s.SummarizeChaosCleanup(summary); line != "" {
+		logEntry.Infof("chaos cleanup before helm restart: cleaned %s in %s", line, namespace)
+	}
+	for _, w := range warnings {
+		logEntry.Warnf("chaos cleanup warning in %s: %v", namespace, w)
+	}
+}

@@ -1,0 +1,154 @@
+suite: Test ClickHouse Cluster Resources
+templates:
+  - clickhouse/cluster.yaml
+  - clickhouse/keeper.yaml
+
+tests:
+  - it: should render ClickHouseCluster CR when enabled
+    templates:
+      - clickhouse/cluster.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ClickHouseCluster
+      - equal:
+          path: apiVersion
+          value: clickhouse.com/v1alpha1
+      - matchRegex:
+          path: metadata.name
+          pattern: .*-clickhouse$
+
+  - it: should render KeeperCluster CR when enabled
+    templates:
+      - clickhouse/keeper.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: KeeperCluster
+      - equal:
+          path: apiVersion
+          value: clickhouse.com/v1alpha1
+      - matchRegex:
+          path: metadata.name
+          pattern: .*-keeper$
+
+  - it: should not render CRs when disabled
+    set:
+      clickhouse:
+        enabled: false
+    templates:
+      - clickhouse/cluster.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render keeper when disabled
+    set:
+      clickhouse:
+        enabled: false
+    templates:
+      - clickhouse/keeper.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should pass cluster spec through from values
+    templates:
+      - clickhouse/cluster.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.shards
+          value: 1
+      - equal:
+          path: spec.dataVolumeClaimSpec.resources.requests.storage
+          value: 10Gi
+
+  - it: should resolve keeperClusterRef template expression
+    templates:
+      - clickhouse/cluster.yaml
+    asserts:
+      - matchRegex:
+          path: spec.keeperClusterRef.name
+          pattern: .*-keeper$
+
+  - it: should pass keeper spec through from values
+    templates:
+      - clickhouse/keeper.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.dataVolumeClaimSpec.resources.requests.storage
+          value: 5Gi
+
+  - it: should allow overriding cluster spec
+    templates:
+      - clickhouse/cluster.yaml
+    set:
+      clickhouse:
+        cluster:
+          spec:
+            replicas: 3
+            shards: 2
+            keeperClusterRef:
+              name: custom-keeper
+            dataVolumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 100Gi
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.shards
+          value: 2
+      - equal:
+          path: spec.keeperClusterRef.name
+          value: custom-keeper
+      - equal:
+          path: spec.dataVolumeClaimSpec.resources.requests.storage
+          value: 100Gi
+
+  - it: should allow overriding keeper spec
+    templates:
+      - clickhouse/keeper.yaml
+    set:
+      clickhouse:
+        keeper:
+          spec:
+            replicas: 3
+            dataVolumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: fast-ssd
+              resources:
+                requests:
+                  storage: 20Gi
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.dataVolumeClaimSpec.storageClassName
+          value: fast-ssd
+      - equal:
+          path: spec.dataVolumeClaimSpec.resources.requests.storage
+          value: 20Gi
+
+  - it: should include extraUsersConfig in cluster spec
+    templates:
+      - clickhouse/cluster.yaml
+    asserts:
+      - isNotNull:
+          path: spec.settings.extraUsersConfig.users.app
+      - isNotNull:
+          path: spec.settings.extraUsersConfig.users.otelcollector

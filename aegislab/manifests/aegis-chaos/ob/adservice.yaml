@@ -1,0 +1,135 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "adservice"
+  system: "ob"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "ob"
+    - capability: "cpu_stress"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService.AdServiceImpl"
+        method: "getAds"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "blockUntilShutdown"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "createAdsMap"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getAdsByCategory"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getInstance"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getRandomAds"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "initStats"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "initTracing"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "main"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "start"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "stop"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "AdServiceClient"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getAds"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getPortOrDefaultFromArgs"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getStringOrDefaultFromArgs"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "main"
+        namespace: "ob"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "shutdown"
+        namespace: "ob"
+    - capability: "pod_failure"
+      target:
+        app: "adservice"
+        namespace: "ob"
+    - capability: "pod_kill"
+      target:
+        app: "adservice"
+        namespace: "ob"
+    - capability: "time_skew"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "ob"

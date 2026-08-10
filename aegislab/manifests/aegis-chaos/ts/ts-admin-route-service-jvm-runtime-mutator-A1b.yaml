@@ -1,0 +1,842 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-admin-route-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to lowercase"
+        method: "addRoute"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to lowercase"
+        method: "deleteRoute"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to lowercase"
+        method: "getAllRoutes"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to lowercase"
+        method: "home"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to uppercase"
+        method: "addRoute"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to uppercase"
+        method: "deleteRoute"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to uppercase"
+        method: "getAllRoutes"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Convert string to uppercase"
+        method: "home"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "addRoute"
+        mutation_from: "\"/adminroute\""
+        mutation_to: "\"mutated_/adminroute\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "deleteRoute"
+        mutation_from: "\"/adminroute/{routeId}\""
+        mutation_to: "\"mutated_/adminroute/{routeId}\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllRoutes"
+        mutation_from: "\"*\""
+        mutation_to: "\"mutated_*\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllRoutes"
+        mutation_from: "\"/adminroute\""
+        mutation_to: "\"mutated_/adminroute\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"/welcome\""
+        mutation_to: "\"mutated_/welcome\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Mutate string constant to an error-oriented value"
+        method: "home"
+        mutation_from: "\"Welcome to [ AdminRoute Service ] !\""
+        mutation_to: "\"mutated_Welcome to [ AdminRoute Service ] !\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with empty string"
+        method: "addRoute"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with empty string"
+        method: "deleteRoute"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with empty string"
+        method: "getAllRoutes"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with empty string"
+        method: "home"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with null"
+        method: "addRoute"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with null"
+        method: "deleteRoute"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with null"
+        method: "getAllRoutes"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string result with null"
+        method: "home"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string with random content"
+        method: "addRoute"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string with random content"
+        method: "deleteRoute"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string with random content"
+        method: "getAllRoutes"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Replace string with random content"
+        method: "home"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Reverse string content"
+        method: "addRoute"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Reverse string content"
+        method: "deleteRoute"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Reverse string content"
+        method: "getAllRoutes"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        description: "Reverse string content"
+        method: "home"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to lowercase"
+        method: "checkStationsExists"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to lowercase"
+        method: "createAndModifyRoute"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to lowercase"
+        method: "deleteRoute"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to lowercase"
+        method: "getAllRoutes"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to lowercase"
+        method: "getServiceUrl"
+        mutation_strategy: "lowercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to uppercase"
+        method: "checkStationsExists"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to uppercase"
+        method: "createAndModifyRoute"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to uppercase"
+        method: "deleteRoute"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to uppercase"
+        method: "getAllRoutes"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Convert string to uppercase"
+        method: "getServiceUrl"
+        mutation_strategy: "uppercase"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate + to -"
+        method: "checkStationsExists"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate + to -"
+        method: "createAndModifyRoute"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate + to -"
+        method: "deleteRoute"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate + to -"
+        method: "getAllRoutes"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate + to -"
+        method: "getServiceUrl"
+        mutation_strategy: "add_to_sub"
+        mutation_type: 1
+        mutation_type_name: "operator"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "checkStationsExists"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate integer constant 0 to 1"
+        method: "createAndModifyRoute"
+        mutation_from: "0"
+        mutation_to: "1"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate integer constant 1 to 0"
+        method: "checkStationsExists"
+        mutation_from: "1"
+        mutation_to: "0"
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "checkStationsExists"
+        mutation_from: "\"/api/v1/stationservice/stations/idlist\""
+        mutation_to: "\"mutated_/api/v1/stationservice/stations/idlist\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "checkStationsExists"
+        mutation_from: "\"check stations Exist succeed\""
+        mutation_to: "\"mutated_check stations Exist succeed\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "checkStationsExists"
+        mutation_from: "\"some station not exists\""
+        mutation_to: "\"mutated_some station not exists\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "checkStationsExists"
+        mutation_from: "\"ts-station-service\""
+        mutation_to: "\"mutated_ts-station-service\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "createAndModifyRoute"
+        mutation_from: "\"/api/v1/routeservice/routes\""
+        mutation_to: "\"mutated_/api/v1/routeservice/routes\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "createAndModifyRoute"
+        mutation_from: "\"start or end station not include in stationList.\""
+        mutation_to: "\"mutated_start or end station not include in stationList.\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "createAndModifyRoute"
+        mutation_from: "\"ts-route-service\""
+        mutation_to: "\"mutated_ts-route-service\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "deleteRoute"
+        mutation_from: "\"/api/v1/routeservice/routes/\""
+        mutation_to: "\"mutated_/api/v1/routeservice/routes/\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "deleteRoute"
+        mutation_from: "\"ts-route-service\""
+        mutation_to: "\"mutated_ts-route-service\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllRoutes"
+        mutation_from: "\"/api/v1/routeservice/routes\""
+        mutation_to: "\"mutated_/api/v1/routeservice/routes\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getAllRoutes"
+        mutation_from: "\"ts-route-service\""
+        mutation_to: "\"mutated_ts-route-service\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getServiceUrl"
+        mutation_from: "\":8080\""
+        mutation_to: "\"mutated_:8080\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Mutate string constant to an error-oriented value"
+        method: "getServiceUrl"
+        mutation_from: "\"http://\""
+        mutation_to: "\"mutated_http://\""
+        mutation_type: 0
+        mutation_type_name: "constant"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with empty string"
+        method: "checkStationsExists"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with empty string"
+        method: "createAndModifyRoute"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with empty string"
+        method: "deleteRoute"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with empty string"
+        method: "getAllRoutes"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with empty string"
+        method: "getServiceUrl"
+        mutation_strategy: "empty"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with null"
+        method: "checkStationsExists"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with null"
+        method: "createAndModifyRoute"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with null"
+        method: "deleteRoute"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with null"
+        method: "getAllRoutes"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string result with null"
+        method: "getServiceUrl"
+        mutation_strategy: "null"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string with random content"
+        method: "checkStationsExists"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string with random content"
+        method: "createAndModifyRoute"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string with random content"
+        method: "deleteRoute"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string with random content"
+        method: "getAllRoutes"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Replace string with random content"
+        method: "getServiceUrl"
+        mutation_strategy: "random"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Reverse string content"
+        method: "checkStationsExists"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Reverse string content"
+        method: "createAndModifyRoute"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Reverse string content"
+        method: "deleteRoute"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Reverse string content"
+        method: "getAllRoutes"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"
+    - capability: "jvm_runtime_mutator"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        description: "Reverse string content"
+        method: "getServiceUrl"
+        mutation_strategy: "reverse"
+        mutation_type: 2
+        mutation_type_name: "string"
+        namespace: "ts"

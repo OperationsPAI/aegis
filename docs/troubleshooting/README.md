@@ -1,0 +1,22 @@
+# Aegis Troubleshooting Docs
+
+Cross-repo runbooks for problems that span aegislab + chaos-experiment +
+rcabench-platform. Kept at the repo-root `aegis/docs/` level because the
+fixes touch multiple submodules.
+
+Start with [`../../aegislab/docs/aegisctl-cli-spec.md`](../../aegislab/docs/aegisctl-cli-spec.md) for the supported CLI-first validation path. Use the troubleshooting pages below when that contract fails in a real cluster or dev environment.
+
+| File | Purpose |
+|------|---------|
+| [`datapack-schema.md`](./datapack-schema.md) | The 12 parquets + 3 JSON files a datapack is *required* to contain, plus column-level notes (TZ, namespaces, etc.) |
+| [`app-label-key.md`](./app-label-key.md) | Per-system `AppLabelKey` design — why `otel-demo` uses `app.kubernetes.io/name` while `ts` uses `app` |
+| [`benchmark-integration-playbook.md`](./benchmark-integration-playbook.md) | Consolidated playbook for onboarding a new benchmark (sockshop/hs/sn/mm/tea lessons): **microservice ↔ fault-injection-points binding (section 0)**, 5-layer model, step-by-step template, per-system diff table, reusable Jaeger→OTLP bridge + dsb-wrk2 infra, recurring gotchas |
+
+Operational runbooks scoped to a single sub-repo live alongside their code:
+
+| Repo | Index |
+|------|-------|
+| aegislab | [`../../aegislab/docs/README.md`](../../aegislab/docs/README.md) — share-upload three-step flow, telepresence dev-intercept, edge-proxy host-aliasing |
+
+Short-form pitfalls index lives in the auto-memory at
+`~/.claude/projects/-home-ddq-AoyangSpace-aegis/memory/aegislab_e2e_pitfalls.md`.

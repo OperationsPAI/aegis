@@ -1,0 +1,502 @@
+package consts
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
+
+// ActionName is the type for permission action names, used for permission checks
+type ActionName string
+
+// System permission action constants
+const (
+	// Basic CRUD Operations
+	ActionCreate ActionName = "create" // Create new resources
+	ActionRead   ActionName = "read"   // Read/View resources
+	ActionUpdate ActionName = "update" // Update existing resources
+	ActionDelete ActionName = "delete" // Delete resources
+
+	// Execution and State Management
+	ActionExecute  ActionName = "execute"  // Execute tasks, injections, builds, etc.
+	ActionStop     ActionName = "stop"     // Stop running tasks or executions
+	ActionRestart  ActionName = "restart"  // Restart services or tasks
+	ActionActivate ActionName = "activate" // Activate/Enable resources
+	ActionSuspend  ActionName = "suspend"  // Suspend/Disable resources
+
+	// File and Data Operations
+	ActionUpload   ActionName = "upload"   // Upload files, charts, datasets
+	ActionDownload ActionName = "download" // Download files, results, datapacks
+	ActionImport   ActionName = "import"   // Import data, configurations
+	ActionExport   ActionName = "export"   // Export data, reports, backups
+
+	// Permission and Membership Management
+	ActionAssign ActionName = "assign" // Assign users to resources, roles to users
+	ActionGrant  ActionName = "grant"  // Grant permissions or access rights
+	ActionRevoke ActionName = "revoke" // Revoke permissions or access rights
+
+	// Configuration and Administration
+	ActionConfigure ActionName = "configure" // Configure system settings, resources
+	ActionManage    ActionName = "manage"    // Full administrative control
+
+	// Collaboration and Sharing
+	ActionShare ActionName = "share" // Share resources with others
+	ActionClone ActionName = "clone" // Clone/Duplicate resources
+
+	// Monitoring and Analysis
+	ActionMonitor ActionName = "monitor" // Monitor system metrics, traces
+	ActionAnalyze ActionName = "analyze" // Analyze results, evaluate performance
+	ActionAudit   ActionName = "audit"   // View audit logs and history
+)
+
+func (a ActionName) String() string {
+	return string(a)
+}
+
+// ResourceName is the type for resource names, used for permission checks
+type ResourceName string
+
+// System resource name constants
+const (
+	ResourceSystem           ResourceName = "system"            // system resource
+	ResourceAudit            ResourceName = "audit"             // audit resource
+	ResourceConfiguration    ResourceName = "configuration"     // configuration resource
+	ResourceContainer        ResourceName = "container"         // container resource
+	ResourceContainerVersion ResourceName = "container_version" // container version resource
+	ResourceDataset          ResourceName = "dataset"           // dataset resource
+	ResourceDatasetVersion   ResourceName = "dataset_version"   // dataset version resource
+	ResourceProject          ResourceName = "project"           // project resource
+	ResourceTeam             ResourceName = "team"              // team resource
+	ResourceLabel            ResourceName = "label"             // label resource
+	ResourceUser             ResourceName = "user"              // user resource
+	ResourceRole             ResourceName = "role"              // role resource
+	ResourcePermission       ResourceName = "permission"        // permission resource
+	ResourceTask             ResourceName = "task"              // task resource
+	ResourceTrace            ResourceName = "trace"             // trace resource
+	ResourceInjection        ResourceName = "injection"         // fault injection resource
+	ResourceExecution        ResourceName = "execution"         // execution resource
+	ResourceAPIKey           ResourceName = "api_key"           // api key credential resource
+	ResourcePedestal         ResourceName = "pedestal"          // pedestal runtime (helm release) resource
+)
+
+func (r ResourceName) String() string {
+	return string(r)
+}
+
+var ProjectScopedResources = []ResourceName{
+	ResourceInjection,
+	ResourceExecution,
+	ResourceTask,
+	ResourceTrace,
+}
+
+var TeamScopedResources = []ResourceName{
+	ResourceContainer,
+	ResourceContainerVersion,
+	ResourceDataset,
+	ResourceDatasetVersion,
+	ResourceProject,
+	ResourceLabel,
+}
+
+// IsProjectScoped checks if a resource can inherit project-level permissions
+func IsProjectScoped(resource ResourceName) bool {
+	return slices.Contains(ProjectScopedResources, resource)
+}
+
+// IsTeamScoped checks if a resource can inherit team-level permissions
+func IsTeamScoped(resource ResourceName) bool {
+	return slices.Contains(TeamScopedResources, resource)
+}
+
+type ResourceType int
+
+const (
+	ResourceTypeSystem ResourceType = iota
+	ResourceTypeTable
+)
+
+type ResourceCategory int
+
+const (
+	// ResourceCategoryChaos represents core chaos engineering resources
+	// (e.g., injection, execution, trace, task).
+	ResourceCategoryChaos ResourceCategory = iota
+
+	// ResourceCategoryAsset represents experimental assets
+	// (e.g., container, dataset, label).
+	ResourceCategoryAsset
+
+	// ResourceCategoryPlatform represents organizational and administrative structures
+	// (e.g., project, team).
+	ResourceCategoryPlatform
+
+	// ResourceCategorySystem represents system configurations and security
+	// (e.g., system, audit, configuration, user, role, permission).
+	ResourceCategorySystem
+)
+
+type ResourceScope string
+
+const (
+	ScopeOwn     ResourceScope = "own"     // Own resources only
+	ScopeProject ResourceScope = "project" // Project resources
+	ScopeTeam    ResourceScope = "team"    // Team resources
+	ScopeAll     ResourceScope = "all"     // All resources
+)
+
+func (r ResourceScope) String() string {
+	return string(r)
+}
+
+// Scope types for UserScopedRole (SSO extraction). Identifies the kind of
+// business object a scoped role grant applies to. The value is stored as a
+// string in the user_scoped_roles.scope_type column so other services can
+// register their own scope types (e.g. "yourservice.workspace").
+const (
+	ScopeTypeProject   = "aegis.project"
+	ScopeTypeTeam      = "aegis.team"
+	ScopeTypeContainer = "aegis.container"
+	ScopeTypeDataset   = "aegis.dataset"
+	// ScopeTypeService is the scope_type for delegated service-admin grants
+	// (Task #13). A user_scoped_roles row with this scope_type and
+	// scope_id=<downstream service name> makes the user admin over
+	// everything sso exposes for that one service — without
+	// granting global system_admin.
+	ScopeTypeService = "sso.service"
+
+	ServiceAegis    = "aegis"
+	ServiceAegisSSO = "sso"
+)
+
+// RoleName is the type for role constants
+type RoleName string
+
+// Role constants for system roles
+const (
+	RoleSuperAdmin           RoleName = "super_admin"            // Super Admin
+	RoleAdmin                RoleName = "admin"                  // Admin
+	RoleUser                 RoleName = "user"                   // Regular User
+	RoleContainerAdmin       RoleName = "container_admin"        // Container Admin
+	RoleContainerDeveloper   RoleName = "container_developer"    // Container Developer
+	RoleContainerViewer      RoleName = "container_viewer"       // Container Viewer
+	RoleDatasetAdmin         RoleName = "dataset_admin"          // Dataset Admin
+	RoleDatasetDeveloper     RoleName = "dataset_developer"      // Dataset Developer
+	RoleDatasetViewer        RoleName = "dataset_viewer"         // Dataset Viewer
+	RoleProjectAdmin         RoleName = "project_admin"          // Project Admin
+	RoleProjectAlgoDeveloper RoleName = "project_algo_developer" // Project Algorithm Developer
+	RoleProjectDataDeveloper RoleName = "project_data_developer" // Project Data Developer
+	RoleProjectViewer        RoleName = "project_viewer"         // Project Viewer
+	RoleTeamAdmin            RoleName = "team_admin"             // Team Admin
+	RoleTeamMember           RoleName = "team_member"            // Team Member
+	RoleTeamViewer           RoleName = "team_viewer"            // Team Viewer
+	// RoleServiceAdmin is a built-in role for delegated service admins
+	// (Task #13). Grant it via user_scoped_roles with
+	// scope_type=ScopeTypeService and scope_id=<downstream service name>
+	// to scope a user to one service's SSO surface.
+	RoleServiceAdmin RoleName = "service_admin"
+)
+
+// SSO service-admin permission names — granted to RoleServiceAdmin. Live on
+// service=sso, scope_type=ScopeTypeService. The /v1 SSO admin gate
+// reads them to authorize delegated admins.
+const (
+	PermSSOUsersRead           = "sso.users.read"
+	PermSSOUsersWrite          = "sso.users.write"
+	PermSSORolesRead           = "sso.roles.read"
+	PermSSOGrantsRead          = "sso.grants.read"
+	PermSSOGrantsWrite         = "sso.grants.write"
+	PermSSOClientsRead         = "sso.clients.read"
+	PermSSOClientsWrite        = "sso.clients.write"
+	PermSSOPermissionsRegister = "sso.permissions.register"
+)
+
+// SSOServiceAdminPermissions is the canonical list seeded for RoleServiceAdmin.
+var SSOServiceAdminPermissions = []string{
+	PermSSOUsersRead,
+	PermSSOUsersWrite,
+	PermSSORolesRead,
+	PermSSOGrantsRead,
+	PermSSOGrantsWrite,
+	PermSSOClientsRead,
+	PermSSOClientsWrite,
+	PermSSOPermissionsRegister,
+}
+
+func (r RoleName) String() string {
+	return string(r)
+}
+
+type PermissionRule struct {
+	Resource ResourceName
+	Action   ActionName
+	Scope    ResourceScope
+}
+
+// ParsePermissionRule parses a permission rule string (e.g., "container:read:own")
+func ParsePermissionRule(rule string) (*PermissionRule, error) {
+	parts := strings.Split(rule, ":")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid permission rule format: %s (expected resource:action:scope)", rule)
+	}
+	return &PermissionRule{
+		Resource: ResourceName(parts[0]),
+		Action:   ActionName(parts[1]),
+		Scope:    ResourceScope(parts[2]),
+	}, nil
+}
+
+func (pr PermissionRule) String() string {
+	return fmt.Sprintf("%v:%v:%v", pr.Resource, pr.Action, pr.Scope)
+}
+
+// ============================================================================
+// Predefined Permission Rules - Single Source of Truth
+// ============================================================================
+
+var (
+	// System permissions
+	PermSystemRead      = PermissionRule{Resource: ResourceSystem, Action: ActionRead, Scope: ScopeAll}
+	PermSystemConfigure = PermissionRule{Resource: ResourceSystem, Action: ActionConfigure, Scope: ScopeAll}
+	PermSystemManage    = PermissionRule{Resource: ResourceSystem, Action: ActionManage, Scope: ScopeAll}
+
+	// Pedestal runtime permissions — gate the admin /pedestals helm
+	// install / restart / uninstall endpoints. Distinct from PermSystem*
+	// (which guards chaossystem row CRUD) because pedestal ops have
+	// cluster-wide blast radius (`helm uninstall` in any namespace the
+	// kubeconfig sees).
+	PermPedestalRead   = PermissionRule{Resource: ResourcePedestal, Action: ActionRead, Scope: ScopeAll}
+	PermPedestalManage = PermissionRule{Resource: ResourcePedestal, Action: ActionManage, Scope: ScopeAll}
+
+	// Audit permissions
+	PermAuditRead  = PermissionRule{Resource: ResourceAudit, Action: ActionRead, Scope: ScopeAll}
+	PermAuditAudit = PermissionRule{Resource: ResourceAudit, Action: ActionAudit, Scope: ScopeAll}
+
+	// Configuration permissions
+	PermConfigurationRead      = PermissionRule{Resource: ResourceConfiguration, Action: ActionRead, Scope: ScopeAll}
+	PermConfigurationUpdate    = PermissionRule{Resource: ResourceConfiguration, Action: ActionUpdate, Scope: ScopeAll}
+	PermConfigurationConfigure = PermissionRule{Resource: ResourceConfiguration, Action: ActionConfigure, Scope: ScopeAll}
+
+	// User permissions
+	PermUserReadAll   = PermissionRule{Resource: ResourceUser, Action: ActionRead, Scope: ScopeAll}
+	PermUserCreateAll = PermissionRule{Resource: ResourceUser, Action: ActionCreate, Scope: ScopeAll}
+	PermUserUpdateAll = PermissionRule{Resource: ResourceUser, Action: ActionUpdate, Scope: ScopeAll}
+	PermUserDeleteAll = PermissionRule{Resource: ResourceUser, Action: ActionDelete, Scope: ScopeAll}
+	PermUserAssignAll = PermissionRule{Resource: ResourceUser, Action: ActionAssign, Scope: ScopeAll}
+
+	// Role permissions
+	PermRoleReadAll   = PermissionRule{Resource: ResourceRole, Action: ActionRead, Scope: ScopeAll}
+	PermRoleCreateAll = PermissionRule{Resource: ResourceRole, Action: ActionCreate, Scope: ScopeAll}
+	PermRoleUpdateAll = PermissionRule{Resource: ResourceRole, Action: ActionUpdate, Scope: ScopeAll}
+	PermRoleDeleteAll = PermissionRule{Resource: ResourceRole, Action: ActionDelete, Scope: ScopeAll}
+	PermRoleGrantAll  = PermissionRule{Resource: ResourceRole, Action: ActionGrant, Scope: ScopeAll}
+	PermRoleRevokeAll = PermissionRule{Resource: ResourceRole, Action: ActionRevoke, Scope: ScopeAll}
+
+	// Permission management permissions
+	PermPermissionReadAll   = PermissionRule{Resource: ResourcePermission, Action: ActionRead, Scope: ScopeAll}
+	PermPermissionCreateAll = PermissionRule{Resource: ResourcePermission, Action: ActionCreate, Scope: ScopeAll}
+	PermPermissionUpdateAll = PermissionRule{Resource: ResourcePermission, Action: ActionUpdate, Scope: ScopeAll}
+	PermPermissionDeleteAll = PermissionRule{Resource: ResourcePermission, Action: ActionDelete, Scope: ScopeAll}
+	PermPermissionManageAll = PermissionRule{Resource: ResourcePermission, Action: ActionManage, Scope: ScopeAll}
+
+	// Team permissions
+	PermTeamReadAll    = PermissionRule{Resource: ResourceTeam, Action: ActionRead, Scope: ScopeAll}
+	PermTeamReadTeam   = PermissionRule{Resource: ResourceTeam, Action: ActionRead, Scope: ScopeTeam}
+	PermTeamCreateAll  = PermissionRule{Resource: ResourceTeam, Action: ActionCreate, Scope: ScopeAll}
+	PermTeamUpdateAll  = PermissionRule{Resource: ResourceTeam, Action: ActionUpdate, Scope: ScopeAll}
+	PermTeamUpdateTeam = PermissionRule{Resource: ResourceTeam, Action: ActionUpdate, Scope: ScopeTeam}
+	PermTeamDeleteAll  = PermissionRule{Resource: ResourceTeam, Action: ActionDelete, Scope: ScopeAll}
+	PermTeamManageAll  = PermissionRule{Resource: ResourceTeam, Action: ActionManage, Scope: ScopeAll}
+
+	// Project permissions
+	PermProjectReadAll    = PermissionRule{Resource: ResourceProject, Action: ActionRead, Scope: ScopeAll}
+	PermProjectReadTeam   = PermissionRule{Resource: ResourceProject, Action: ActionRead, Scope: ScopeTeam}
+	PermProjectReadOwn    = PermissionRule{Resource: ResourceProject, Action: ActionRead, Scope: ScopeOwn}
+	PermProjectCreateTeam = PermissionRule{Resource: ResourceProject, Action: ActionCreate, Scope: ScopeTeam}
+	PermProjectCreateOwn  = PermissionRule{Resource: ResourceProject, Action: ActionCreate, Scope: ScopeOwn}
+	PermProjectUpdateAll  = PermissionRule{Resource: ResourceProject, Action: ActionUpdate, Scope: ScopeAll}
+	PermProjectUpdateOwn  = PermissionRule{Resource: ResourceProject, Action: ActionUpdate, Scope: ScopeOwn}
+	PermProjectDeleteAll  = PermissionRule{Resource: ResourceProject, Action: ActionDelete, Scope: ScopeAll}
+	PermProjectDeleteOwn  = PermissionRule{Resource: ResourceProject, Action: ActionDelete, Scope: ScopeOwn}
+	PermProjectManageAll  = PermissionRule{Resource: ResourceProject, Action: ActionManage, Scope: ScopeAll}
+	PermProjectManageOwn  = PermissionRule{Resource: ResourceProject, Action: ActionManage, Scope: ScopeOwn}
+
+	// Container permissions
+	PermContainerReadAll     = PermissionRule{Resource: ResourceContainer, Action: ActionRead, Scope: ScopeAll}
+	PermContainerReadTeam    = PermissionRule{Resource: ResourceContainer, Action: ActionRead, Scope: ScopeTeam}
+	PermContainerCreateAll   = PermissionRule{Resource: ResourceContainer, Action: ActionCreate, Scope: ScopeAll}
+	PermContainerCreateTeam  = PermissionRule{Resource: ResourceContainer, Action: ActionCreate, Scope: ScopeTeam}
+	PermContainerCreateOwn   = PermissionRule{Resource: ResourceContainer, Action: ActionCreate, Scope: ScopeOwn}
+	PermContainerUpdateAll   = PermissionRule{Resource: ResourceContainer, Action: ActionUpdate, Scope: ScopeAll}
+	PermContainerUpdateTeam  = PermissionRule{Resource: ResourceContainer, Action: ActionUpdate, Scope: ScopeTeam}
+	PermContainerDeleteAll   = PermissionRule{Resource: ResourceContainer, Action: ActionDelete, Scope: ScopeAll}
+	PermContainerManageAll   = PermissionRule{Resource: ResourceContainer, Action: ActionManage, Scope: ScopeAll}
+	PermContainerExecuteAll  = PermissionRule{Resource: ResourceContainer, Action: ActionExecute, Scope: ScopeAll}
+	PermContainerExecuteTeam = PermissionRule{Resource: ResourceContainer, Action: ActionExecute, Scope: ScopeTeam}
+
+	// Container Version permissions
+	PermContainerVersionReadAll    = PermissionRule{Resource: ResourceContainerVersion, Action: ActionRead, Scope: ScopeAll}
+	PermContainerVersionReadTeam   = PermissionRule{Resource: ResourceContainerVersion, Action: ActionRead, Scope: ScopeTeam}
+	PermContainerVersionCreateAll  = PermissionRule{Resource: ResourceContainerVersion, Action: ActionCreate, Scope: ScopeAll}
+	PermContainerVersionCreateTeam = PermissionRule{Resource: ResourceContainerVersion, Action: ActionCreate, Scope: ScopeTeam}
+	PermContainerVersionUpdateAll  = PermissionRule{Resource: ResourceContainerVersion, Action: ActionUpdate, Scope: ScopeAll}
+	PermContainerVersionUpdateTeam = PermissionRule{Resource: ResourceContainerVersion, Action: ActionUpdate, Scope: ScopeTeam}
+	PermContainerVersionDeleteAll  = PermissionRule{Resource: ResourceContainerVersion, Action: ActionDelete, Scope: ScopeAll}
+	PermContainerVersionManageAll  = PermissionRule{Resource: ResourceContainerVersion, Action: ActionManage, Scope: ScopeAll}
+	PermContainerVersionUploadAll  = PermissionRule{Resource: ResourceContainerVersion, Action: ActionUpload, Scope: ScopeAll}
+	PermContainerVersionUploadTeam = PermissionRule{Resource: ResourceContainerVersion, Action: ActionUpload, Scope: ScopeTeam}
+
+	// Dataset permissions
+	PermDatasetReadAll    = PermissionRule{Resource: ResourceDataset, Action: ActionRead, Scope: ScopeAll}
+	PermDatasetReadTeam   = PermissionRule{Resource: ResourceDataset, Action: ActionRead, Scope: ScopeTeam}
+	PermDatasetCreateAll  = PermissionRule{Resource: ResourceDataset, Action: ActionCreate, Scope: ScopeAll}
+	PermDatasetCreateTeam = PermissionRule{Resource: ResourceDataset, Action: ActionCreate, Scope: ScopeTeam}
+	PermDatasetCreateOwn  = PermissionRule{Resource: ResourceDataset, Action: ActionCreate, Scope: ScopeOwn}
+	PermDatasetUpdateAll  = PermissionRule{Resource: ResourceDataset, Action: ActionUpdate, Scope: ScopeAll}
+	PermDatasetUpdateTeam = PermissionRule{Resource: ResourceDataset, Action: ActionUpdate, Scope: ScopeTeam}
+	PermDatasetDeleteAll  = PermissionRule{Resource: ResourceDataset, Action: ActionDelete, Scope: ScopeAll}
+	PermDatasetManageAll  = PermissionRule{Resource: ResourceDataset, Action: ActionManage, Scope: ScopeAll}
+
+	// Dataset Version permissions
+	PermDatasetVersionReadAll      = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionRead, Scope: ScopeAll}
+	PermDatasetVersionReadTeam     = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionRead, Scope: ScopeTeam}
+	PermDatasetVersionCreateAll    = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionCreate, Scope: ScopeAll}
+	PermDatasetVersionCreateTeam   = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionCreate, Scope: ScopeTeam}
+	PermDatasetVersionUpdateAll    = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionUpdate, Scope: ScopeAll}
+	PermDatasetVersionUpdateTeam   = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionUpdate, Scope: ScopeTeam}
+	PermDatasetVersionDeleteAll    = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionDelete, Scope: ScopeAll}
+	PermDatasetVersionManageAll    = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionManage, Scope: ScopeAll}
+	PermDatasetVersionDownloadAll  = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionDownload, Scope: ScopeAll}
+	PermDatasetVersionDownloadTeam = PermissionRule{Resource: ResourceDatasetVersion, Action: ActionDownload, Scope: ScopeTeam}
+
+	// Label permissions
+	PermLabelReadAll   = PermissionRule{Resource: ResourceLabel, Action: ActionRead, Scope: ScopeAll}
+	PermLabelCreateAll = PermissionRule{Resource: ResourceLabel, Action: ActionCreate, Scope: ScopeAll}
+	PermLabelCreateOwn = PermissionRule{Resource: ResourceLabel, Action: ActionCreate, Scope: ScopeOwn}
+	PermLabelUpdateAll = PermissionRule{Resource: ResourceLabel, Action: ActionUpdate, Scope: ScopeAll}
+	PermLabelDeleteAll = PermissionRule{Resource: ResourceLabel, Action: ActionDelete, Scope: ScopeAll}
+
+	// Injection permissions (project-scoped)
+	PermInjectionReadProject     = PermissionRule{Resource: ResourceInjection, Action: ActionRead, Scope: ScopeProject}
+	PermInjectionCreateProject   = PermissionRule{Resource: ResourceInjection, Action: ActionCreate, Scope: ScopeProject}
+	PermInjectionUpdateProject   = PermissionRule{Resource: ResourceInjection, Action: ActionUpdate, Scope: ScopeProject}
+	PermInjectionDeleteProject   = PermissionRule{Resource: ResourceInjection, Action: ActionDelete, Scope: ScopeProject}
+	PermInjectionExecuteProject  = PermissionRule{Resource: ResourceInjection, Action: ActionExecute, Scope: ScopeProject}
+	PermInjectionCloneProject    = PermissionRule{Resource: ResourceInjection, Action: ActionClone, Scope: ScopeProject}
+	PermInjectionDownloadProject = PermissionRule{Resource: ResourceInjection, Action: ActionDownload, Scope: ScopeProject}
+
+	// Injection permissions (global)
+	PermInjectionReadAll     = PermissionRule{Resource: ResourceInjection, Action: ActionRead, Scope: ScopeAll}
+	PermInjectionUpdateAll   = PermissionRule{Resource: ResourceInjection, Action: ActionUpdate, Scope: ScopeAll}
+	PermInjectionDeleteAll   = PermissionRule{Resource: ResourceInjection, Action: ActionDelete, Scope: ScopeAll}
+	PermInjectionCloneAll    = PermissionRule{Resource: ResourceInjection, Action: ActionClone, Scope: ScopeAll}
+	PermInjectionDownloadAll = PermissionRule{Resource: ResourceInjection, Action: ActionDownload, Scope: ScopeAll}
+	PermInjectionUploadAll   = PermissionRule{Resource: ResourceInjection, Action: ActionUpload, Scope: ScopeAll}
+
+	// Execution permissions (project-scoped)
+	PermExecutionReadProject    = PermissionRule{Resource: ResourceExecution, Action: ActionRead, Scope: ScopeProject}
+	PermExecutionCreateProject  = PermissionRule{Resource: ResourceExecution, Action: ActionCreate, Scope: ScopeProject}
+	PermExecutionUpdateProject  = PermissionRule{Resource: ResourceExecution, Action: ActionUpdate, Scope: ScopeProject}
+	PermExecutionDeleteProject  = PermissionRule{Resource: ResourceExecution, Action: ActionDelete, Scope: ScopeProject}
+	PermExecutionExecuteProject = PermissionRule{Resource: ResourceExecution, Action: ActionExecute, Scope: ScopeProject}
+	PermExecutionStopProject    = PermissionRule{Resource: ResourceExecution, Action: ActionStop, Scope: ScopeProject}
+
+	// Execution permissions (global)
+	PermExecutionReadAll   = PermissionRule{Resource: ResourceExecution, Action: ActionRead, Scope: ScopeAll}
+	PermExecutionUpdateAll = PermissionRule{Resource: ResourceExecution, Action: ActionUpdate, Scope: ScopeAll}
+	PermExecutionDeleteAll = PermissionRule{Resource: ResourceExecution, Action: ActionDelete, Scope: ScopeAll}
+
+	// Task permissions
+	PermTaskReadAll    = PermissionRule{Resource: ResourceTask, Action: ActionRead, Scope: ScopeAll}
+	PermTaskCreateAll  = PermissionRule{Resource: ResourceTask, Action: ActionCreate, Scope: ScopeAll}
+	PermTaskUpdateAll  = PermissionRule{Resource: ResourceTask, Action: ActionUpdate, Scope: ScopeAll}
+	PermTaskDeleteAll  = PermissionRule{Resource: ResourceTask, Action: ActionDelete, Scope: ScopeAll}
+	PermTaskExecuteAll = PermissionRule{Resource: ResourceTask, Action: ActionExecute, Scope: ScopeAll}
+	PermTaskStopAll    = PermissionRule{Resource: ResourceTask, Action: ActionStop, Scope: ScopeAll}
+
+	// Trace permissions
+	PermTraceReadAll    = PermissionRule{Resource: ResourceTrace, Action: ActionRead, Scope: ScopeAll}
+	PermTraceMonitorAll = PermissionRule{Resource: ResourceTrace, Action: ActionMonitor, Scope: ScopeAll}
+	PermTraceStopAll    = PermissionRule{Resource: ResourceTrace, Action: ActionStop, Scope: ScopeAll}
+)
+
+// SystemRolePermissions defines the default permission rules for each system role
+var SystemRolePermissions = map[RoleName][]PermissionRule{
+	// System Roles
+	RoleSuperAdmin: {}, // Super admin has unrestricted access to all resources
+
+	RoleAdmin: {
+		// System management moved to module/system/permissions.go. The
+		// rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// User and permission management
+		// User management moved to module/user/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+		// RBAC management moved to module/rbac/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Team management moved to module/team/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Project management moved to module/project/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Container management moved to module/container/permissions.go.
+
+		// Dataset management moved to module/dataset/permissions.go. The
+		// rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Label management — moved to module/label/permissions.go (Phase 3
+		// reference migration). The rbac aggregator re-adds these to
+		// RoleAdmin at startup via framework.RoleGrantsRegistrar.
+
+		// Injection management -- moved to module/injection/permissions.go.
+		// The rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Execution management moved to module/execution/permissions.go.
+		// The rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Task management moved to module/task/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Trace permissions moved to module/trace/permissions.go
+		// (Phase 4, issue #44). The rbac aggregator re-adds these
+		// RoleAdmin grants at startup via fx.Invoke.
+	},
+	// Regular User Role - basic role with minimal permissions
+	// Users can read team resources if they are team members
+	RoleUser: {
+		// Container permissions moved to module/container/permissions.go.
+
+		// Dataset permissions moved to module/dataset/permissions.go.
+		// The rbac aggregator re-adds these to RoleUser at startup.
+
+		// Label permissions — moved to module/label/permissions.go
+		// (Phase 3 reference migration). The rbac aggregator re-adds
+		// these to RoleUser at startup.
+	},
+
+	// Container Roles
+	RoleContainerAdmin:     {},
+	RoleContainerDeveloper: {},
+	RoleContainerViewer:    {},
+
+	// Dataset roles moved to module/dataset/permissions.go. The rbac
+	// aggregator re-adds these grants at startup via
+	// framework.RoleGrantsRegistrar.
+
+	// Team Roles moved to module/team/permissions.go. The rbac
+	// aggregator re-adds these at startup via framework.RoleGrantsRegistrar.
+
+	// Project Roles moved to module/project/permissions.go. The rbac
+	// aggregator re-adds these at startup via framework.RoleGrantsRegistrar.
+}

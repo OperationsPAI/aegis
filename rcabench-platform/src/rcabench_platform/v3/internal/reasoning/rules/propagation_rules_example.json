@@ -1,0 +1,106 @@
+{
+  "$schema": "propagation_rules_schema.json",
+  "description": "Canonical-state propagation rule examples (Phase 2 IR vocabulary)",
+
+  "available_node_kinds": [
+    "machine", "namespace", "deployment", "replica_set", "stateful_set",
+    "daemon_set", "pod", "container", "service", "span",
+    "pvc", "pv", "configmap", "secret", "ingress", "endpoints", "function"
+  ],
+
+  "available_edge_kinds": [
+    "owns", "routes_to", "scales", "manages", "schedules",
+    "runs", "claims", "binds_to", "calls", "includes",
+    "related_to", "mounts", "exposes", "depends_on", "affects"
+  ],
+
+  "available_directions": ["forward", "backward"],
+
+  "available_states": {
+    "span":      ["unknown", "healthy", "slow", "erroring", "unavailable", "missing"],
+    "service":   ["unknown", "healthy", "slow", "degraded", "erroring", "unavailable"],
+    "pod":       ["unknown", "healthy", "degraded", "restarting", "erroring", "unavailable"],
+    "container": ["unknown", "healthy", "degraded", "erroring", "unavailable"]
+  },
+
+  "default_states": {
+    "pod": "healthy",
+    "container": "healthy",
+    "service": "healthy",
+    "span": "healthy"
+  },
+
+  "rules": [
+    {
+      "rule_id": "span_slow_to_caller",
+      "description": "SLOW callee span propagates SLOW to its caller (callee waits the caller).",
+      "tier": "core",
+      "src_kind": "span",
+      "src_states": ["slow"],
+      "edge_kind": "calls",
+      "direction": "backward",
+      "dst_kind": "span",
+      "possible_dst_states": ["slow", "erroring"],
+      "confidence": 0.8
+    },
+    {
+      "rule_id": "span_erroring_to_caller",
+      "description": "ERRORING callee span propagates ERRORING to its caller.",
+      "tier": "core",
+      "src_kind": "span",
+      "src_states": ["erroring"],
+      "edge_kind": "calls",
+      "direction": "backward",
+      "dst_kind": "span",
+      "possible_dst_states": ["erroring", "slow"],
+      "confidence": 0.8
+    },
+
+    {
+      "rule_id": "pod_unavailable_to_span",
+      "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE.",
+      "tier": "core",
+      "src_kind": "pod",
+      "src_states": ["unavailable"],
+      "path": [
+        {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+        {"edge_kind": "includes", "direction": "forward"}
+      ],
+      "dst_kind": "span",
+      "possible_dst_states": ["missing", "unavailable", "erroring"],
+      "confidence": 0.9
+    }
+  ],
+
+  "edge_condition_operators": [">", "<", ">=", "<=", "==", "!="],
+
+  "edge_data_fields": {
+    "calls": {
+      "description": "Statistics for span-to-span call edges",
+      "fields": {
+        "baseline_call_count": "Total calls during baseline period",
+        "baseline_error_count": "Error count (5xx) during baseline period",
+        "baseline_error_rate": "Computed: baseline_error_count / baseline_call_count",
+        "baseline_avg_latency": "Average latency in seconds (baseline)",
+        "baseline_p99_latency": "P99 latency in seconds (baseline)",
+        "abnormal_call_count": "Total calls during abnormal period",
+        "abnormal_error_count": "Error count (5xx) during abnormal period",
+        "abnormal_error_rate": "Computed: abnormal_error_count / abnormal_call_count",
+        "abnormal_avg_latency": "Average latency in seconds (abnormal)",
+        "abnormal_p99_latency": "P99 latency in seconds (abnormal)"
+      }
+    }
+  },
+
+  "topology_reference": {
+    "namespace --owns--> deployment|stateful_set|service": "Namespace contains workloads",
+    "deployment --scales--> replica_set": "Deployment manages ReplicaSet",
+    "replica_set|stateful_set --manages--> pod": "Controller manages Pods",
+    "machine --schedules--> pod": "Node schedules Pod",
+    "pod --runs--> container": "Pod runs containers",
+    "service --routes_to--> pod": "Service routes traffic to Pods",
+    "service --includes--> span|function": "Service contains API endpoints",
+    "service --exposes--> endpoints": "Service exposes endpoints",
+    "span --calls--> span": "Span calls Span (distributed tracing RPC)"
+  }
+}

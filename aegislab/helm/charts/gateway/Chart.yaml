@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gateway
+description: Aegis gateway microservice (extracted from rcabench monolith chart)
+type: application
+version: 0.2.3
+appVersion: "1.0.0"

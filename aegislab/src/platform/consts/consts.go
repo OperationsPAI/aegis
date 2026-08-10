@@ -1,0 +1,772 @@
+package consts
+
+import (
+	"encoding/json"
+	"strconv"
+	"time"
+
+	"aegis/platform/chaos"
+)
+
+const InitialFilename = "data.yaml"
+const DetectorKey = "algo.detector"
+
+const (
+	DefaultContainerVersion = "v1.0.0"
+	DefaultContainerTag     = "latest"
+	DefaultInvalidID        = 0
+	DefaultLabelUsage       = 1
+	DefaultTimeUnit         = time.Minute
+)
+
+// Fault-injection time windows are pinned in code so loop agents and
+// external callers cannot drift them. Every active injection follows the
+// same schedule:
+//
+//	[restart] → [warmup] → [normal] → [abnormal]
+//	  25 min     2 min      5 min       5 min
+//
+// Interval (= normal + abnormal) is the namespace-lock window after the
+// pedestal becomes Ready; it does NOT include the restart or warmup phases.
+//
+// Restart timeout is sized for cold DSB systems (TrainTicket /
+// HotelReservation / SocialNetwork / MediaMicroservices) without
+// pre-warm: ts/sn/mm/hs cold pull-and-init runs 12-22 min in observed
+// data, so 25 min keeps a margin while still failing fast on
+// genuine readiness regressions. Pre-warmed pedestals settle in
+// 30-90 s — the timeout is a ceiling, not a target.
+// DefaultFixedPedestalRestartTimeoutSeconds / DefaultFixedPedestalWarmupSeconds
+// are operational defaults; runtime callers should read the corresponding
+// config key (orchestrator.pedestal.restart_timeout_seconds /
+// orchestrator.pedestal.warmup_seconds) and fall back to these.
+//
+// FixedNormalWindowSeconds / FixedAbnormalWindowSeconds are protocol
+// invariants (per-spec inject window) and intentionally not config-backed —
+// they are referenced by payload-construction tests and timeline math.
+const (
+	DefaultFixedPedestalRestartTimeoutSeconds = 25 * 60 // 25 min
+	DefaultFixedPedestalWarmupSeconds         = 1 * 60  // 1 min (was 2 min — trimmed for byte-cluster e2e iteration)
+	FixedNormalWindowSeconds                  = 1 * 60  // 1 min (was 5 min — was pre_duration)
+	FixedAbnormalWindowSeconds                = 1 * 60  // 1 min (was 5 min — was per-spec duration)
+	FixedIntervalSeconds                      = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
+)
+
+// Minute-denominated views of the fixed windows, for the legacy payload
+// fields (consts.InjectPreDuration, consts.RestartIntarval, consts.RestartFaultDuration)
+// that downstream code expects in minute units.
+const (
+	FixedNormalWindowMinutes   = FixedNormalWindowSeconds / 60
+	FixedAbnormalWindowMinutes = FixedAbnormalWindowSeconds / 60
+	FixedIntervalMinutes       = FixedIntervalSeconds / 60
+)
+
+// monitoring related constants
+const (
+	// Set of all monitored namespaces
+	NamespacesKey = "monitor:namespaces"
+	// Hash pattern for namespace status (will be monitor:ns:{namespace})
+	NamespaceKeyPattern = "monitor:ns:%s"
+)
+
+// configuration update notification constants
+const (
+	ConfigEtcdProducerPrefix    = "/rcabench/config/producer/"
+	ConfigEtcdConsumerPrefix    = "/rcabench/config/consumer/"
+	ConfigEtcdGlobalPrefix      = "/rcabench/config/global/"
+	ConfigUpdateResponseChannel = "config:updates:response"
+)
+
+const Hybrid chaos.ChaosType = -1
+
+// Evaluation type constants
+const (
+	EvalTypeDatapack = "datapack"
+	EvalTypeDataset  = "dataset"
+)
+
+type DatapackSource string
+
+const (
+	DatapackSourceInjection DatapackSource = "injection"
+	DatapackSourceManual    DatapackSource = "manual"
+)
+
+const (
+	GroundtruthSourceAuto     = "auto"
+	GroundtruthSourceManual   = "manual"
+	GroundtruthSourceImported = "imported"
+)
+
+const (
+	// Execution result label keys
+	ExecutionLabelSource = "source"
+
+	// Execution result label values
+	ExecutionSourceManual = "manual" // User manually uploaded
+	ExecutionSourceSystem = "system" // RCABench internally managed
+
+	ExecutionManualDescription = "Manual execution result created via API"
+	ExecutionSystemDescription = "System-managed execution result created by RCABench"
+)
+
+type LabelCategory int
+
+const (
+	SystemCategory LabelCategory = iota
+	ConfigCategory
+	ContainerCategory
+	DatasetCategory
+	ProjectCategory
+	InjectionCategory
+	ExecutionCategory
+)
+
+const (
+	LabelKeyTag = "tag"
+
+	CustomLabelDescriptionTemplate = "Custom label '%s' created %s"
+)
+
+type AuditLogState int
+
+const (
+	AuditLogStateFailed AuditLogState = iota
+	AuditLogStateSuccess
+)
+
+type BuildSourceType string
+
+const (
+	BuildSourceTypeFile   BuildSourceType = "file"
+	BuildSourceTypeGitHub BuildSourceType = "github"
+	BuildSourceTypeHarbor BuildSourceType = "harbor"
+)
+
+type ConfigHistoryChangeType int
+
+const (
+	ChangeTypeUpdate ConfigHistoryChangeType = iota
+	ChangeTypeRollback
+)
+
+type ConfigHistoryChangeField int
+
+const (
+	ChangeFieldValue ConfigHistoryChangeField = iota
+	ChangeFieldDescription
+	ChangeFieldDefaultValue
+	ChangeFieldMinValue
+	ChangeFieldMaxValue
+	ChangeFieldPattern
+	ChangeFieldOptions
+)
+
+type ContainerType int
+
+const (
+	ContainerTypeAlgorithm ContainerType = iota
+	ContainerTypeBenchmark
+	ContainerTypePedestal
+)
+
+type ConfigScope int
+
+const (
+	ConfigScopeProducer ConfigScope = iota
+	ConfigScopeConsumer
+	ConfigScopeGlobal
+)
+
+type ConfigValueType int
+
+const (
+	ConfigValueTypeString ConfigValueType = iota
+	ConfigValueTypeBool
+	ConfigValueTypeInt
+	ConfigValueTypeFloat
+	ConfigValueTypeStringArray
+)
+
+type ParameterType int
+
+const (
+	ParameterTypeFixed ParameterType = iota
+	ParameterTypeDynamic
+)
+
+type ParameterCategory int
+
+const (
+	ParameterCategoryEnvVars ParameterCategory = iota
+	ParameterCategoryHelmValues
+)
+
+type ValueDataType int
+
+const (
+	ValueDataTypeString ValueDataType = iota
+	ValueDataTypeInt
+	ValueDataTypeBool
+	ValueDataTypeFloat
+	ValueDataTypeArray
+	ValueDataTypeObject
+)
+
+type DatapackState int
+
+const (
+	DatapackInitial DatapackState = iota
+	DatapackInjectFailed
+	DatapackInjectSuccess
+	DatapackBuildFailed
+	DatapackBuildSuccess
+	DatapackDetectorFailed
+	DatapackDetectorSuccess
+)
+
+func (ds DatapackState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(GetDatapackStateName(ds))
+}
+
+func (ds *DatapackState) UnmarshalJSON(data []byte) error {
+	var stateName string
+	if err := json.Unmarshal(data, &stateName); err != nil {
+		return err
+	}
+	*ds = *GetDatapackStateByName(stateName)
+	return nil
+}
+
+type ExecutionState int
+
+const (
+	ExecutionInitial ExecutionState = iota
+	ExecutionFailed
+	ExecutionSuccess
+)
+
+func (es ExecutionState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(GetExecutionStateName(es))
+}
+
+func (es *ExecutionState) UnmarshalJSON(data []byte) error {
+	var stateName string
+	if err := json.Unmarshal(data, &stateName); err != nil {
+		return err
+	}
+	*es = *GetExecutionStateByName(stateName)
+	return nil
+}
+
+type GrantType int
+
+const (
+	GrantTypeGrant GrantType = iota
+	GrantTypeDeny
+)
+
+const (
+	DetectorNoAnomaly = "no_anomaly"
+)
+
+type PageSize int
+
+const (
+	PageSizeTiny   PageSize = 5
+	PageSizeSmall  PageSize = 10
+	PageSizeMedium PageSize = 20
+	PageSizeLarge  PageSize = 50
+	PageSizeXLarge PageSize = 100
+)
+
+type TaskExtra string
+
+const (
+	TaskExtraInjectionAlgorithms TaskExtra = "injection_algorithms"
+	// TaskExtraParentSubmittedByAegisctlViaChaos marks tasks the chaos
+	// webhook submits on behalf of aegisctl --via-chaos, which never
+	// persists a backend tasks row for its ParentTaskID. SubmitTaskWithDB
+	// uses this to downgrade the missing-parent log from ERROR (regression
+	// in the backend dispatcher path) to WARN (expected for aegisctl).
+	TaskExtraParentSubmittedByAegisctlViaChaos TaskExtra = "parent_submitted_by_aegisctl_via_chaos"
+)
+
+type TaskState int
+
+const (
+	TaskCancelled   TaskState = -2
+	TaskError       TaskState = -1
+	TaskPending     TaskState = 0
+	TaskRescheduled TaskState = 1
+	TaskRunning     TaskState = 2
+	TaskCompleted   TaskState = 3
+)
+
+type TraceType int
+
+const (
+	TraceTypeFullPipeline   TraceType = iota // Complete fault injection + algorithm execution pipeline
+	TraceTypeFaultInjection                  // Fault injection workflow
+	TraceTypeDatapackBuild                   // Datapack building workflow
+	TraceTypeAlgorithmRun                    // Algorithm execution workflow
+)
+
+type TraceState int
+
+const (
+	TracePending   TraceState = iota // Trace is pending/not started
+	TraceRunning                     // Trace is currently running
+	TraceCompleted                   // Trace completed successfully
+	TraceFailed                      // Trace failed with errors
+	TraceCancelled                   // Trace cancelled by user
+)
+
+func (t TraceState) MarshalBinary() ([]byte, error) {
+	return []byte(strconv.Itoa(int(t))), nil
+}
+
+type TaskType int
+
+const (
+	TaskTypeBuildContainer TaskType = iota
+	TaskTypeRestartPedestal
+	TaskTypeFaultInjection
+	TaskTypeRunAlgorithm
+	TaskTypeBuildDatapack
+	TaskTypeCollectResult
+	TaskTypeCronJob
+)
+
+type StatusType int
+
+// common status: 0:disabled 1:enabled -1:deleted
+const (
+	CommonDeleted  StatusType = -1
+	CommonDisabled StatusType = 0
+	CommonEnabled  StatusType = 1
+)
+
+const (
+	TaskMsgCompleted string = "Task %s completed"
+	TaskMsgFailed    string = "Task %s failed"
+)
+
+// Payload keys for different task types
+const (
+	BuildImageRef     = "image_ref"
+	BuildSourcePath   = "source_path"
+	BuildBuildOptions = "build_options"
+
+	BuildOptionContextDir     = "context_dir"
+	BuildOptionDockerfilePath = "dockerfile_path"
+	BuildOptionTarget         = "target"
+	BuildOptionBuildArgs      = "build_args"
+	BuildOptionForceRebuild   = "force_rebuild"
+
+	RestartPedestal          = "pedestal_version"
+	RestartHelmConfig        = "helm_config"
+	RestartIntarval          = "interval"
+	RestartFaultDuration     = "fault_duration"
+	RestartInjectPayload     = "inject_payload"
+	RestartSkipInstall       = "skip_install"
+	RestartRequiredNamespace = "required_namespace"
+
+	InjectBenchmark     = "benchmark_version"
+	InjectPreDuration   = "pre_duration"
+	InjectGuidedConfigs = "guided_configs"
+	InjectNamespace     = "namespace"
+	InjectPedestal      = "pedestal"
+	InjectPedestalID    = "pedestal_id"
+	InjectLabels        = "labels"
+	InjectSystem        = "system"
+	// Chaos point-catalog identity threaded through to the dispatcher so
+	// chaos-service POSTs hash the same Point ID as aegisctl --via-chaos.
+	// Empty values map to the seed-catalog defaults (instance="seed",
+	// chart_version=helm_configs.version).
+	InjectChaosInstance = "chaos_instance"
+	InjectChartVersion  = "chart_version"
+
+	BuildBenchmark        = "benchmark"
+	BuildDatapack         = "datapack"
+	BuildDatasetVersionID = "dataset_version_id"
+	BuildLabels           = "labels"
+
+	ExecuteAlgorithm        = "algorithm"
+	ExecuteDatapack         = "datapack"
+	ExecuteDatasetVersionID = "dataset_version_id"
+	ExecuteEnvVars          = "env_vars"
+	ExecuteLabels           = "labels"
+
+	CollectAlgorithm   = "algorithm"
+	CollectDatapack    = "datapack"
+	CollectExecutionID = "execution_id"
+
+	EvaluateLabel = "app_name"
+	EvaluateLevel = "level"
+)
+
+// DefaultHarborTimeoutSeconds is the operational default for Harbor API
+// calls; callers should read config key `harbor.timeout_seconds` and fall
+// back to this.
+const (
+	DefaultHarborTimeoutSeconds = 30
+	HarborTimeUnit              = time.Second
+)
+
+const (
+	InjectionAlgorithmsKey = "injection:algorithms"
+)
+
+// Redis stream channels and fields
+const (
+	StreamTraceLogKey = "trace:%s:log"
+	StreamGroupLogKey = "group:%s:log"
+
+	RdbEventTaskID   = "task_id"
+	RdbEventTaskType = "task_type"
+	RdbEventStatus   = "status"
+	RdbEventFileName = "file_name"
+	RdbEventLine     = "line"
+	RdbEventName     = "name"
+	RdbEventPayload  = "payload"
+	RdbEventFn       = "function_name"
+
+	RdbEventTraceID        = "trace_id"
+	RdbEventTraceState     = "state"
+	RdbEventTraceLastEvent = "last_event"
+)
+
+const (
+	TokenWaitTimeout    = 10
+	TokenWaitTimeoutKey = "rate_limiting.token_wait_timeout"
+
+	RestartPedestalTokenBucket   = "token_bucket:restart_service"
+	MaxTokensKeyRestartPedestal  = "rate_limiting.max_concurrent_restarts_pedestal"
+	MaxConcurrentRestartPedestal = 2
+	RestartPedestalServiceName   = "restart_pedestal"
+
+	// MaxTokensKeyRestartPedestalPerSystemPrefix is the dotted prefix for a
+	// per-system override of the restart-pedestal concurrency cap. The full
+	// key is `<prefix>.<system>` (e.g.
+	// rate_limiting.max_concurrent_restarts_pedestal_per_system.ts). A
+	// SEPARATE parent ("..._per_system") is required because viper merges
+	// dotted keys into a nested map: writing `<global-key>.ts` would clobber
+	// the scalar at the global key. Systems without an override fall back to
+	// MaxTokensKeyRestartPedestal (the global default).
+	MaxTokensKeyRestartPedestalPerSystemPrefix = "rate_limiting.max_concurrent_restarts_pedestal_per_system"
+
+	BuildContainerTokenBucket = "token_bucket:build_container"
+	// MaxTokensKeyBuildContainer reads the same etcd key that the
+	// rate_limiting config handler watches (rate_limiting.max_concurrent_builds).
+	// Earlier this was "rate_limiting.max_concurrent_build_container" which
+	// disagreed with the watched key, so reload would silently no-op against
+	// the operator-set value. The Go symbol stays BuildContainerKey* to keep
+	// the BuildContainer / BuildDatapack / Algo / Restart triples symmetric.
+	MaxTokensKeyBuildContainer  = "rate_limiting.max_concurrent_builds"
+	MaxConcurrentBuildContainer = 3
+	BuildContainerServiceName   = "build_container"
+
+	// BuildDatapack rate limiting. Gates the BuildDatapack task type which
+	// fans out a Kubernetes Job that issues ~30 ClickHouse queries per
+	// invocation; without this cap the autonomous inject-loop has crossed
+	// ClickHouse's max_concurrent_queries=500 default and triggered
+	// "Code 202: Too many simultaneous queries" cascades.
+	BuildDatapackTokenBucket   = "token_bucket:build_datapack"
+	MaxTokensKeyBuildDatapack  = "rate_limiting.max_concurrent_build_datapack"
+	MaxConcurrentBuildDatapack = 8
+	BuildDatapackServiceName   = "build_datapack"
+
+	// BuildDatapack ClickHouse freshness pre-flight (issue #210). The
+	// executor blocks the K8s Job submission until otel.otel_traces has
+	// rows with Timestamp >= (abnormal_end - watermark) for the target
+	// service.namespace, or the bounded retry budget is exhausted. The
+	// two keys are read on every probe via config.GetInt so a runtime
+	// `aegisctl etcd put` applies without a backend rebuild.
+	MaxTokensKeyBuildDatapackFreshnessWatermark   = "rate_limiting.build_datapack_freshness_watermark_seconds"
+	MaxTokensKeyBuildDatapackFreshnessMaxWait     = "rate_limiting.build_datapack_freshness_max_wait_seconds"
+	DefaultBuildDatapackFreshnessWatermarkSeconds = 30
+	DefaultBuildDatapackFreshnessMaxWaitSeconds   = 300
+
+	// RestartPedestal traffic-presence readiness gate. After the pedestal
+	// workload reports Ready, the executor polls otel.otel_traces for spans
+	// from the target namespace and only treats the namespace as warmed once
+	// traffic is confirmed flowing. Closes the cold-start race where DSB
+	// charts go pod-Ready in seconds but their data-init-job + load-generator
+	// take minutes to emit the first spans — injecting at the fixed 1-min
+	// warmup produced an empty abnormal window and a no-spans BuildDatapack.
+	// All three keys are read via config.GetInt so a runtime etcd push applies
+	// without a backend rebuild.
+	PedestalTrafficGateMinSpansKey           = "orchestrator.pedestal.traffic_gate_min_spans"
+	PedestalTrafficGatePollKey               = "orchestrator.pedestal.traffic_gate_poll_seconds"
+	PedestalTrafficGateTimeoutKey            = "orchestrator.pedestal.traffic_gate_timeout_seconds"
+	DefaultPedestalTrafficGateMinSpans       = 50
+	DefaultPedestalTrafficGatePollSeconds    = 15
+	DefaultPedestalTrafficGateTimeoutSeconds = 600
+
+	// Algorithm execution rate limiting
+	AlgoExecutionTokenBucket   = "token_bucket:algo_execution"
+	MaxTokensKeyAlgoExecution  = "rate_limiting.max_concurrent_algo_execution"
+	MaxConcurrentAlgoExecution = 5
+	AlgoExecutionServiceName   = "algo_execution"
+
+	// Per-system inject concurrency cap. checkSystemCapacity reads this via
+	// config.GetInt; the seeded dynamic_configs row must carry Global scope so
+	// aegis-chaos boot's EnsureScope(Global) loads it into Viper, and the boot
+	// hook also starts EnsureConfigCenterBridge so a runtime `aegisctl etcd put`
+	// applies live. The per-system chaos_systems.max_concurrent_injections
+	// column overrides it when set > 0; DefaultMaxConcurrentInjections is the
+	// final floor when neither override nor config is present.
+	MaxConcurrentInjectionsKey     = "rate_limiting.max_concurrent_injections"
+	DefaultMaxConcurrentInjections = 20
+
+	// Namespace warming rate limiting. Decoupled from RestartPedestal so the
+	// "max concurrent helm-installs hammering the API server" bound stays
+	// small (typically 5) while "max namespaces simultaneously cold-starting
+	// workloads" can be much larger (default 30). Held during the
+	// post-install WaitNamespaceReady probe; released when the readiness
+	// probe returns or times out. See PR #205.
+	NamespaceWarmingTokenBucket   = "token_bucket:namespace_warming"
+	MaxTokensKeyNamespaceWarming  = "rate_limiting.max_concurrent_ns_warming"
+	MaxConcurrentNamespaceWarming = 30
+	NamespaceWarmingServiceName   = "namespace_warming"
+
+	// Stuck-trace reconciler (issue #293). Closes the latent gap where the
+	// chaos-mesh CRD-success path is the only thing that submits the
+	// BuildDatapack task: a worker restart, an in-memory batchManager race,
+	// or a silently early-returning postProcess closure leaves the trace
+	// pinned at last_event=fault.injection.{started,completed} with no
+	// downstream task. The reconciler is a periodic DB-driven sweep; it
+	// re-fires the equivalent of postProcess for traces older than the
+	// stuck threshold, idempotent on the per-fault-injection-task
+	// BuildDatapack child task. Both keys are read on every tick so a
+	// runtime aegisctl push to etcd applies without a backend rebuild.
+	StuckTraceReconcileIntervalKey         = "rate_limiting.stuck_trace_reconcile_interval_seconds"
+	StuckTraceReconcileStuckThresholdKey   = "rate_limiting.stuck_trace_reconcile_stuck_threshold_seconds"
+	DefaultStuckTraceReconcileIntervalSecs = 60
+	DefaultStuckTraceReconcileStuckSecs    = 600
+	// StuckTraceReconcileRestartPedestalThresholdKey overrides the stuck
+	// threshold applied specifically to traces parked at
+	// restart.pedestal.started. RestartPedestal legitimately holds this state
+	// far longer than the fault.injection.* states: a cold DSB bootstrap
+	// chains the per-system readiness_timeout (up to ~25 min), the warmup
+	// floor, and the traffic-presence gate (up to 10 min) BEFORE the inject
+	// fires, and the trace's updated_at does not advance during that wait. The
+	// generic 600 s threshold reaps these legitimate in-progress bootstraps.
+	// 2400 s (40 min) comfortably exceeds the worst-case legitimate RP
+	// duration while still recovering genuinely-dead workers.
+	StuckTraceReconcileRestartPedestalThresholdKey = "rate_limiting.stuck_trace_reconcile_restart_pedestal_threshold_seconds"
+	DefaultStuckTraceReconcileRestartPedestalSecs  = 2400
+
+	// RestartPedestalMaxRescheduleKey caps how many times a RestartPedestal
+	// task may reschedule on a transient acquire failure (rate-limited / no
+	// namespace available) before it is abandoned: the trace is failed and the
+	// namespace lock released so the topology becomes re-injectable instead of
+	// holding a dedup slot forever (issue #531). Read on every reschedule so a
+	// runtime etcd push applies without a rebuild. Default 30: at the backoff
+	// cap of 5 min per attempt that is a ~2.5 h budget for a genuinely
+	// transient pool, well past which the namespace is permanently
+	// unsatisfiable.
+	RestartPedestalMaxRescheduleKey     = "rate_limiting.restart_pedestal_max_reschedule"
+	DefaultRestartPedestalMaxReschedule = 30
+
+	// FaultInjectionMaxRescheduleKey caps how many times a FaultInjection task
+	// may reschedule on transient pre-dispatch backpressure — a 429
+	// system-at-capacity (per-system max_concurrent_injections cap) or
+	// namespace-lock contention from a sibling trace — before it is abandoned:
+	// the trace is failed so it stops looping forever (issue #533). Read on
+	// every reschedule so a runtime etcd push applies without a rebuild.
+	// Default 30 mirrors RestartPedestal: at the 5-min backoff cap that is a
+	// ~2.5 h budget, well past which the capacity / lock pressure is no longer
+	// plausibly transient.
+	FaultInjectionMaxRescheduleKey     = "rate_limiting.fault_injection_max_reschedule"
+	DefaultFaultInjectionMaxReschedule = 30
+)
+
+type EventType string
+
+const (
+	EventRestartPedestalStarted   EventType = "restart.pedestal.started"
+	EventRestartPedestalCompleted EventType = "restart.pedestal.completed"
+	EventRestartPedestalFailed    EventType = "restart.pedestal.failed"
+
+	EventFaultInjectionStarted   EventType = "fault.injection.started"
+	EventFaultInjectionCompleted EventType = "fault.injection.completed"
+	EventFaultInjectionFailed    EventType = "fault.injection.failed"
+	// EventFaultInjectionRescheduled marks a FaultInjection task re-queued on
+	// transient dispatch backpressure (429 system-at-capacity or ns-lock
+	// contention, issue #533). Deliberately distinct from no.namespace.available
+	// so the stuck-trace reconciler's no-namespace recovery arm (which routes to
+	// recoverStuckRestartPedestal) does not sweep an actively-backing-off inject.
+	EventFaultInjectionRescheduled EventType = "fault.injection.rescheduled"
+
+	EventAlgoRunStarted       EventType = "algorithm.run.started"
+	EventAlgoRunSucceed       EventType = "algorithm.run.succeed"
+	EventAlgoRunFailed        EventType = "algorithm.run.failed"
+	EventAlgoResultCollection EventType = "algorithm.result.collection"
+	EventAlgoNoResultData     EventType = "algorithm.no_result_data"
+
+	EventDatapackBuildStarted     EventType = "datapack.build.started"
+	EventDatapackBuildSucceed     EventType = "datapack.build.succeed"
+	EventDatapackBuildFailed      EventType = "datapack.build.failed"
+	EventDatapackResultCollection EventType = "datapack.result.collection"
+	EventDatapackNoAnomaly        EventType = "datapack.no_anomaly"
+	EventDatapackNoDetectorData   EventType = "datapack.no_detector_data"
+
+	EventImageBuildStarted EventType = "image.build.started"
+	EventImageBuildSucceed EventType = "image.build.succeed"
+	EventImageBuildFailed  EventType = "image.build.failed"
+
+	EventTaskStarted     EventType = "task.started"
+	EventTaskStateUpdate EventType = "task.state.update"
+	EventTaskRetryStatus EventType = "task.retry.status"
+	EventTaskScheduled   EventType = "task.scheduled"
+	EventTraceCancelled  EventType = "trace.cancelled"
+
+	EventNoNamespaceAvailable EventType = "no.namespace.available"
+	EventNoTokenAvailable     EventType = "no.token.available"
+
+	EventAcquireLock EventType = "acquire.lock"
+	EventReleaseLock EventType = "release.lock"
+
+	EventJobSucceed EventType = "k8s.job.succeed"
+	EventJobFailed  EventType = "k8s.job.failed"
+)
+
+func (e EventType) String() string {
+	return string(e)
+}
+
+func (e EventType) MarshalBinary() ([]byte, error) {
+	return []byte(e), nil
+}
+
+const (
+	TaskCarrier      = "task_carrier"
+	TraceCarrier     = "trace_carrier"
+	GroupCarrier     = "group_carrier"
+	RootTraceCarrier = "root_trace_carrier"
+)
+
+// K8s fields
+const (
+	// Annotation fields
+	CRDAnnotationBenchmark = "benchmark"
+	JobAnnotationAlgorithm = "algorithm"
+	JobAnnotationDatapack  = "datapack"
+
+	K8sLabelAppID = "rcabench_app_id"
+
+	// CRD label fields
+	CRDLabelBatchID  = "batch_id"
+	CRDLabelIsHybrid = "is_hybrid"
+
+	// Job label common fields
+	JobLabelName      = "job-name"
+	JobLabelTaskID    = "task_id"
+	JobLabelTraceID   = "trace_id"
+	JobLabelGroupID   = "group_id"
+	JobLabelProjectID = "project_id"
+	JobLabelUserID    = "user_id"
+	JobLabelTaskType  = "task_type"
+
+	// Job label custom fields
+	JobLabelDatapack    = "datapack"
+	JobLabelDatasetID   = "dataset_id"
+	JobLabelExecutionID = "execution_id"
+	JobLabelTimestamp   = "timestamp"
+
+	// Pod metadata read by the node-local OTel collector's k8sattributes
+	// processor. The processor copies the trace-id annotation into log
+	// records as LogAttributes['trace_id'], joining pod stdout with the
+	// orchestrator's OTLP logs in ClickHouse. The DNS-style prefix avoids
+	// colliding with the bare-key labels above (which are already used as
+	// downward-API surfaces by some workloads).
+	AegisPodAnnotationTraceID = "aegis.io/trace-id"
+	AegisPodLabelComponent    = "aegis.io/component"
+
+	AegisComponentAlgorithm     = "algorithm"
+	AegisComponentBuildDatapack = "build-datapack"
+)
+
+type VolumeMountName string
+
+const (
+	VolumeMountKubeConfig        VolumeMountName = "kube_config"
+	VolumeMountDataset           VolumeMountName = "dataset"
+	VolumeMountExperimentStorage VolumeMountName = "experiment_storage"
+)
+
+type SSEEventName string
+
+// SSE event types
+const (
+	EventEnd    SSEEventName = "end"
+	EventUpdate SSEEventName = "update"
+)
+
+type LogLevel string
+
+const (
+	LogLevelError LogLevel = "error"
+	LogLevelWarn  LogLevel = "warn"
+	LogLevelInfo  LogLevel = "info"
+	LogLevelDebug LogLevel = "debug"
+)
+
+type WSLogType string
+
+// WebSocket log message types
+const (
+	WSLogTypeHistory  WSLogType = "history"
+	WSLogTypeRealtime WSLogType = "realtime"
+	WSLogTypeEnd      WSLogType = "end"
+	WSLogTypeError    WSLogType = "error"
+)
+
+const (
+	SpanStatusDescription = "task %s %s"
+)
+
+const (
+	DownloadFilename       = "package"
+	DetectorConclusionFile = "conclusion.csv"
+	ExecutionResultFile    = "result.csv"
+)
+
+const (
+	DurationNodeKey = "0"
+	SystemNodeKey   = "1"
+)
+
+// span attribute keys
+const (
+	// TaskIDKey is the key for the task ID attribute.
+	TaskIDKey = "task.task_id"
+	// TaskTypeKey is the key for the task type attribute.
+	TaskTypeKey = "task.task_type"
+	// TaskStateKey is the key for the task status attribute.
+	TaskStateKey = "task.task_state"
+)
+
+const (
+	URLPathID           = "id"
+	URLPathUserID       = "user_id"
+	URLPathRoleID       = "role_id"
+	URLPathPermissionID = "permission_id"
+	URLPathConfigID     = "config_id"
+	URLPathContainerID  = "container_id"
+	URLPathVersionID    = "version_id"
+	URLPathDatasetID    = "dataset_id"
+	URLPathProjectID    = "project_id"
+	URLPathTeamID       = "team_id"
+	URLPathTaskID       = "task_id"
+	URLPathDatapackID   = "datapack_id"
+	URLPathExecutionID  = "execution_id"
+	URLPathAlgorithmID  = "algorithm_id"
+	URLPathInjectionID  = "injection_id"
+	URLPathTraceID      = "trace_id"
+	URLPathGroupID      = "group_id"
+	URLPathLabelID      = "label_id"
+	URLPathResourceID   = "resource_id"
+	URLPathName         = "name"
+)

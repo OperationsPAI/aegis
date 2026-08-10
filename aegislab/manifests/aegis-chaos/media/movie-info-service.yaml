@@ -1,0 +1,33 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "movie-info-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "movie-info-service"
+        namespace: "media"
+    - capability: "pod_failure"
+      target:
+        app: "movie-info-service"
+        namespace: "media"
+    - capability: "container_kill"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media"
+    - capability: "cpu_stress"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media"
+    - capability: "time_skew"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media"
