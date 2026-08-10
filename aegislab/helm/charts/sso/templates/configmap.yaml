@@ -1,0 +1,71 @@
+{{- if .Values.enabled }}
+# Aegis SSO ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sso.fullname" . }}-config
+  labels:
+    {{- include "sso.labels" . | nindent 4 }}
+data:
+  config.prod.toml: |
+    name = "{{ .Values.config.name | default "sso" }}"
+    version = "{{ .Values.config.version | default "1.0.0" }}"
+    port = {{ .Values.config.port }}
+    workspace = "{{ .Values.config.workspace | default "/app" }}"
+
+    [database.mysql]
+    host = "{{ .Values.config.database.mysql.host }}"
+    port = "{{ .Values.config.database.mysql.port }}"
+    user = "{{ .Values.config.database.mysql.user }}"
+    password = "{{ .Values.config.database.mysql.password }}"
+    db = "{{ .Values.config.database.mysql.db }}"
+
+    [redis]
+    host = "{{ .Values.config.redis.host }}"
+
+    [tracing]
+    endpoint = "{{ .Values.config.tracing.endpoint }}"
+
+    [k8s]
+    namespace = "{{ .Values.config.k8s.namespace | default .Release.Namespace }}"
+    [k8s.job.service_account]
+    name = "{{ .Values.config.k8s.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
+
+    [sso]
+    issuer = "{{ .Values.config.sso.issuer }}"
+    base_url = "{{ .Values.config.sso.baseURL }}"
+    jwks_url = "{{ .Values.config.sso.jwksURL }}"
+    kid = "{{ .Values.config.sso.kid }}"
+    client_id = "{{ .Values.config.sso.clientID }}"
+    backend_redirect_uri = "{{ .Values.config.sso.backendRedirectURI }}"
+    private_key_path = "{{ .Values.config.sso.privateKeyPath }}"
+    seed_secret_dump_path = "{{ .Values.config.sso.seedSecretDumpPath }}"
+    {{- /*
+      Derive console redirect URI + login redirect from `global.publicBaseURL`
+      (set at the parent chart root) when the explicit values are empty.
+      Explicit values still win for multi-origin whitelists.
+    */}}
+    {{- $pub := (.Values.global).publicBaseURL | default "" -}}
+    {{- $consoleURIs := .Values.config.sso.consoleRedirectURIs -}}
+    {{- if and (not $consoleURIs) $pub }}
+      {{- $consoleURIs = printf "%s/auth/callback" $pub -}}
+    {{- end }}
+    {{- $loginRedir := .Values.config.sso.loginRedirect -}}
+    {{- if and (not $loginRedir) $pub }}
+      {{- $loginRedir = printf "%s/auth/login" $pub -}}
+    {{- end }}
+    console_redirect_uris = "{{ $consoleURIs }}"
+    login_redirect = "{{ $loginRedir }}"
+    {{- /* Federated-login callback base; derive from publicBaseURL when unset. */}}
+    {{- $cbBase := .Values.config.sso.federationCallbackBaseURL | default $pub -}}
+    {{- if $cbBase }}
+    [sso.federation]
+    callback_base_url = "{{ $cbBase }}"
+    {{- end }}
+
+    {{- /* TrustedHeaderAuth shares the gateway HMAC key via `global` (the only
+      value subcharts can see). Without it every gateway-forwarded admin
+      request to SSO 401s. */}}
+    [gateway]
+    trusted_header_key = "{{ (.Values.global).gatewayTrustedHeaderKey | default "" }}"
+{{- end }}

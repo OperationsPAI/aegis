@@ -1,0 +1,149 @@
+{
+    "$schema": "structural_rules_schema.json",
+    "description": "IR-level structural-cascade rules. Asserted by StructuralInheritanceAdapter before the propagator runs, encoding the containment-axis state inheritance that follows from k8s topology (container <- pod <- service -> spans). Every rule is epistemic_class=A by definition: violating one means the topology graph itself is wrong, so they are not falsified by the 4-gate.",
+    "version": "1.0",
+    "rules": [
+        {
+            "rule_id": "container_unavailable_cascade",
+            "description": "Container UNAVAILABLE -> Pod DEGRADED -> Service UNAVAILABLE -> spans MISSING. Pod is DEGRADED (not UNAVAILABLE) because one bad container does not necessarily kill the pod, but it does take the only routable backend out so the service rolls up to UNAVAILABLE, and spans served via that service can no longer be observed.",
+            "src_kind": "container",
+            "src_state": "unavailable",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "runs", "direction": "backward"},
+                    "derived_kind": "pod",
+                    "derived_state": "degraded"
+                },
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "unavailable"
+                },
+                {
+                    "via": {"edge_kind": "includes", "direction": "forward"},
+                    "derived_kind": "span",
+                    "derived_state": "missing"
+                }
+            ]
+        },
+        {
+            "rule_id": "container_degraded_cascade",
+            "description": "Container DEGRADED -> walk through Pod (no emit) -> Service DEGRADED. Spans NOT inherited; degraded infra does not imply spans degrade — that should come from the trace adapter as an observable.",
+            "src_kind": "container",
+            "src_state": "degraded",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "runs", "direction": "backward"},
+                    "derived_kind": "pod",
+                    "derived_state": null
+                },
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "degraded"
+                }
+            ]
+        },
+        {
+            "rule_id": "container_erroring_cascade",
+            "description": "Container ERRORING -> Pod ERRORING -> Service ERRORING. Spans NOT inherited; container_erroring_to_span causal rule walks the hop sequence itself, this cascade only ensures pod and service have an intermediate window at the fault onset (so temporal admission can match).",
+            "src_kind": "container",
+            "src_state": "erroring",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "runs", "direction": "backward"},
+                    "derived_kind": "pod",
+                    "derived_state": "erroring"
+                },
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "erroring"
+                }
+            ]
+        },
+        {
+            "rule_id": "container_slow_cascade",
+            "description": "Container SLOW -> Pod DEGRADED (pod has no SLOW state per taxonomy §11.1, so latency at the app layer projects as DEGRADED at pod level) -> Service SLOW. Spans NOT inherited; same reasoning as the erroring cascade.",
+            "src_kind": "container",
+            "src_state": "slow",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "runs", "direction": "backward"},
+                    "derived_kind": "pod",
+                    "derived_state": "degraded"
+                },
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "slow"
+                }
+            ]
+        },
+        {
+            "rule_id": "pod_unavailable_cascade",
+            "description": "Pod UNAVAILABLE -> Service UNAVAILABLE -> spans MISSING. The pod was the only routable backend and it went away.",
+            "src_kind": "pod",
+            "src_state": "unavailable",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "unavailable"
+                },
+                {
+                    "via": {"edge_kind": "includes", "direction": "forward"},
+                    "derived_kind": "span",
+                    "derived_state": "missing"
+                }
+            ]
+        },
+        {
+            "rule_id": "pod_degraded_cascade",
+            "description": "Pod DEGRADED -> Service DEGRADED. Spans NOT inherited; degraded-pod latency should be observed by the trace adapter, not asserted structurally.",
+            "src_kind": "pod",
+            "src_state": "degraded",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "routes_to", "direction": "backward"},
+                    "derived_kind": "service",
+                    "derived_state": "degraded"
+                }
+            ]
+        },
+        {
+            "rule_id": "service_unavailable_cascade",
+            "description": "Service UNAVAILABLE -> spans MISSING. A service marked unavailable cannot serve traces on its spans.",
+            "src_kind": "service",
+            "src_state": "unavailable",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "includes", "direction": "forward"},
+                    "derived_kind": "span",
+                    "derived_state": "missing"
+                }
+            ]
+        },
+        {
+            "rule_id": "service_silent_cascade",
+            "description": "Service SILENT -> spans SILENT. Class E mirror of the unavailable->missing rule (taxonomy §3.E): when a service stops carrying observable request flow, every span it includes inherits the silent signal.",
+            "src_kind": "service",
+            "src_state": "silent",
+            "derivations": [
+                {
+                    "via": {"edge_kind": "includes", "direction": "forward"},
+                    "derived_kind": "span",
+                    "derived_state": "silent"
+                }
+            ]
+        }
+    ],
+    "notes": {
+        "epistemic_class": "All structural rules are class A (topology axioms): they follow from the k8s containment hierarchy itself. The 4-gate does not falsify them. If a structural rule's claim is wrong, the topology graph is wrong.",
+        "design": [
+            "Each derivation is one edge traversal. derived_state=null means walk through without emitting (used when the intermediate kind has no canonical mapping — e.g. pod has no SLOW state, but we still need to traverse the pod to reach the service).",
+            "Rules are applied per-window: every prior-timeline window in {unavailable, degraded, erroring, slow, silent} that has a matching rule triggers the cascade at that window's start time.",
+            "Severity-based redundancy check applied at emit time: if the prior timeline at the cascade onset already carries a worse-or-equal state, the inherited transition is suppressed (avoid contradicting observed evidence)."
+        ]
+    }
+}

@@ -1,0 +1,82 @@
+fault_type_name: NetworkDelay
+target_kind: pod
+seed_tier: slow
+description: |
+  Pod-level network latency injected via netem on the targeted interface.
+  Outbound (or inbound, per chaos-mesh direction) packets are delayed by
+  configured latency + jitter. The injecting pod is still reachable; the
+  primary symptom is elevated P99 on RPCs that traverse the impaired
+  link. Pod-level resource counters (cpu/mem/throttle) usually do NOT
+  fire — this is the gentlest network fault.
+
+# Direction handling: chaos-mesh `direction` field in display_config:
+#   "from"  → egress: pod's outbound calls slow → caller-side spans whose
+#             SOURCE is the pod see delay on outbound RPCs.
+#   "to"    → ingress: traffic to the pod slowed → callers TO the pod
+#             see delay on their outbound RPCs to it.
+#   "both"  → both directions; spans on either side of the pod see delay.
+# Either way, the observable is `span.latency_p99_ratio >= 1.5` on spans
+# adjacent to the pod. Pod silent / unavailable should NOT fire.
+entry_signature:
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.2, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p50_ratio
+      band: [1.1, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: timeout_rate
+      band: [0.02, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 1
+
+# Cascade is shallow. Latency propagates one or two hops via synchronous
+# RPC; deeper callers usually absorb via concurrency. Layer 2 only fires
+# when latency exceeds caller timeout budgets.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes, routes_to]
+    edge_directions: [forward, forward, backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.7
+      - kind: span
+        feature: latency_p50_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.15, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256
+
+corroborator:
+  kind: span
+  feature: request_count_ratio
+  band: [0.0, 0.7]
+
+multi_v_root: true

@@ -1,0 +1,30 @@
+# LLM Agent Evaluation Config Example
+# Usage: rca llm-eval run example_config.yaml
+
+exp_id: "my_experiment"
+agent_type: "my_agent"
+model_name: "gpt-4o"
+
+data:
+  dataset: "RCABench"
+  type: "single"
+  question_field: "question"
+  gt_field: "answer"
+  # tags: ["experiment-1"]  # optional filter
+
+# db_url: "sqlite:///eval.db"  # default from env LLM_EVAL_DB_URL
+
+concurrency: 10
+judge_concurrency: 5
+# rollout_timeout: 600  # per-sample timeout in seconds (None = no limit)
+
+judge_model:
+  model_provider:
+    type: "chat.completions"
+    model: "gpt-4o-mini"
+    # base_url: "https://api.openai.com/v1"
+    # api_key: "sk-..."
+  rate_limit:
+    rpm: 500
+    tpm: 800000
+    max_retries: 20

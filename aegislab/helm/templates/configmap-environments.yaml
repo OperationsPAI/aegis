@@ -1,0 +1,11 @@
+{{- if .Values.aegisEnvironments.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-aegis-environments
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+data:
+  manifest.json: |
+{{ .Values.aegisEnvironments.manifest | toJson | indent 4 }}
+{{- end }}

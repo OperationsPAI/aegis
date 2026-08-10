@@ -1,0 +1,65 @@
+name: aegislab PointManifest lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "aegislab/manifests/aegis-chaos/**"
+      - "aegislab/src/cli/cmd/manifest_schema.json"
+      - "aegislab/src/cli/cmd/manifest.go"
+      - "aegislab/src/cli/**"
+      - ".github/workflows/aegislab-manifest-lint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: L1 schema lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aegislab
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "aegislab/src/go.mod"
+
+      - name: Build aegisctl
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          (cd src && go build -o "$RUNNER_TEMP/bin/aegisctl" ./cli)
+
+      - name: Validate every PointManifest under manifests/aegis-chaos/
+        env:
+          AEGISCTL_BIN: ${{ runner.temp }}/bin/aegisctl
+        run: |
+          set -euo pipefail
+          root="manifests/aegis-chaos"
+          if [ ! -d "$root" ]; then
+            echo "No PointManifests under $root; nothing to lint."
+            exit 0
+          fi
+          files=$(find "$root" -type f \( -name '*.yaml' -o -name '*.yml' \) | sort)
+          if [ -z "$files" ]; then
+            echo "No PointManifest YAMLs found under $root."
+            exit 0
+          fi
+          count=0
+          failed=0
+          while IFS= read -r f; do
+            count=$((count + 1))
+            if ! "$AEGISCTL_BIN" manifest validate "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::PointManifest fails bundled schema validation"
+              "$AEGISCTL_BIN" manifest validate "$f" || true
+              failed=$((failed + 1))
+            fi
+          done <<< "$files"
+          if [ "$failed" -gt 0 ]; then
+            echo "$failed/$count PointManifest(s) failed schema lint"
+            exit 1
+          fi
+          echo "$count PointManifest(s) pass schema lint"

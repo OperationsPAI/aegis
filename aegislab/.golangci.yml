@@ -1,0 +1,36 @@
+version: "2"
+
+run:
+  issues-exit-code: 1
+  path-prefix: src
+  build-tags:
+    - duckdb_arrow
+  new-from-rev: HEAD~1
+
+linters:
+  enable:
+    - forbidigo
+  settings:
+    forbidigo:
+      # analyze-types makes patterns match type expressions (composite literals
+      # like &http.Client{}) in addition to call selectors.
+      analyze-types: true
+      forbid:
+        - pattern: '^http\.NewRequest(WithContext)?$'
+          msg: "Use apiclient.<Service>.<Method> from aegis/cli/apiclient/, not hand-rolled HTTP. See aegislab/CLAUDE.md 'Hard rules for new HTTP endpoints'."
+        - pattern: '^http\.Client$'
+          msg: "Use apiclient.<Service>.<Method> with the shared transport from aegis/cli/client/, not a freshly constructed http.Client. See aegislab/CLAUDE.md."
+  exclusions:
+    rules:
+      # forbidigo Rule 1: hand-rolled HTTP is forbidden under cli/cmd/ (the CLI surface).
+      # Everything outside cli/cmd/ is exempt — backend, generated apiclient, and the
+      # shared client/ transport wrappers all legitimately use net/http.
+      - path-except: "cli/cmd/"
+        linters:
+          - forbidigo
+
+issues:
+  exclude-rules:
+    - path: ".*_test\\.go"
+      linters:
+        - errcheck

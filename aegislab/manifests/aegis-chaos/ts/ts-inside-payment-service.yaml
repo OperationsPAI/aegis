@@ -1,0 +1,367 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "ts-inside-payment-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "container_kill"
+      target:
+        app: "ts-inside-payment-service"
+        container: "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-inside-payment-service"
+        container: "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-inside-payment-service"
+        container: "ts-inside-payment-service"
+        namespace: "ts"
+    - capability: "http_request_delay"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "POST /api/v1/inside_pay_service/inside_payment"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "POST /api/v1/inside_pay_service/inside_payment"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-inside-payment-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "GET /api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+        server_address: "ts-inside-payment-service"
+        span_name: "GET /api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+    - capability: "http_response_abort"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_response_delay"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_response_replace_code"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_response_patch_body"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_response_replace_body"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_request_replace_method"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "http_request_replace_path"
+      target:
+        app: "ts-inside-payment-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/{userId}/{money}"
+        port: 8080
+    - capability: "dns_error"
+      target:
+        app: "ts-inside-payment-service"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-inside-payment-service"
+        domain_patterns:
+          - "ts-order-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "GET /api/v1/orderservice/order/status/{orderId}/{status}"
+          - "GET /api/v1/orderservice/order/{orderId}"
+        target_service: "ts-order-service"
+    - capability: "dns_error"
+      target:
+        app: "ts-inside-payment-service"
+        domain_patterns:
+          - "ts-payment-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-inside-payment-service"
+        domain_patterns:
+          - "ts-payment-service"
+        namespace: "ts"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        span_names:
+          - "POST /api/v1/paymentservice/payment"
+        target_service: "ts-payment-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-inside-payment-service"
+        target_service: "mysql"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "inside_money"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "inside_money"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "inside_payment"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "inside_payment"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "inside_payment"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "inside_payment"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "inside_money"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-inside-payment-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "inside_money"

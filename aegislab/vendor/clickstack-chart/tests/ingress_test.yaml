@@ -1,0 +1,359 @@
+suite: Test Ingress
+templates:
+  - hyperdx/ingress.yaml
+
+_selectors:
+  app-ingress: &app-ingress-selector
+    path: metadata.name
+    value: RELEASE-NAME-clickstack-app-ingress
+  otel-collector-ingress: &otel-collector-ingress-selector
+    path: metadata.name
+    value: RELEASE-NAME-clickstack-otel-collector
+  custom-service-ingress: &custom-service-ingress-selector
+    path: metadata.name
+    value: RELEASE-NAME-clickstack-custom-service
+  default-service-ingress: &default-service-ingress-selector
+    path: metadata.name
+    value: RELEASE-NAME-clickstack-default-service
+tests:
+  - it: should not render any ingress templates when disabled
+    set:
+      hyperdx:
+        ingress:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render primary ingress with passthrough annotations and spec
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          annotations:
+            alb.ingress.kubernetes.io/scheme: internet-facing
+            alb.ingress.kubernetes.io/target-type: ip
+          spec:
+            ingressClassName: alb
+            rules:
+              - host: hyperdx.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: my-service
+                          port:
+                            number: 8000
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.annotations["alb.ingress.kubernetes.io/scheme"]
+          value: internet-facing
+      - equal:
+          path: metadata.annotations["alb.ingress.kubernetes.io/target-type"]
+          value: ip
+      - equal:
+          path: spec.ingressClassName
+          value: alb
+      - equal:
+          path: spec.rules[0].host
+          value: hyperdx.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8000
+
+  - it: should fail when ingress is enabled but spec is empty
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec: {}
+    asserts:
+      - failedTemplate:
+          errorMessage: "hyperdx.ingress.spec is required when ingress is enabled"
+
+  - it: should render primary ingress with nginx configuration
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          annotations:
+            nginx.ingress.kubernetes.io/rewrite-target: /$1
+            nginx.ingress.kubernetes.io/use-regex: "true"
+          spec:
+            ingressClassName: nginx
+            rules:
+              - host: hyperdx.example.com
+                http:
+                  paths:
+                    - path: /(.*)
+                      pathType: ImplementationSpecific
+                      backend:
+                        service:
+                          name: my-service
+                          port:
+                            number: 3000
+            tls:
+              - hosts:
+                  - hyperdx.example.com
+                secretName: hyperdx-tls
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+      - equal:
+          path: spec.tls[0].secretName
+          value: hyperdx-tls
+
+  - it: should render primary ingress without annotations when empty
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          annotations: {}
+          spec:
+            rules:
+              - host: test.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 80
+    asserts:
+      - isNull:
+          path: metadata.annotations
+
+  - it: should render additional ingress templates alongside primary
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          annotations:
+            test: "primary"
+          spec:
+            rules:
+              - host: hyperdx.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 3000
+          additionalIngresses:
+            - name: otel-collector
+              annotations:
+                testProperty: "true"
+                another: "yes"
+              ingressClassName: nginx
+              hosts:
+                - host: collector.example.com
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      port: 4318
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isKind:
+          of: Ingress
+        documentSelector: *app-ingress-selector
+      - isKind:
+          of: Ingress
+        documentSelector: *otel-collector-ingress-selector
+      - equal:
+          path: metadata.annotations.testProperty
+          value: "true"
+        documentSelector: *otel-collector-ingress-selector
+      - equal:
+          path: spec.rules[0].host
+          value: collector.example.com
+        documentSelector: *otel-collector-ingress-selector
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 4318
+        documentSelector: *otel-collector-ingress-selector
+
+  - it: should render additional ingress templates with TLS enabled
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec:
+            rules:
+              - host: hyperdx.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 3000
+          additionalIngresses:
+            - name: otel-collector
+              ingressClassName: nginx
+              hosts:
+                - host: collector.example.com
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      port: 4318
+              tls:
+                - secretName: otel-collector-tls
+                  hosts:
+                    - collector.example.com
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.tls[0].secretName
+          value: otel-collector-tls
+        documentSelector: *otel-collector-ingress-selector
+      - contains:
+          path: spec.tls[0].hosts
+          content: collector.example.com
+        documentSelector: *otel-collector-ingress-selector
+
+  - it: should fail when annotations of the additional ingresses is not a map of strings
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec:
+            rules:
+              - host: test.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 80
+          additionalIngresses:
+            - name: otel-collector
+              annotations:
+                - invalid: "annotation"
+                - format: "here"
+              ingressClassName: nginx
+              hosts:
+                - host: collector.example.com
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      port: 4318
+    asserts:
+      - failedTemplate:
+          errorMessage: "annotations must be a map of string key-value pairs"
+
+  - it: should fail when TLS configuration specifies secretName without hosts
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec:
+            rules:
+              - host: test.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 80
+          additionalIngresses:
+            - name: otel-collector
+              ingressClassName: nginx
+              hosts:
+                - host: collector.example.com
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      port: 4318
+              tls:
+                - secretName: otel-collector-tls
+    asserts:
+      - failedTemplate:
+          errorMessage: "TLS configuration must contain hosts property"
+
+  - it: should fail when paths object is missing required properties
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec:
+            rules:
+              - host: test.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 80
+          additionalIngresses:
+            - name: otel-collector
+              ingressClassName: nginx
+              hosts:
+                - host: collector.example.com
+                  paths:
+                    - pathType: Prefix
+                      port: 4318
+    asserts:
+      - failedTemplate:
+          errorMessage: "Each path in additional ingress must contain path, pathType, and port properties"
+
+  - it: should use service name suffix when name is provided in additional ingress paths
+    set:
+      hyperdx:
+        ingress:
+          enabled: true
+          spec:
+            rules:
+              - host: test.example.com
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: test
+                          port:
+                            number: 80
+          additionalIngresses:
+            - name: custom-service
+              ingressClassName: nginx
+              hosts:
+                - host: custom.example.com
+                  paths:
+                    - path: /api
+                      pathType: Prefix
+                      port: 8080
+                      name: api-service
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-clickstack-api-service
+        documentSelector: *custom-service-ingress-selector

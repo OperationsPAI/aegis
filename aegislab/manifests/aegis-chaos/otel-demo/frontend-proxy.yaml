@@ -1,0 +1,93 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "frontend-proxy"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "container_kill"
+      target:
+        app: "frontend-proxy"
+        container: "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "frontend-proxy"
+        container: "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "frontend-proxy"
+        container: "frontend-proxy"
+        namespace: "otel-demo"
+    - capability: "dns_error"
+      target:
+        app: "frontend-proxy"
+        domain_patterns:
+          - "frontend"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "frontend-proxy"
+        domain_patterns:
+          - "frontend"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "frontend-proxy"
+        span_names:
+          - "GET"
+          - "POST"
+        target_service: "frontend"

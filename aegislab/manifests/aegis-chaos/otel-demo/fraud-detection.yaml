@@ -1,0 +1,87 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "observed-genesis"
+  instance: "observed"
+  service: "fraud-detection"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "pod_kill"
+      target:
+        app: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "container_kill"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "dns_error"
+      target:
+        app: "fraud-detection"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "dns_random"
+      target:
+        app: "fraud-detection"
+        domain_patterns:
+          - "flagd"
+        namespace: "otel-demo"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        span_names:
+          - "flagd.evaluation.v1.Service/ResolveInt"
+        target_service: "flagd"
