@@ -1,0 +1,63 @@
+package api
+
+import (
+	"aegis/boot"
+	configcenterclient "aegis/clients/configcenter"
+	runtimeclient "aegis/clients/runtime"
+	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"
+	configcenter "aegis/crud/admin/configcenter"
+	auth "aegis/crud/iam/auth"
+	rbac "aegis/crud/iam/rbac"
+	sso "aegis/crud/iam/sso"
+	chaos "aegis/platform/chaos"
+	k8s "aegis/platform/k8s"
+	"aegis/platform/middleware"
+
+	"go.uber.org/fx"
+)
+
+// Options builds the aegis-api business runtime (cmd/aegis-api).
+//
+// aegis-api is the *business* API process — chaos injection, executions,
+// datasets, containers, tasks, etc. Identity (sso), notifications (notify),
+// blob storage (blob), config-center, and the L7 gateway are separate
+// binaries that this process talks to through clients/sso, clients/blob,
+// clients/notification, clients/configcenter.
+//
+// The only gRPC surface aegis-api itself exposes is the RuntimeIntakeService,
+// which runtime-worker uses to write execution / injection state back into
+// the shared DB.
+func Options(confPath, port string) fx.Option {
+	return fx.Options(
+		app.BaseOptions(confPath),
+		app.WithSigner(),
+		app.ObserveOptions(),
+		app.DataOptions(),
+		app.CoordinationOptions(),
+		app.BuildInfraOptions(),
+		chaos.Module,
+		k8s.Module,
+		configcenter.Module,
+		configcenterclient.Module,
+		app.ProducerHTTPOptions(port),
+		// rbac stays here (not in monolithHTTPModules) because aegis-api
+		// must contribute its module-internal RoleGrantsRegistrar /
+		// PermissionRegistrar to AggregatePermissions so the every-boot
+		// ReconcileSystemPermissions seed sees them. The rbac HTTP routes
+		// themselves are served by aegis-sso; this import is for the
+		// fx-group registrars + the AggregatePermissions invoke only.
+		rbac.Module,
+		// Auth routes (/api/v2/auth/*) — profile, API keys, etc.
+		auth.Module,
+		// Admin/RBAC REST surface (/v1/*) absorbed from aegis-sso so the
+		// SSO process can be decommissioned (Authentik migration Phase 5).
+		sso.AdminModule,
+		grpcruntimeintake.Module,
+		// Query channel into runtime-worker. aegis-api is otherwise intake-only
+		// (worker writes back), but the rate-limiter admin status reads the
+		// worker's LIVE limiter MaxTokens over this client; without it status
+		// falls back to the stale const ceiling.
+		runtimeclient.Module,
+		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
+	)
+}

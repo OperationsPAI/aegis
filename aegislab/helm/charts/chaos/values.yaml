@@ -1,0 +1,89 @@
+# chaos subchart defaults — aegis-chaos microservice.
+# Rendering is gated by umbrella `chaos.enabled` (see helm/Chart.yaml).
+
+# replicaCount intentionally absent: the deployment hard-codes replicas=1
+# because the reconciler has no inter-replica coordination. See the
+# template for the lift criteria.
+httpPort: 8086
+binaryName: "aegis-chaos"
+
+service:
+  type: ClusterIP
+
+serviceAccount:
+  name: ""
+  # SA-token Secret used by aegis-chaos to authenticate outbound webhook
+  # POSTs to aegis-api. Secret must hold a valid rcabench-sa JWT (minted
+  # via SSO POST /v1/service-accounts/chaos-service/issue). When unset
+  # the deployment falls back to the deprecated chaosAuth.webhookBearer*
+  # path and logs an ERROR at boot.
+  secretName: ""
+  secretKey: "token"
+
+# Step-1 RBAC: aegis-chaos owns the chaos-mesh.org CRD verbs. §11 step 5c
+# removes the same verbs from aegis-backend; until then the two roles
+# coexist (each scoped to its own SA).
+rbac:
+  create: true
+  # crdResources mirrors the GVRs the renderer registry dispatches to —
+  # see aegislab/src/crud/chaos/renderer_*.go (one Resource per renderer
+  # family) as the source of truth. Keep this list aligned when adding a
+  # new renderer family; the executor's dynamic client needs the verb on
+  # every registered GVR.
+  crdResources:
+    - podchaos
+    - networkchaos
+    - stresschaos
+    - timechaos
+    - dnschaos
+    - httpchaos
+    - jvmchaos
+
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+configMap:
+  name: ""
+
+env:
+  ENV: "prod"
+  GOPRIVATE: ""
+
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+extraEnv: []
+extraEnvFrom: []
+resources: {}
+
+# Backend hook receiver URL. Empty disables webhook delivery; the
+# reconciler still updates row status but skips POST /api/v1/hooks/chaos.
+# Umbrella values.yaml fills this in by default (release-aegis-api).
+backendURL: ""
+
+# Bearer token sent with each webhook. The receiver's TrustedHeaderAuth
+# middleware falls through to JWTAuth for inter-service calls without an
+# X-Aegis-Signature, so a valid service-token JWT (or admin token in dev)
+# authenticates the chaos service to aegis-api. Empty disables Bearer.
+# Production deployments should wire `webhookBearerSecretRef` instead so
+# the token isn't baked into rendered manifests.
+webhookBearer: ""
+webhookBearerSecretRef: {}
+  # name: chaos-service-token
+  # key: token
+
+# §11 step-5b R1 inbound auth: shared secret used by both directions of the
+# backend ↔ chaos hop. The chaos service reads it as CHAOS_INBOUND_BEARER;
+# aegis-api stamps the same value as CHAOS_OUTBOUND_BEARER. Operators must
+# create the Secret BEFORE install (no chart hook materialises it) so that
+# rotation is a single `kubectl create secret generic --dry-run | apply -f`.
+# Both fields empty → chaos service /v1beta runs open (kind dev only).
+chaosAuth:
+  secretName: ""
+  secretKey: "token"
+  literal: ""
+  # Fail-closed when CHAOS_INBOUND_BEARER is unset. Default true; flip to
+  # false ONLY for kind/local-dev to allow TrustedHeaderAuth-only mode.
+  requireBearer: true

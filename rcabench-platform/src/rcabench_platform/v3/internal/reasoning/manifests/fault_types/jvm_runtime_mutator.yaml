@@ -1,0 +1,110 @@
+fault_type_name: JVMRuntimeMutator
+target_kind: container
+seed_tier: silent
+description: |
+  JVM runtime mutator: chaos-mesh attaches a JVM agent to the affected
+  container's process and rewrites a target method's bytecode at runtime.
+  When the mutated method short-circuits (returns null/early/throws) the
+  affected service's outbound RPC fan-out collapses — both inbound and
+  outbound spans on the affected service stop appearing in the abnormal
+  trace bundle. Observationally this is **issuance silence at the
+  service plane**, distinct from PodKill's response silence (the JVM
+  process itself is alive; it just stops doing the work). When the
+  mutation triggers an exception or a slow path, the surface looks like
+  JVMException / JVMLatency instead — the manifest accepts any of these
+  modalities via disjunction-of-symptoms, so a single dominant signal
+  is sufficient for entry.
+
+entry_signature:
+  # Disjunction-of-symptoms: mutator effects vary by what's mutated.
+  # Any one of: span-plane silence (dominant for return-null /
+  # short-circuit mutations), error_rate (throw mutations), p99 (slow
+  # mutations), cpu_throttle (CPU-intensive mutations). silent is
+  # high-specificity in fault-free windows so it stands alone as
+  # an anchor; mirrors PodFailure's min_match=1 design.
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: service
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: error_rate
+      band: [0.10, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [1.5, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [routes_to, includes, calls]
+    edge_directions: [backward, forward, backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.10, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.6
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.4
+    max_fanout: 16
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.5
+    on_layer: 1
+    rationale: |
+      When the mutated method throws and the error_rate saturates above
+      0.5 at a caller layer, downstream observers see response-abort
+      symptoms. Universal cross-family trigger; mirrors JVMException.
+
+terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256

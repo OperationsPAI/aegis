@@ -1,0 +1,160 @@
+# JVMMemoryStress — Byteman/JVM-level memory pressure on a method.
+#
+# Empirical bands calibrated from 10 sample cases in
+# /home/ddq/AoyangSpace/dataset/rca/ (see evidence MD for list).
+# memory peak/base p95 ratio: median 3.14, p5/p95 [1.0, 3.6]
+#   -> use 2.5 as conservative lower bound (drops the bottom mode
+#      where memory wasn't pushed because the method wasn't reached).
+# cpu peak/base ratio: median 8.4, p5/p95 [3.8, 225]
+#   -> JVM mem stress also burns CPU walking memory; lower 3.0.
+# span p99 ratio: median 6.3, p5/p95 [0.74, 54.6]
+#   -> bimodal (some pods see no traffic during chaos); keep optional.
+fault_type_name: JVMMemoryStress
+target_kind: container
+seed_tier: degraded
+description: |
+  JVM-level memory pressure injected via Byteman: heap or stack
+  allocation pressure inside the target method. Surfaces as
+  k8s.pod.memory_limit_utilization rising toward the cgroup cap
+  and as JVM heap pressure (high_heap_pressure label per
+  JvmAugmenterAdapter). Concurrent CPU burn from allocation-walk
+  pushes cpu_limit_utilization up as well.
+
+# Entry signature uses a disjunction — JVMMemoryStress can manifest at
+# five observation points depending on whether the byteman-injected
+# method is actually exercised during the chaos window:
+#   1. method runs & allocates → container/pod memory_usage_ratio rises
+#   2. allocation pressure exceeds heap → frequent GC
+#   3. allocation walk burns CPU → cpu_throttle_ratio rises
+#   4. heap exhaustion → cgroup OOM-kill → pod restart_count delta ≥ 1
+#   5. method itself slows down → span.latency_p99_ratio rises
+# Phase 4 diagnosis: in 50/65 cases the method was rarely called and
+# signals (1)+(5) stayed flat; restart and CPU burn carried the entry.
+entry_signature:
+  entry_window_sec: 60
+  required_features: []
+  optional_features:
+    - kind: container
+      feature: memory_usage_ratio
+      band: [0.5, 1.0]
+      magnitude_source: empirical
+    - kind: pod
+      feature: memory_usage_ratio
+      band: [0.5, 1.0]
+      magnitude_source: empirical
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [3.0, .inf]
+      magnitude_source: empirical
+    - kind: container
+      feature: gc_pause_ratio
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: pod
+      feature: restart_count
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.15, .inf]
+      magnitude_source: empirical
+  optional_min_match: 1
+
+derivation_layers:
+  # Layer-1 admission: any of {span p99, pod/container memory, CPU saturation,
+  # pod restart} suffices. Phase 6 audit found CPU and restart are the strongest
+  # signals on real cases (CPU 2-596× baseline, restarts on byteman-targeted
+  # OOM); listing only memory + p99 dropped 23/65 admissible cases on layer-1.
+  - layer: 1
+    edge_kinds: [runs, routes_to, includes]
+    edge_directions: [backward, backward, forward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.15, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: memory_usage_ratio
+        band: [0.5, 1.0]
+        magnitude_decay: 1.0
+      - kind: container
+        feature: memory_usage_ratio
+        band: [0.5, 1.0]
+        magnitude_decay: 1.0
+      - kind: pod
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.7
+      - kind: container
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: restart_count
+        band: [1.0, .inf]
+        magnitude_decay: 1.0
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+  - layer: 3
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.3
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+    max_fanout: 16
+
+hand_offs:
+  - to: ContainerKill
+    trigger:
+      kind: container
+      feature: memory_usage_ratio
+      threshold: 0.98
+    on_layer: 1
+    rationale: |
+      Sustained heap pressure that breaches the cgroup memory limit
+      triggers OOM-kill; JvmAugmenterAdapter emits
+      container.UNAVAILABLE + oom_killed which is the ContainerKill
+      entry signature. Empirical: mem peaks reach ~0.81 in our
+      sample (below 0.98 threshold), so this hand-off fires only on
+      the pathological tail, not as a default propagation step.
+
+terminals: []

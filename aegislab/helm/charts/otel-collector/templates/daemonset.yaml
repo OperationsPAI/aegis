@@ -1,0 +1,68 @@
+{{- if and .Values.enabled .Values.daemonset.enabled }}
+# Node-local OTel Collector — one pod per node, tails container logs
+# from the host's /var/log/pods. Separate from the central OTLP
+# Deployment because filelog requires node-local file access and runs
+# on every node; the OTLP receiver only needs a few replicas.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-daemonset
+  labels:
+    app: {{ include "otel-collector.fullname" . }}-daemonset
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "otel-collector.fullname" . }}-daemonset
+  template:
+    metadata:
+      labels:
+        app: {{ include "otel-collector.fullname" . }}-daemonset
+    spec:
+      serviceAccountName: {{ include "otel-collector.fullname" . }}-daemonset
+      # Tolerate every taint so we actually run on control-plane and
+      # tainted GPU/algo nodes — those are exactly where algorithm Pods
+      # land, so missing them defeats the purpose.
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: otel-collector
+          image: {{ include "otel-collector.image" . }}
+          imagePullPolicy: "{{ include "otel-collector.imagePullPolicy" . }}"
+          args: ["--config=/etc/otel/collector.yaml"]
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            # /var/log/pods entries are symlinks into /var/log/containers
+            # and /var/lib/docker (or containerd). Mount the underlying
+            # container log dir so filelog can resolve the symlink target.
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+          {{- with .Values.daemonset.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "otel-collector.fullname" . }}-daemonset-config
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+            type: Directory
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+            type: DirectoryOrCreate
+{{- end }}

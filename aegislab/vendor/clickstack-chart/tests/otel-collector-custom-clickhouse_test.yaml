@@ -1,0 +1,23 @@
+suite: Test ClickStack ConfigMap - ClickHouse Endpoint
+templates:
+  - hyperdx/configmap.yaml
+
+tests:
+  - it: should use default ClickHouse endpoint
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data.CLICKHOUSE_ENDPOINT
+          pattern: "tcp://.*-clickhouse-clickhouse-headless:[0-9]+\\?dial_timeout=10s"
+
+  - it: should render ClickHouse endpoint with correct port
+    set:
+      clickhouse:
+        nativePort: 9001
+    release:
+      name: test-release
+    asserts:
+      - matchRegex:
+          path: data.CLICKHOUSE_ENDPOINT
+          pattern: "tcp://test-release-clickstack-clickhouse-clickhouse-headless:9001"

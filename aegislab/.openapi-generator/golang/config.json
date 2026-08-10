@@ -1,0 +1,13 @@
+{
+  "packageName": "apiclient",
+  "packageVersion": "0.0.0",
+  "isGoSubmodule": false,
+  "withGoMod": false,
+  "structPrefix": false,
+  "generateInterfaces": true,
+  "useOneOfDiscriminatorLookup": true,
+  "disallowAdditionalPropertiesIfNotPresent": false,
+  "sortParamsByRequiredFlag": true,
+  "hideGenerationTimestamp": true,
+  "enumClassPrefix": true
+}

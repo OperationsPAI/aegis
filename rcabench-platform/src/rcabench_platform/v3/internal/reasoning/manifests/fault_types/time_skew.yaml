@@ -1,0 +1,62 @@
+fault_type_name: TimeSkew
+target_kind: pod
+seed_tier: degraded
+description: |
+  Pod-level container clock shift (timechaos), typically tens of seconds to
+  several minutes. Effect is highly application-specific: only code paths
+  that compare timestamps (token expiry, JWT/OAuth validation, cache TTL,
+  schedulers, dedup windows) react. Many TimeSkew injections are entirely
+  silent in telemetry and SHOULD legitimately be classified ineffective.
+  Confidence in this manifest is LOW; loose entry signature on purpose.
+
+# Loose entry signature. We require some non-trivial error_rate at the
+# v_root window AND rely on the orchestrator to require a concurrent
+# do(v_root, TimeSkew) record. We do not require any specific symptom
+# because the symptom space is application-defined.
+entry_signature:
+  entry_window_sec: 60
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.3, .inf]
+      magnitude_source: theoretical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+# Cascade is application-specific. We keep ONE narrow layer to admit the
+# obvious case (auth/token errors propagate one hop to immediate caller)
+# and stop. Going deeper invites false positives.
+derivation_layers:
+  - layer: 1
+    # TimeSkew often manifests as latency rather than errors when the
+    # affected code path retries or stalls on stale timestamps. Accept
+    # latency alternatives so cascade can propagate. Bands kept tight
+    # because TimeSkew layer-1 sees only one immediate caller hop.
+    edge_kinds: [calls, includes]
+    edge_directions: [backward, forward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p50_ratio
+        band: [1.3, .inf]
+        magnitude_decay: null
+    max_fanout: 8
+
+hand_offs: []
+
+terminals: []
