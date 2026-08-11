@@ -1,0 +1,416 @@
+# =============================================================================
+# RCABench Justfile
+# =============================================================================
+# Use 'just --list' to view all available commands
+
+set dotenv-load := true
+set dotenv-filename := ".env"
+
+# Configuration
+env_mode     := env("ENV_MODE", "dev")
+ns           := "exp"
+
+root := justfile_directory()
+command_dir  := root + "/scripts/command"
+src_dir      := root + "/src"
+
+command      := "UV_WITH_GROUPS=dev uv run --project " + command_dir + " python " + command_dir + "/main.py"
+
+# Colors
+blue   := '\033[1;34m'
+green  := '\033[1;32m'
+yellow := '\033[1;33m'
+red    := '\033[1;31m'
+cyan   := '\033[1;36m'
+gray   := '\033[90m'
+reset  := '\033[0m'
+
+# =============================================================================
+# Default Recipe
+# =============================================================================
+
+# 📖 Display all available commands
+default:
+    @just --list
+
+# =============================================================================
+# Command Tool Management
+# =============================================================================
+
+# 🔧 Run command tool (usage: just run-command "your args")
+run-command *ARGS:
+    {{command}} {{ARGS}}
+
+# =============================================================================
+# Environment Check and Setup
+# =============================================================================
+
+# 🔍 Check development environment dependencies
+check-prerequisites:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🔍 Checking development environment dependencies...{{reset}}\n"
+    for cmd in devbox docker helm kubectx; do
+        if command -v "$cmd" &>/dev/null; then
+            printf "{{gray}}  - $cmd installed{{reset}}\n"
+        else
+            printf "{{red}}❌ $cmd not installed{{reset}}\n" && exit 1
+        fi
+    done
+    devbox install >/dev/null 2>&1 || { printf "{{red}}❌ devbox dependencies installation failed{{reset}}\n"; exit 1; }
+    printf "{{green}}✅ All dependency checks passed{{reset}}\n\n"
+
+# 🔗 Start port forwarding to access application
+port-forward env="prod":
+    just run-command port start -e {{env}} -n {{ns}}
+
+# 🛠️ Setup development environment
+setup-dev-env: check-prerequisites
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🛠️  Setting up development environment...{{reset}}\n"
+    if command -v uv &>/dev/null; then
+        printf "{{green}}✅ 'uv' found in PATH{{reset}}\n"
+    else
+        printf "{{yellow}}Warning: 'uv' not found. Installing via script...{{reset}}\n"
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        printf "{{green}}✅ 'uv' installed!{{reset}}\n"
+    fi
+    printf "{{gray}}Applying Kubernetes manifests for local development...{{reset}}\n"
+    kubectl apply -f manifests/dev/exp-dev-setup.yaml
+    printf "{{gray}}Installing Git hooks with Lefthook...{{reset}}\n"
+    if [ -f "lefthook.yml" ]; then
+        devbox run install-hooks
+        printf "{{green}}✅ Lefthook hooks installed successfully!{{reset}}\n"
+    else
+        printf "{{red}}❌ lefthook.yml not found{{reset}}\n" && exit 1
+    fi
+    printf "{{green}}✅ Development environment setup completed!{{reset}}\n"
+
+# 🧪 Setup test environment
+setup-test-env: check-prerequisites
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🧪 Setting up test environment...{{reset}}\n"
+    cd {{root}} && bash scripts/start.sh test
+    printf "{{green}}✅ Test environment setup completed!{{reset}}\n"
+
+# =============================================================================
+# Pedestal Function
+# =============================================================================
+
+# 🔍 Install pedestals in namespaces (usage: just pedestal-install <name> <count>)
+pedestal-install pedestal_name pedestal_count:
+    just run-command pedestal install -e {{env_mode}} -n {{pedestal_name}} -c {{pedestal_count}} -f
+
+# =============================================================================
+# Build and Deployment
+# =============================================================================
+
+# Deploy OpenEBS
+openebs-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}Deploying OpenEBS...{{reset}}\n"
+    helm upgrade -i openebs openebs/openebs --namespace openebs \
+        --create-namespace \
+        --values ./manifests/staging/openebs.yaml \
+        --atomic --timeout 10m
+    printf "{{green}}✅ OpenEBS installed successfully{{reset}}\n\n"
+
+# 🔧 Deploy RCABench application in prod environment
+rcabench-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🔧 Deploying RCABench application...{{reset}}\n"
+    helm upgrade -i rcabench ./helm --namespace {{ns}} \
+        --create-namespace \
+        --values ./manifests/prod/rcabench.yaml \
+        --set-file initialDataFiles.data_yaml=data/initial_data/prod/data.yaml \
+        --set-file initialDataFiles.otel_demo_yaml=data/initial_data/prod/otel-demo.yaml \
+        --set-file initialDataFiles.ts_yaml=data/initial_data/prod/ts.yaml \
+        --atomic --timeout 10m
+    printf "{{green}}✅ RCABench installed successfully{{reset}}\n\n"
+    printf "{{blue}}🔗 Starting automatic port forwarding...{{reset}}\n"
+    just port-forward
+
+# 🛠️ Setup local development environment with basic services
+local-deploy-legacy:
+    just run-command rcabench local-deploy -f
+    just etcd-init
+
+# 🚀 Build and deploy to local kind/minikube cluster (one-shot)
+local-up:
+    devbox run skaffold run -p local
+
+# 🔄 Dev mode: auto-rebuild & redeploy on source change
+local-dev:
+    devbox run skaffold dev -p local
+
+# 🚀 Build and deploy application (using skaffold)
+run: check-prerequisites
+    ENV_MODE=staging devbox run skaffold run
+
+# Initialize etcd
+etcd-init:
+    just run-command etcd init -e {{env_mode}} -f
+
+version-update version:
+    just run-command rcabench version-update -v {{version}}
+
+# =============================================================================
+# Backup
+# =============================================================================
+
+# 💾 Backup MySQL database
+backup-mysql:
+    just run-command backup mysql backup
+
+# =============================================================================
+# Test
+# =============================================================================
+
+# Run tests
+test version:
+    SDK_VERSION={{version}} ENV_MODE=test devbox run skaffold run
+
+# Run regression tests
+test-regression:
+    chmod +x ./scripts/test-regression.sh && ./scripts/test-regression.sh
+
+# =============================================================================
+# Development Tools
+# =============================================================================
+
+# 🔐 Generate RSA keypair for sso (first-time setup; idempotent)
+sso-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -f data/sso/sso-private.pem ]; then
+        printf "{{green}}✅ data/sso/sso-private.pem already exists, skipping{{reset}}\n"
+        exit 0
+    fi
+    printf "{{blue}}🔐 Generating RSA keypair for sso...{{reset}}\n"
+    mkdir -p data/sso data/sso-secrets
+    openssl genrsa -out data/sso/sso-private.pem 2048
+    openssl rsa -in data/sso/sso-private.pem -pubout -out data/sso/sso-public.pem
+    chmod 600 data/sso/sso-private.pem
+    printf "{{green}}✅ Wrote data/sso/sso-private.pem and data/sso/sso-public.pem{{reset}}\n"
+
+# 🐛 Start local debugging environment
+local-debug:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}⌛️ Starting local application...{{reset}}\n"
+    cd {{src_dir}} && go run -tags=duckdb_arrow . both -conf ./config.dev.toml -port 8082
+
+# 🔨 Build aegisctl CLI binary
+build-aegisctl output="/tmp/aegisctl":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🔨 Building aegisctl...{{reset}}\n"
+    version="$(git describe --tags --dirty --always 2>/dev/null | tr -d '\n')"
+    commit="$(git rev-parse --short HEAD 2>/dev/null | tr -d '\n')"
+    build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    ldflags=(
+      "-X aegis/cli/cmd.version=${version}"
+      "-X aegis/cli/cmd.commit=${commit}"
+      "-X aegis/cli/cmd.buildTime=${build_time}"
+      "-X aegis/cli/cmd.minServerAPIVersion=2"
+    )
+    cd {{src_dir}} && go build -ldflags "${ldflags[*]}" -o {{output}} ./cli
+    printf "{{green}}✅ aegisctl built: {{output}}{{reset}}\n"
+
+# =============================================================================
+# Chaos Management
+# =============================================================================
+
+# 🧹 Clean all chaos resource finalizers (usage: just clean-finalizers <prefix> <count>)
+clean-finalizers ns_prefix ns_count:
+    just run-command chaos clean-finalizers -e {{env_mode}} -p {{ns_prefix}} -c {{ns_count}}
+
+# 🗑️ Delete chaos resources (usage: just delete-chaos <prefix> <count>)
+delete-chaos ns_prefix ns_count:
+    just run-command chaos delete-resources -e {{env_mode}} -p {{ns_prefix}} -c {{ns_count}}
+
+# =============================================================================
+# Image Sync
+# =============================================================================
+
+# 🔄 Sync Docker images from DockerHub to prod repository
+images-sync bv="latest" fv="latest":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source {{root}}/.secret
+
+    # Application images — use provided version tag
+    app_images=(
+        "opspai/rcabench:{{bv}}"
+        "opspai/rcabench-frontend:{{fv}}"
+    )
+
+    sync_image() {
+        local img="$1"
+        local name="${img%%:*}"
+        local tag="${img##*:}"
+        local base="${name##*/}"
+        local src="docker://docker.io/${img}"
+        local dest="docker://${PROD_REPO}/${base}:${tag}"
+
+        printf "{{gray}}   📤 ${src} → ${dest}{{reset}}\n"
+        skopeo copy \
+            --src-creds  "${DOCKERHUB_USERNAME}:${DOCKERHUB_PASSWORD}" \
+            --dest-creds "${VOLCE_USERNAME}:${VOLCE_PASSWORD}" \
+            --override-arch amd64 \
+            "$src" "$dest"
+    }
+
+    printf "{{blue}}🔄 Syncing application images (backend_version:{{bv}}, frontend_version:{{fv}})...{{reset}}\n"
+    for img in "${app_images[@]}"; do sync_image "$img"; done
+
+    printf "{{green}}✅ Image sync completed successfully{{reset}}\n"
+
+# =============================================================================
+# SDK Generation
+# =============================================================================
+
+# 📝 Initialize Swagger documentation
+swagger-init v:
+    just run-command swagger init -v {{v}} --apifox-target all
+
+# ⚙️ Generate Portal TypeScript SDK from Swagger documentation
+generate-portal v:
+    just run-command sdk typescript --target portal --env local --version {{v}}
+
+# ⚙️ Generate Admin TypeScript SDK from Swagger documentation
+generate-admin v:
+    just run-command sdk typescript --target admin --env local --version {{v}}
+
+# ⚙️ Generate Python SDK from Swagger documentation
+generate-python-sdk v:
+    just run-command sdk python --target sdk --env local --version {{v}}
+
+# ⚙️ Generate Go API client (consumed by aegisctl) from Swagger documentation
+generate-go-sdk v:
+    just run-command sdk golang --target sdk --env local --version {{v}}
+
+# 🚀 Generate release-ready Portal TypeScript SDK
+release-portal v:
+    just run-command sdk typescript --target portal --env release --version {{v}}
+
+# 🚀 Generate release-ready Admin TypeScript SDK
+release-admin v:
+    just run-command sdk typescript --target admin --env release --version {{v}}
+
+# 🚀 Generate release-ready Python SDK
+release-python-sdk v:
+    just run-command sdk python --target sdk --env release --version {{v}}
+
+# 🚀 Generate release-ready Go API client
+release-go-sdk v:
+    just run-command sdk golang --target sdk --env release --version {{v}}
+
+# =============================================================================
+# Utilities
+# =============================================================================
+
+# 📝 Generate CHANGELOG.md
+changelog:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}📝 Generating CHANGELOG.md...{{reset}}\n"
+    eval "$(devbox shellenv)" && git-cliff -o CHANGELOG.md
+    printf "{{green}}✅ CHANGELOG.md generated successfully{{reset}}\n"
+
+# 🧬 Regenerate aegis-chaos Capability seed list + JSON schemas
+# Source of truth: aegislab/src/crud/chaos/guided/ ChaosTypeMap.
+# Outputs: tools/capgen/output/{capabilities.json,capabilities.md,conformance_cases.json}
+#          src/crud/chaos/capability_map_gen.go (ChaosType -> name map)
+capgen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd tools/capgen && go run . output
+
+# 📜 Regenerate aegis-chaos Point Manifests
+# Outputs: manifests/aegis-chaos/<system>/<service>.yaml
+manifestgen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd tools/manifestgen && go run .
+
+# 🧪 Lint every PointManifest under aegislab/manifests/aegis-chaos/ against
+# the bundled aegisctl JSON Schema. L1 gate from
+# docs/aegis-chaos/point-manifest-spec.md §9. Fails on the first invalid file.
+lint-manifests:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    aegisctl_bin="${AEGISCTL_BIN:-/tmp/aegisctl}"
+    if [ ! -x "$aegisctl_bin" ]; then
+        printf "{{blue}}Building aegisctl → %s{{reset}}\n" "$aegisctl_bin"
+        (cd src && go build -o "$aegisctl_bin" ./cli)
+    fi
+    root="{{root}}/manifests/aegis-chaos"
+    if [ ! -d "$root" ]; then
+        printf "{{yellow}}No PointManifests under %s; skipping.{{reset}}\n" "$root"
+        exit 0
+    fi
+    files=$(find "$root" -type f \( -name '*.yaml' -o -name '*.yml' \) | sort)
+    if [ -z "$files" ]; then
+        printf "{{yellow}}No PointManifest YAMLs found under %s; skipping.{{reset}}\n" "$root"
+        exit 0
+    fi
+    count=0
+    failed=0
+    while IFS= read -r f; do
+        count=$((count + 1))
+        if ! "$aegisctl_bin" manifest validate "$f" >/dev/null 2>&1; then
+            printf "{{red}}FAIL{{reset}} %s\n" "$f"
+            "$aegisctl_bin" manifest validate "$f" || true
+            failed=$((failed + 1))
+        fi
+    done <<< "$files"
+    if [ "$failed" -gt 0 ]; then
+        printf "{{red}}%d/%d PointManifest(s) failed schema lint{{reset}}\n" "$failed" "$count"
+        exit 1
+    fi
+    printf "{{green}}✅ %d PointManifest(s) pass schema lint{{reset}}\n" "$count"
+
+# 🔍 Fail if the live chaos_points catalog drifts from the committed manifests.
+# Dry-run only; needs AEGIS_CHAOS_SERVER pointed at a live aegis-chaos.
+# Run this in the seed-update cycle (and CI-against-a-cluster) so a manifestgen
+# regen that nobody reconciled can never silently fall behind the catalog.
+chaos-reconcile-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    AEGISCTL_BIN="${AEGISCTL_BIN:-aegisctl}" {{root}}/scripts/chaos-catalog-reconcile.sh --check
+
+# 🧬 Reconcile the live chaos_points catalog to the committed manifests
+# (import + sweep), then re-check. Needs AEGIS_CHAOS_SERVER.
+chaos-reconcile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    AEGISCTL_BIN="${AEGISCTL_BIN:-aegisctl}" {{root}}/scripts/chaos-catalog-reconcile.sh --apply
+
+# 👁️ Preview unreleased changes
+changelog-preview:
+    #!/usr/bin/env bash
+    eval "$(devbox shellenv)" && git-cliff --unreleased
+
+# 📋 Show latest release changes
+changelog-latest:
+    #!/usr/bin/env bash
+    eval "$(devbox shellenv)" && git-cliff --latest
+
+release version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "{{blue}}🚀 Releasing version {{version}}...{{reset}}\n"
+    just version-update {{version}}
+    just changelog
+    git add {{root}}/CHANGELOG.md {{root}}/helm/Chart.yaml {{root}}/helm/values.yaml \
+        {{root}}/src/config.dev.toml {{root}}/src/main.go
+    git commit -m "chore(release): version {{version}}" --no-verify
+    git push -u origin main
+    git tag -a "v{{version}}" -m "Release version {{version}}"
+    git push origin "v{{version}}"
+    printf "{{green}}✅ Version {{version}} released successfully{{reset}}\n"

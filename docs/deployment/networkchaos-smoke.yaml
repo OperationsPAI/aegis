@@ -1,0 +1,14 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: smoke-delay
+  namespace: exp
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - default
+  delay:
+    latency: 10ms
+  duration: 30s

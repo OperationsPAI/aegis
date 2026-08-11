@@ -1,0 +1,138 @@
+# Kind-cluster profile for cold-start / regression validation.
+#
+# Assumes:
+#   - kind cluster (default storageclass "standard" / local-path)
+#   - in-cluster observability already provided by docs/deployment/otel-pipeline.yaml
+#     (ClickHouse + otel-collector in namespace "otel")
+#   - backend image pulled from Docker Hub. Pin to the same immutable tag
+#     bytecluster uses so cold-start regression validates the same artifact.
+#     For local-dev iteration, override with:
+#       --set images.rcabench.name=aegislab-backend --set images.rcabench.tag=local
+#     after `kind load docker-image aegislab-backend:local --name <cluster>`.
+#
+# Used by `aegisctl` regression flow; aligns with skills in .claude/skills/.
+
+global:
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: byte-20260605-duckdbquery
+      pullPolicy: IfNotPresent
+
+# Not needed for regression smoke.
+buildkit:
+  enabled: false
+harbor:
+  enabled: false
+configmap:
+  system:
+    env_mode: "prod"
+
+# Wire aegis-api + runtime-worker-service to the rustfs-admin Secret so
+# the in-process s3 driver can resolve BLOB_S3_*_*_KEY env at boot.
+microservices:
+  aegisApi:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+  runtimeWorkerService:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+
+# Blob microservice (extracted to helm/charts/blob/). The same subchart
+# now owns its wire-format configuration: schema (values) and rendering
+# (`blob.tomlSection` helper) live together under `helm/charts/blob/`.
+# rustfs-backed buckets for blob / share — matches byte-cluster topology
+# so the same code path is exercised in kind. Endpoint targets the
+# chart-rendered `<release>-rustfs` Service in namespace `exp`.
+blob:
+  extraEnvFrom:
+    - secretRef:
+        name: rustfs-admin
+  client:
+    mode: "local"
+  buckets:
+    datapack:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-datapack"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+    execution:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-execution"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
+    shared:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-shared"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+  share:
+    bucket: "shared"
+    publicBaseURL: ""
+
+# In-chart rustfs (S3 backend). Kind uses local-path provisioner
+# (storageClass `standard`), not the byte-cluster `rcabench` SC.
+rustfs:
+  enabled: true
+  image:
+    # Mirror via opspai/rustfs works for kind (Docker Hub reachable).
+    name: docker.io/opspai/rustfs
+    tag: 1.0.0-beta.6
+  persistence:
+    storageClass: "standard"
+    size: 20Gi
+  initBuckets:
+    image:
+      name: docker.io/opspai/mc
+      tag: latest
+
+# Drain template + init-helm-charts are not required for regression-only paths.
+initialization:
+  initDrainTemplate:
+    enabled: false
+  # opspai/init-helm-charts is not published publicly; aegisctl pedestal chart
+  # push seeds pedestal charts on demand instead.
+  initHelmCharts:
+    enabled: false
+
+# Kind has no JuiceFS / Volcengine. Use the default local-path provisioner.
+persistence:
+  # RWX shared volumes (containers, juicefs dataset) use an in-cluster NFS SC.
+  # See prerequisites: `helm install nfs-server nfs-ganesha/nfs-server-provisioner ...`.
+  storageType: external
+  storageClassNames:
+    external: nfs
+  juicefs:
+    enabled: true
+    useStaticPV: false
+    external:
+      accessMode: ReadWriteMany
+
+# mysql subchart overrides (mirrors legacy persistence.mysql).
+mysql:
+  persistence:
+    storageClass: standard
+
+# redis subchart overrides (mirrors legacy persistence.redis).
+redis:
+  persistence:
+    storageClass: standard
+
+# etcd subchart overrides (mirrors legacy persistence.etcd).
+etcd:
+  persistence:
+    storageClass: standard

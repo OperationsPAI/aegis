@@ -1,0 +1,114 @@
+# NetworkBandwidth — pod-level egress/ingress bandwidth cap.
+#
+# Targets: pod (NOT container, unlike the other Family B faults).
+#
+# *** VOCABULARY GAP — flagged for orchestrator ***
+# The bootstrap feature vocabulary in SCHEMA.md does not contain a
+# pod-level throughput feature. The dataset exposes
+# `k8s.pod.network.io` (cumulative bytes counter, in
+# abnormal_metrics_sum.parquet); on its 22 NetworkBandwidth cases
+# the cumulative-bytes p95 ratio is ~1.1-1.45 and is NOT a usable
+# entry signal because the counter is monotonic. A rate-derived
+# feature is required: proposal `network_throughput_ratio` on kind
+# `pod`, computed as (delta-bytes / window) / baseline-rate. This
+# manifest cannot use that feature until vocabulary + IR adapter
+# emit it. Until then, entry_signature relies on secondary symptoms
+# (request_count drop, latency blow-up) which are noisy.
+#
+# Empirical bands (n=22 NetworkBandwidth cases in canonical dataset):
+#   request_count_ratio (abn/base, on GT service):
+#     p5/p95 = [0.01, 0.58], median 0.07
+#       -> drop is dramatic and consistent
+#   latency_p99_ratio (abn/base, on GT service):
+#     p5/p95 = [0.20, 1553], median ~5
+#       -> bimodal: requests either pile up (huge latency) or
+#          fail fast (count collapses, latency drops). Either way,
+#          request_count drop is the robust signal.
+fault_type_name: NetworkBandwidth
+target_kind: pod
+seed_tier: slow
+description: |
+  Pod-level network bandwidth cap (egress, ingress, or both) imposed
+  via tc/netem on the target pod's veth. Effective throughput drops
+  toward the configured rate, so requests either pile up against the
+  cap (latency explodes) or fail fast against TCP-level back-pressure
+  (request count collapses). The IR currently does not emit a
+  pod-throughput feature, so entry must rely on these secondary
+  effects until vocabulary is extended.
+
+entry_signature:
+  # Disjunction. Bandwidth cap is bimodal: requests either pile up (huge
+  # latency, timeout) or fail fast (request_count collapses). Either branch
+  # admits, but neither always fires — hence min_match: 1.
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: request_count_ratio
+      band: [0.0, 0.6]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [routes_to, includes]
+    edge_directions: [backward, forward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: 0.7
+      - kind: span
+        feature: request_count_ratio
+        band: [0.0, 0.7]
+        magnitude_decay: 1.0
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: timeout_rate
+      threshold: 0.3
+    on_layer: 2
+    rationale: |
+      Bandwidth-capped requests that breach upstream timeout budget
+      surface as response-abort at far-downstream callers
+      (universal cross-family trigger).
+
+terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256
+
+corroborator:
+  kind: span
+  feature: request_count_ratio
+  band: [0.0, 0.7]
+
+multi_v_root: true

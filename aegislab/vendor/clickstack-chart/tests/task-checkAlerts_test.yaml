@@ -1,0 +1,229 @@
+suite: Test Check Alerts CronJob
+templates:
+  - hyperdx/cronjob-check-alerts.yaml
+tests:
+  - it: should not render when tasks are disabled
+    set:
+      hyperdx:
+        tasks:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render correctly when tasks are enabled
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+          checkAlerts:
+            schedule: "*/5 * * * *"
+            resources:
+              limits:
+                cpu: 300m
+                memory: 300Mi
+              requests:
+                cpu: 150m
+                memory: 150Mi
+        deployment:
+          image:
+            repository: hyperdx/hyperdx
+            tag: 2-beta
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: spec.schedule
+          value: "*/5 * * * *"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: hyperdx/hyperdx:2-beta
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/build/tasks/index.js", "check-alerts"]
+      - isSubset:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources
+          content:
+            limits:
+              cpu: 300m
+              memory: 300Mi
+            requests:
+              cpu: 150m
+              memory: 150Mi
+      - isSubset:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom[0]
+          content:
+            configMapRef:
+              name: clickstack-config
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: NODE_ENV
+            value: "production"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: OTEL_SERVICE_NAME
+            value: "hdx-oss-task-check-alerts"
+
+  - it: should use default schedule when not provided
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/1 * * * *"
+
+  - it: should not include imagePullSecrets when not configured
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+    asserts:
+      - isNull:
+          path: spec.jobTemplate.spec.template.spec.imagePullSecrets
+
+  - it: should include imagePullSecrets when configured
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+      global:
+        imagePullSecrets:
+          - name: regcred
+    asserts:
+      - isNotNull:
+          path: spec.jobTemplate.spec.template.spec.imagePullSecrets
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.imagePullSecrets[0].name
+          value: regcred
+
+  - it: should use esbuild command path for versions before 2.7.0
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+        deployment:
+          image:
+            tag: "2.6.9"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/tasks/index", "check-alerts"]
+
+  - it: should use esbuild command path for version 2.6.0
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+        deployment:
+          image:
+            tag: "2.6.0"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/tasks/index", "check-alerts"]
+
+  - it: should use post-esbuild command path for version 2.7.0
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+        deployment:
+          image:
+            tag: "2.7.0"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/build/tasks/index.js", "check-alerts"]
+
+  - it: should use post-esbuild command path for versions after 2.7.0
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+        deployment:
+          image:
+            tag: "2.8.0"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/build/tasks/index.js", "check-alerts"]
+
+  - it: should use post-esbuild command path for version 3.0.0
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+        deployment:
+          image:
+            tag: "3.0.0"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/build/tasks/index.js", "check-alerts"]
+
+  - it: should not include additionalArgs when empty
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+          checkAlerts:
+            additionalArgs: {}
+        deployment:
+          image:
+            tag: "2.8.0"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: ["node", "/app/packages/api/build/tasks/index.js", "check-alerts"]
+
+  - it: should include additionalArgs with -- prefix in command
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+          checkAlerts:
+            additionalArgs:
+              concurrency: 6
+              sourceTimeoutMs: 90000
+        deployment:
+          image:
+            tag: "2.8.0"
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "--concurrency"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "6"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "--sourceTimeoutMs"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "90000"
+
+  - it: should include additionalArgs in pre-esbuild command path
+    set:
+      hyperdx:
+        tasks:
+          enabled: true
+          checkAlerts:
+            additionalArgs:
+              concurrency: 4
+        deployment:
+          image:
+            tag: "2.6.0"
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "/app/packages/api/tasks/index"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "--concurrency"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content: "4"

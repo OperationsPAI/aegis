@@ -1,0 +1,917 @@
+package guided
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"aegis/platform/k8s/resourcelookup"
+	"aegis/platform/systemconfig"
+)
+
+func buildPodKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("PodKill", map[string]any{
+		"Duration": duration,
+		"System":   systemIdx,
+		"AppIdx":   appIdx,
+	}), nil
+}
+
+func buildPodFailure(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("PodFailure", map[string]any{
+		"Duration": duration,
+		"System":   systemIdx,
+		"AppIdx":   appIdx,
+	}), nil
+}
+
+func buildJVMGarbageCollector(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMGarbageCollector", map[string]any{
+		"Duration": duration,
+		"System":   systemIdx,
+		"AppIdx":   appIdx,
+	}), nil
+}
+
+func buildContainerKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("ContainerKill", map[string]any{
+		"Duration":     duration,
+		"System":       systemIdx,
+		"ContainerIdx": containerIdx,
+	}), nil
+}
+
+func buildCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.CPULoad == nil || cfg.CPUWorker == nil {
+		return nil, fmt.Errorf("cpu_load and cpu_worker are required")
+	}
+
+	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("CPUStress", map[string]any{
+		"Duration":     duration,
+		"System":       systemIdx,
+		"ContainerIdx": containerIdx,
+		"CPULoad":      *cfg.CPULoad,
+		"CPUWorker":    *cfg.CPUWorker,
+	}), nil
+}
+
+func buildMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.MemorySize == nil || cfg.MemWorker == nil {
+		return nil, fmt.Errorf("memory_size and mem_worker are required")
+	}
+
+	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("MemoryStress", map[string]any{
+		"Duration":     duration,
+		"System":       systemIdx,
+		"ContainerIdx": containerIdx,
+		"MemorySize":   *cfg.MemorySize,
+		"MemWorker":    *cfg.MemWorker,
+	}), nil
+}
+
+func buildTimeSkew(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.TimeOffset == nil {
+		return nil, fmt.Errorf("time_offset is required")
+	}
+
+	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("TimeSkew", map[string]any{
+		"Duration":     duration,
+		"System":       systemIdx,
+		"ContainerIdx": containerIdx,
+		"TimeOffset":   *cfg.TimeOffset,
+	}), nil
+}
+
+func buildHTTPRequestAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPRequestAbort", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+	}), nil
+}
+
+func buildHTTPResponseAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPResponseAbort", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+	}), nil
+}
+
+func buildHTTPRequestDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.DelayDuration == nil {
+		return nil, fmt.Errorf("delay_duration is required")
+	}
+
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPRequestDelay", map[string]any{
+		"Duration":      duration,
+		"System":        systemIdx,
+		"EndpointIdx":   endpointIdx,
+		"DelayDuration": *cfg.DelayDuration,
+	}), nil
+}
+
+func buildHTTPResponseDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.DelayDuration == nil {
+		return nil, fmt.Errorf("delay_duration is required")
+	}
+
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPResponseDelay", map[string]any{
+		"Duration":      duration,
+		"System":        systemIdx,
+		"EndpointIdx":   endpointIdx,
+		"DelayDuration": *cfg.DelayDuration,
+	}), nil
+}
+
+func buildHTTPResponseReplaceBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.BodyType == "" {
+		return nil, fmt.Errorf("body_type is required")
+	}
+
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyType, err := bodyTypeCode(cfg.BodyType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPResponseReplaceBody", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+		"BodyType":    bodyType,
+	}), nil
+}
+
+func buildHTTPResponsePatchBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPResponsePatchBody", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+	}), nil
+}
+
+func buildHTTPRequestReplacePath(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPRequestReplacePath", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+	}), nil
+}
+
+func buildHTTPRequestReplaceMethod(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.ReplaceMethod == "" {
+		return nil, fmt.Errorf("replace_method is required")
+	}
+
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	methodCode, err := replaceMethodCode(systemType, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPRequestReplaceMethod", map[string]any{
+		"Duration":      duration,
+		"System":        systemIdx,
+		"EndpointIdx":   endpointIdx,
+		"ReplaceMethod": methodCode,
+	}), nil
+}
+
+func buildHTTPResponseReplaceCode(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.StatusCode == nil {
+		return nil, fmt.Errorf("status_code is required")
+	}
+
+	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	statusCode, err := statusCodeCode(*cfg.StatusCode)
+	if err != nil {
+		return nil, err
+	}
+	return payload("HTTPResponseReplaceCode", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"EndpointIdx": endpointIdx,
+		"StatusCode":  statusCode,
+	}), nil
+}
+
+func buildDNSError(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	dnsIdx, systemIdx, duration, err := resolveDNSLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("DNSError", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"DNSEndpointIdx": dnsIdx,
+	}), nil
+}
+
+func buildDNSRandom(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	dnsIdx, systemIdx, duration, err := resolveDNSLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("DNSRandom", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"DNSEndpointIdx": dnsIdx,
+	}), nil
+}
+
+func buildNetworkPartition(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Direction == "" {
+		return nil, fmt.Errorf("direction is required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkPartition", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildNetworkDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Latency == nil || cfg.Correlation == nil || cfg.Jitter == nil || cfg.Direction == "" {
+		return nil, fmt.Errorf("latency, correlation, jitter and direction are required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkDelay", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Latency":        *cfg.Latency,
+		"Correlation":    *cfg.Correlation,
+		"Jitter":         *cfg.Jitter,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildNetworkLoss(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Loss == nil || cfg.Correlation == nil || cfg.Direction == "" {
+		return nil, fmt.Errorf("loss, correlation and direction are required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkLoss", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Loss":           *cfg.Loss,
+		"Correlation":    *cfg.Correlation,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildNetworkDuplicate(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Duplicate == nil || cfg.Correlation == nil || cfg.Direction == "" {
+		return nil, fmt.Errorf("duplicate, correlation and direction are required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkDuplicate", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Duplicate":      *cfg.Duplicate,
+		"Correlation":    *cfg.Correlation,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildNetworkCorrupt(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Corrupt == nil || cfg.Correlation == nil || cfg.Direction == "" {
+		return nil, fmt.Errorf("corrupt, correlation and direction are required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkCorrupt", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Corrupt":        *cfg.Corrupt,
+		"Correlation":    *cfg.Correlation,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildNetworkBandwidth(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.Rate == nil || cfg.Limit == nil || cfg.Buffer == nil || cfg.Direction == "" {
+		return nil, fmt.Errorf("rate, limit, buffer and direction are required")
+	}
+
+	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("NetworkBandwidth", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"NetworkPairIdx": pairIdx,
+		"Rate":           *cfg.Rate,
+		"Limit":          *cfg.Limit,
+		"Buffer":         *cfg.Buffer,
+		"Direction":      direction,
+	}), nil
+}
+
+func buildJVMLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.LatencyDuration == nil {
+		return nil, fmt.Errorf("latency_duration is required")
+	}
+
+	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMLatency", map[string]any{
+		"Duration":        duration,
+		"System":          systemIdx,
+		"MethodIdx":       methodIdx,
+		"LatencyDuration": *cfg.LatencyDuration,
+	}), nil
+}
+
+func buildJVMReturn(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.ReturnType == "" || cfg.ReturnValueOpt == "" {
+		return nil, fmt.Errorf("return_type and return_value_opt are required")
+	}
+
+	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	returnType, err := returnTypeCode(cfg.ReturnType)
+	if err != nil {
+		return nil, err
+	}
+	returnValueOpt, err := returnValueOptCode(cfg.ReturnValueOpt)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMReturn", map[string]any{
+		"Duration":       duration,
+		"System":         systemIdx,
+		"MethodIdx":      methodIdx,
+		"ReturnType":     returnType,
+		"ReturnValueOpt": returnValueOpt,
+	}), nil
+}
+
+func buildJVMException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.ExceptionOpt == "" {
+		return nil, fmt.Errorf("exception_opt is required")
+	}
+
+	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	exceptionOpt, err := exceptionOptCode(cfg.ExceptionOpt)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMException", map[string]any{
+		"Duration":     duration,
+		"System":       systemIdx,
+		"MethodIdx":    methodIdx,
+		"ExceptionOpt": exceptionOpt,
+	}), nil
+}
+
+func buildJVMCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.CPUCount == nil {
+		return nil, fmt.Errorf("cpu_count is required")
+	}
+
+	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMCPUStress", map[string]any{
+		"Duration":  duration,
+		"System":    systemIdx,
+		"MethodIdx": methodIdx,
+		"CPUCount":  *cfg.CPUCount,
+	}), nil
+}
+
+func buildJVMMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.MemType == "" {
+		return nil, fmt.Errorf("mem_type is required")
+	}
+
+	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+
+	memType, err := memTypeCode(cfg.MemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMMemoryStress", map[string]any{
+		"Duration":  duration,
+		"System":    systemIdx,
+		"MethodIdx": methodIdx,
+		"MemType":   memType,
+	}), nil
+}
+
+func buildJVMMySQLLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.LatencyMs == nil {
+		return nil, fmt.Errorf("latency_ms is required")
+	}
+
+	databaseIdx, systemIdx, duration, err := resolveDatabaseLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMMySQLLatency", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"DatabaseIdx": databaseIdx,
+		"LatencyMs":   *cfg.LatencyMs,
+	}), nil
+}
+
+func buildJVMMySQLException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	databaseIdx, systemIdx, duration, err := resolveDatabaseLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMMySQLException", map[string]any{
+		"Duration":    duration,
+		"System":      systemIdx,
+		"DatabaseIdx": databaseIdx,
+	}), nil
+}
+
+func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
+	if cfg.MutatorConfig == "" {
+		return nil, fmt.Errorf("mutator_config is required")
+	}
+
+	targetIdx, systemIdx, duration, err := resolveMutatorLevel(cfg, systemType)
+	if err != nil {
+		return nil, err
+	}
+	return payload("JVMRuntimeMutator", map[string]any{
+		"Duration":         duration,
+		"System":           systemIdx,
+		"MutatorTargetIdx": targetIdx,
+	}), nil
+}
+
+func resolveAppLevel(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	// Zero-instance bootstrap: the namespace is server-allocated at apply, so
+	// there are no live pods to enumerate the app from. The real injection is
+	// addressed by app name at dispatch time (GuidedChaosPointID) and pod
+	// existence is enforced post-bootstrap, so resolve-time app-index lookup is
+	// redundant here. The returned appIdx is unused by the name-based dispatch.
+	if bootstrapBypassAppDiscovery(cfg) {
+		return 0, systemIdx, normalizedDuration(cfg), nil
+	}
+
+	apps, err := safeAppLabels(ctx, cfg.Namespace, systemType)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	appIdx := indexOf(apps, cfg.App)
+	if appIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("app %q not found in namespace %q; available apps: %s", cfg.App, cfg.Namespace, formatAppList(apps))
+	}
+	return appIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+// bootstrapBypassAppDiscovery reports whether live pod discovery should be
+// skipped: the caller provided an explicit app and asked the server to
+// allocate (--auto) and/or bootstrap (--allow-bootstrap) the namespace, so no
+// pods exist yet at resolve time.
+func bootstrapBypassAppDiscovery(cfg GuidedConfig) bool {
+	return cfg.App != "" && (cfg.Auto || cfg.AllowBootstrap)
+}
+
+func resolveContainerLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	containers, err := safeContainers(cfg.Namespace)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	containerIdx := -1
+	for idx, container := range containers {
+		if container.AppLabel == cfg.App && container.ContainerName == cfg.Container {
+			containerIdx = idx
+			break
+		}
+	}
+	if containerIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("container %q not found under app %q in namespace %q; available containers: %s", cfg.Container, cfg.App, cfg.Namespace, formatContainerList(containers, cfg.App))
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return containerIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+// formatAppList renders a sorted comma list of valid apps or a sentinel when empty.
+// Length-cap prevents explosion on large namespaces (ob has 12, but e.g. ts has 50+).
+func formatAppList(apps []string) string {
+	if len(apps) == 0 {
+		return "<none resolvable in this namespace>"
+	}
+	const maxShow = 20
+	if len(apps) <= maxShow {
+		return strings.Join(apps, ", ")
+	}
+	return strings.Join(apps[:maxShow], ", ") + fmt.Sprintf(", ... (+%d more)", len(apps)-maxShow)
+}
+
+// formatContainerList returns only containers under a specific app; useful for
+// sidecar-level targeting errors.
+func formatContainerList(containers []resourcelookup.ContainerInfo, app string) string {
+	names := make([]string, 0)
+	for _, c := range containers {
+		if c.AppLabel == app {
+			names = append(names, c.ContainerName)
+		}
+	}
+	if len(names) == 0 {
+		return "<no containers found under this app>"
+	}
+	return strings.Join(names, ", ")
+}
+
+func resolveEndpointLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	endpoints, err := resourcelookup.GetSystemCache(systemType).GetAllHTTPEndpoints()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	endpointIdx := -1
+	for idx, endpoint := range endpoints {
+		if endpoint.AppName == cfg.App && endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
+			endpointIdx = idx
+			break
+		}
+	}
+	if endpointIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("http endpoint %s %s not found under app %q", cfg.HTTPMethod, cfg.Route, cfg.App)
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return endpointIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+func resolveDNSLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	endpoints, err := resourcelookup.GetSystemCache(systemType).GetAllDNSEndpoints()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	dnsIdx := -1
+	for idx, endpoint := range endpoints {
+		if endpoint.AppName == cfg.App && endpoint.Domain == cfg.Domain {
+			dnsIdx = idx
+			break
+		}
+	}
+	if dnsIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("dns domain %q not found under app %q", cfg.Domain, cfg.App)
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return dnsIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+func resolveNetworkLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, int, error) {
+	pairs, err := resourcelookup.GetSystemCache(systemType).GetAllNetworkPairs()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	pairIdx := -1
+	for idx, pair := range pairs {
+		if pair.SourceService == cfg.App && pair.TargetService == cfg.TargetService {
+			pairIdx = idx
+			break
+		}
+	}
+	if pairIdx < 0 {
+		return 0, 0, 0, 0, fmt.Errorf("network pair %q -> %q not found", cfg.App, cfg.TargetService)
+	}
+
+	direction, err := directionCode(cfg.Direction)
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	return pairIdx, systemIdx, normalizedDuration(cfg), direction, nil
+}
+
+func resolveMethodLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	methods, err := resourcelookup.GetSystemCache(systemType).GetAllJVMMethods()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	methodIdx := -1
+	for idx, method := range methods {
+		if method.AppName == cfg.App && method.ClassName == cfg.Class && method.MethodName == cfg.Method {
+			methodIdx = idx
+			break
+		}
+	}
+	if methodIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("jvm method %s#%s not found under app %q", cfg.Class, cfg.Method, cfg.App)
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return methodIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+func resolveDatabaseLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	operations, err := resourcelookup.GetSystemCache(systemType).GetAllDatabaseOperations()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	databaseIdx := -1
+	for idx, op := range operations {
+		if op.AppName == cfg.App && op.DBName == cfg.Database && op.TableName == cfg.Table && strings.EqualFold(op.OperationType, cfg.Operation) {
+			databaseIdx = idx
+			break
+		}
+	}
+	if databaseIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("database operation %s/%s/%s not found under app %q", cfg.Database, cfg.Table, cfg.Operation, cfg.App)
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return databaseIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+func resolveMutatorLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	targets, err := resourcelookup.GetSystemCache(systemType).GetAllJVMRuntimeMutatorTargets()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	targetIdx := -1
+	for idx, target := range targets {
+		if target.AppName == cfg.App && target.ClassName == cfg.Class && target.MethodName == cfg.Method && runtimeMutatorKey(target) == cfg.MutatorConfig {
+			targetIdx = idx
+			break
+		}
+	}
+	if targetIdx < 0 {
+		return 0, 0, 0, fmt.Errorf("runtime mutator config %q not found for %s#%s", cfg.MutatorConfig, cfg.Class, cfg.Method)
+	}
+
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return targetIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+func payload(name string, fields map[string]any) map[string]any {
+	return map[string]any{name: fields}
+}
+
+func normalizedDuration(cfg GuidedConfig) int {
+	if cfg.Duration == nil {
+		return defaultDurationMinutes
+	}
+	return *cfg.Duration
+}
+
+func directionCode(direction string) (int, error) {
+	switch strings.ToLower(direction) {
+	case "to":
+		return 1, nil
+	case "from":
+		return 2, nil
+	case "both":
+		return 3, nil
+	default:
+		return 0, fmt.Errorf("invalid direction %q", direction)
+	}
+}
+
+func returnTypeCode(value string) (int, error) {
+	switch strings.ToLower(value) {
+	case "string":
+		return 1, nil
+	case "int":
+		return 2, nil
+	default:
+		return 0, fmt.Errorf("invalid return_type %q", value)
+	}
+}
+
+func returnValueOptCode(value string) (int, error) {
+	switch strings.ToLower(value) {
+	case "default":
+		return 0, nil
+	case "random":
+		return 1, nil
+	default:
+		return 0, fmt.Errorf("invalid return_value_opt %q", value)
+	}
+}
+
+func exceptionOptCode(value string) (int, error) {
+	switch strings.ToLower(value) {
+	case "default":
+		return 0, nil
+	case "random":
+		return 1, nil
+	default:
+		return 0, fmt.Errorf("invalid exception_opt %q", value)
+	}
+}
+
+func memTypeCode(value string) (int, error) {
+	switch strings.ToLower(value) {
+	case "heap":
+		return 1, nil
+	case "stack":
+		return 2, nil
+	default:
+		return 0, fmt.Errorf("invalid mem_type %q", value)
+	}
+}
+
+func bodyTypeCode(value string) (int, error) {
+	switch strings.ToLower(value) {
+	case "empty":
+		return 0, nil
+	case "random":
+		return 1, nil
+	default:
+		return 0, fmt.Errorf("invalid body_type %q", value)
+	}
+}
+
+func statusCodeCode(value int) (int, error) {
+	switch value {
+	case 400:
+		return 0, nil
+	case 401:
+		return 1, nil
+	case 403:
+		return 2, nil
+	case 404:
+		return 3, nil
+	case 405:
+		return 4, nil
+	case 408:
+		return 5, nil
+	case 500:
+		return 6, nil
+	case 502:
+		return 7, nil
+	case 503:
+		return 8, nil
+	case 504:
+		return 9, nil
+	default:
+		return 0, fmt.Errorf("invalid status_code %d", value)
+	}
+}
+
+func replaceMethodCode(systemType systemconfig.SystemType, cfg GuidedConfig) (int, error) {
+	endpoints, err := resourcelookup.GetSystemCache(systemType).GetAllHTTPEndpoints()
+	if err != nil {
+		return 0, err
+	}
+
+	for _, endpoint := range endpoints {
+		if endpoint.AppName == cfg.App && endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
+			targetMethod := strings.ToUpper(cfg.ReplaceMethod)
+			for idx, method := range filteredHTTPMethods(endpoint.Method) {
+				if method == targetMethod {
+					return idx, nil
+				}
+			}
+			return 0, fmt.Errorf("invalid replace_method %q for endpoint method %q", cfg.ReplaceMethod, endpoint.Method)
+		}
+	}
+
+	return 0, fmt.Errorf("http endpoint %s %s not found under app %q", cfg.HTTPMethod, cfg.Route, cfg.App)
+}
+
+func indexOf(values []string, target string) int {
+	for idx, value := range values {
+		if value == target {
+			return idx
+		}
+	}
+	return -1
+}

@@ -1,0 +1,33 @@
+services:
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+    volumes:
+      - /srv/juicefs/minio/data:/data
+    network_mode: "host"
+    command: server /data --console-address ":9001"
+    restart: always
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    network_mode: "host"
+    restart: always
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+    network_mode: "host"
+    restart: always
+
+  redis:
+    image: redis
+    volumes:
+      - /srv/juicefs/redis/data:/data
+    network_mode: "host"
+    command: redis-server --appendonly yes
+    restart: always

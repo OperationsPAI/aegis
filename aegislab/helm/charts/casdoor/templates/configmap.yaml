@@ -1,0 +1,136 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-casdoor
+data:
+  app.conf: |
+    appname = casdoor
+    httpport = {{ .Values.port }}
+    runmode = prod
+
+    driverName = mysql
+    dataSourceName = {{ .Values.mysql.user }}:{{ .Values.mysql.password }}@tcp({{ .Values.mysql.host }}:{{ .Values.mysql.port }})/
+    dbName = {{ .Values.mysql.database }}
+
+    tableNamePrefix =
+    showSql = false
+    sessionOn = true
+
+    origin = {{ .Values.origin | default (printf "http://%s-casdoor:%d" .Release.Name (int .Values.port)) }}
+    staticBaseUrl = ""
+    initDataFile = "/conf/init_data.json"
+
+  init_data.json: |
+    {
+      "organizations": [
+        {
+          "owner": "admin",
+          "name": "aegis",
+          "displayName": "Aegis",
+          "websiteUrl": "",
+          "favicon": "",
+          "passwordType": "plain",
+          "countryCodes": ["US", "CN"],
+          "defaultAvatar": "",
+          "tags": [],
+          "languages": [],
+          "mfaItems": [],
+          "navItems": [],
+          "userNavItems": [],
+          "userTypes": [],
+          "widgetItems": [],
+          "passwordOptions": [],
+          "ldapAttributes": []
+        }
+      ],
+      "applications": [
+        {
+          "owner": "admin",
+          "name": "aegis-console",
+          "displayName": "Aegis Console",
+          "logo": "{{ .Values.global.publicBaseURL | default "" }}/assets/logo.svg",
+          "organization": "aegis",
+          "cert": "cert-built-in",
+          "enablePassword": true,
+          "enableSignUp": {{ if .Values.github.clientId }}true{{ else }}false{{ end }},
+          "enableLinkWithEmail": {{ if .Values.github.clientId }}true{{ else }}false{{ end }},
+          "clientId": "{{ .Values.oidc.console.clientId }}",
+          "clientSecret": "aegis-console-public",
+          "redirectUris": {{ .Values.oidc.console.redirectUris | toJson }},
+          "grantTypes": ["authorization_code", "password"],
+          "tokenFormat": "JWT",
+          "expireInHours": 24,
+          "refreshExpireInHours": 168,
+          "scopes": [],
+          "providers": [{"name":"provider_captcha_default","canSignUp":false,"canSignIn":false,"canUnlink":false,"prompted":false,"signupGroup":"","rule":"None"}{{ if .Values.github.clientId }},{"name":"provider_github","canSignUp":true,"canSignIn":true,"canUnlink":true,"prompted":false,"signupGroup":"","rule":"None"}{{ end }}],
+          "tags": [],
+          "samlAttributes": [],
+          "customScopes": [],
+          "tokenFields": [],
+          "otherDomains": [],
+          "signinMethods": [{"name": "Password", "displayName": "Password", "rule": "All"}],
+          "signupItems": [
+            {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
+            {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
+            {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
+          ]
+        },
+        {
+          "owner": "admin",
+          "name": "aegis-cli",
+          "displayName": "Aegis CLI",
+          "organization": "aegis",
+          "cert": "cert-built-in",
+          "enablePassword": true,
+          "enableSignUp": false,
+          "clientId": "{{ .Values.oidc.cli.clientId }}",
+          "clientSecret": "aegis-cli-public",
+          "redirectUris": {{ .Values.oidc.cli.redirectUris | toJson }},
+          "grantTypes": ["authorization_code", "password"],
+          "tokenFormat": "JWT",
+          "expireInHours": 24,
+          "refreshExpireInHours": 168,
+          "scopes": [],
+          "providers": [],
+          "tags": [],
+          "samlAttributes": [],
+          "customScopes": [],
+          "tokenFields": [],
+          "otherDomains": [],
+          "signinMethods": [{"name": "Password", "displayName": "Password", "rule": "All"}],
+          "signupItems": [
+            {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
+            {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
+            {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
+          ]
+        }
+      ],
+      {{- if .Values.github.clientId }}
+      "providers": [
+        {
+          "owner": "admin",
+          "name": "provider_github",
+          "displayName": "GitHub",
+          "category": "OAuth",
+          "type": "GitHub",
+          "clientId": "{{ .Values.github.clientId }}",
+          "clientSecret": "{{ .Values.github.clientSecret }}"
+        }
+      ],
+      {{- end }}
+      "users": [
+        {
+          "owner": "aegis",
+          "name": "admin",
+          "type": "normal-user",
+          "password": "{{ required "casdoor.admin.password must be set" .Values.admin.password }}",
+          "displayName": "Admin",
+          "email": "admin@aegis.local",
+          "isAdmin": true,
+          "properties": {}
+
+        }
+      ]
+    }
+{{- end }}

@@ -1,0 +1,114 @@
+# Local-cluster profile (kind/minikube) for integrated development & debugging.
+#
+# Assumes:
+#   - kind or minikube cluster with default storageclass "standard" (local-path)
+#   - chaos-mesh installed (for fault injection)
+#   - skaffold handles image build + cluster-load automatically (local.push: false)
+#
+# One-command deploy:
+#   skaffold run -p local
+#
+# Dev mode (auto-rebuild on source change):
+#   skaffold dev -p local
+
+global:
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: local
+      pullPolicy: IfNotPresent
+  ssoclient:
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    privateKeySecretName: "rcabench-sso-key"
+
+buildkit:
+  enabled: true
+
+# No external registry proxy needed in local mode
+harbor:
+  enabled: false
+
+# Dev mode — backend runs with dev config template.
+# SSO issuer + baseURL point at the gateway NodePort so the host-side
+# `apps/console` Vite dev server (localhost:3323) can complete the
+# OIDC code+PKCE flow through a single external entry. The gateway
+# proxies /.well-known, /authorize, /login, /token, /userinfo, /v1/*
+# to rcabench-sso. JWKS refresh server-side stays on internal DNS.
+configmap:
+  system:
+    env_mode: "dev"
+  sso:
+    issuer: "http://172.21.0.2:30082"
+    baseURL: "http://172.21.0.2:30082"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    backendRedirectURI: "http://rcabench-aegis-api:8082/auth/oidc/callback"
+    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+    loginRedirect: "http://localhost:3323/auth/login"
+
+# Single external entry: aegis-gateway on NodePort 30082 fronts the
+# whole stack (sso, notify, blob, aegis-api). The monolith and other
+# microservices stay ClusterIP. Host-side console at localhost:3323
+# proxies all paths to 172.21.0.2:30082.
+# (gateway extracted to helm/charts/gateway/; ssoclient consumer config
+# moved to global.ssoclient above.)
+gateway:
+  service:
+    type: NodePort
+    nodePort: 30082
+  trustedHeaderKey: "aegis-local-dev-trusted-header-key-not-for-prod"
+
+sso:
+  service:
+    type: ClusterIP
+    port: 8083
+  config:
+    sso:
+      # SSO stamps this as the `iss` claim and surfaces it from
+      # /.well-known/openid-configuration. The browser sees the gateway
+      # URL; id_token verification on the SPA side must match.
+      issuer: "http://172.21.0.2:30082"
+      baseURL: "http://172.21.0.2:30082"
+      jwksURL: "http://172.21.0.2:30082/.well-known/jwks.json"
+      consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+      loginRedirect: "http://localhost:3323/auth/login"
+
+# Disable init jobs that pull from private registries.
+# For local dev, seed pedestal charts manually via aegisctl if needed.
+initialization:
+  initDrainTemplate:
+    enabled: false
+  initHelmCharts:
+    enabled: false
+
+# Local clusters use the built-in local-path provisioner (StorageClass "standard").
+# Single-node local clusters don't need RWX — RWO is sufficient.
+persistence:
+  storageType: external
+  storageClassNames:
+    external: standard
+  containers:
+    accessMode: ReadWriteOnce
+  juicefs:
+    enabled: true
+    useStaticPV: false
+    external:
+      accessMode: ReadWriteOnce
+
+juicefs:
+  metaurl: "redis://rcabench-redis:6379/1"
+
+# mysql subchart overrides (mirrors legacy persistence.mysql).
+mysql:
+  persistence:
+    storageClass: standard
+
+# redis subchart overrides (mirrors legacy persistence.redis).
+redis:
+  persistence:
+    storageClass: standard
+
+# etcd subchart overrides (mirrors legacy persistence.etcd).
+etcd:
+  persistence:
+    storageClass: standard

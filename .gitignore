@@ -1,0 +1,35 @@
+
+# Workspace-local backup artifacts (Phase 1 dumps etc.)
+.backup/
+*.bak
+
+# Editor / OS noise
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Anything prefixed with _tmp
+_tmp*/
+
+# Workbuddy local runtime state
+.workbuddy/*
+!.workbuddy/.gitignore
+
+# cache
+.cache
+.aegisctl
+.kube
+
+
+# Loop campaign artifacts — cache subdirs (cloned source repos for analysis) are large + reproducible
+experiments/*/cache/
+experiments/*/.cache/
+
+# Locally-generated dev TLS material (CA + leaf private keys). Never commit.
+aegislab/manifests/byte-cluster/tls-local/*.key
+aegislab/manifests/byte-cluster/tls-local/*.crt
+aegislab/manifests/byte-cluster/tls-local/*.srl
+
+# Helm secrets overlays — contain EIPs, passwords, trusted-header keys.
+aegislab/manifests/byte-cluster/*.secrets.yaml

@@ -1,0 +1,19 @@
+suite: Test ClickStack ConfigMap Rendering
+templates:
+  - hyperdx/configmap.yaml
+
+tests:
+  - it: should render ConfigMap with all expected keys
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - isNotNull:
+          path: data.CLICKHOUSE_ENDPOINT
+      - isNotNull:
+          path: data.OPAMP_SERVER_URL
+      - isNotNull:
+          path: data.MONGO_URI
+      - isNotNull:
+          path: data.FRONTEND_URL
